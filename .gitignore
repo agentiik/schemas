@@ -1,0 +1,5 @@
+# Left behind by running tools/check.py, and by a virtualenv built inside the tree.
+__pycache__/
+*.pyc
+.venv/
+venv/

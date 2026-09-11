@@ -1,0 +1,4 @@
+# Pinned so that the build refuses a document for the same reason on every machine.
+# Only these two are direct: jsonschema brings attrs, referencing and rpds-py with it.
+jsonschema==4.25.1
+PyYAML==6.0.3

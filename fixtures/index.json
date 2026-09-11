@@ -53,6 +53,11 @@
           "file": "workflow/valid/sub-workflow.yaml",
           "covers": "workflow step keyword, concurrency, triggers",
           "source": "https://agentiik.github.io/docs/#step-keywords"
+        },
+        {
+          "file": "workflow/valid/run-timeout.yaml",
+          "covers": "timeout at the root, which bounds the whole run, beside the step limit of the same name",
+          "source": "https://agentiik.github.io/docs/#yaml"
         }
       ],
       "invalid": [
@@ -175,6 +180,12 @@
           "rule": "A duration written as a bare number. A duration carries its unit, so that a file says 10m where a reader would otherwise have to work out what 600 means.",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#step-keywords"
+        },
+        {
+          "file": "workflow/invalid/run-timeout-in-weeks.yaml",
+          "rule": "A run timeout written in weeks. A duration is a number and one of the five units the language carries, ms, s, m, h or d, so a fortnight is written 14d.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#yaml"
         },
         {
           "file": "workflow/invalid/workflow-output-without-port.yaml",

@@ -62,9 +62,9 @@
       "additionalProperties": false,
       "examples": [
         {
-          "inputs": { "in": { "schema": { "$ref": "#/definitions/request" } } },
-          "outputs": { "out": { "schema": { "$ref": "#/definitions/response" } } },
-          "runtime": { "network": "egress", "user": "65532:65532", "read_only_root": true },
+          "inputs": { "in": { "schema": { "$ref": "#/spec/definitions/request" } } },
+          "outputs": { "out": { "schema": { "$ref": "#/spec/definitions/response" } } },
+          "runtime": { "network": "egress", "user": "65532:65532" },
           "resources": { "cpu": "0.5", "memory": "256Mi", "pids": 128 }
         }
       ],
@@ -73,7 +73,7 @@
           "$ref": "#/$defs/ports",
           "description": "Input ports the brick reads. The runner mounts the envelope of each port the step feeds under /agk/in/<port>/, read only, and the single port a brick reads from standard input is conventionally named in.",
           "examples": [
-            { "in": { "schema": { "$ref": "#/definitions/request" } } },
+            { "in": { "schema": { "$ref": "#/spec/definitions/request" } } },
             { "records": {}, "reference": {} }
           ]
         },
@@ -82,8 +82,8 @@
           "description": "Output ports the brick writes, one envelope per port at /agk/out/ports/<port>.json. A step may declare a subset of these and never a port absent from here, and the same names reach the container as the comma separated AGK_OUT_PORTS.",
           "examples": [
             {
-              "out": { "schema": { "$ref": "#/definitions/response" } },
-              "error": { "schema": { "$ref": "#/definitions/failure" } }
+              "out": { "schema": { "$ref": "#/spec/definitions/response" } },
+              "error": { "schema": { "$ref": "#/spec/definitions/failure" } }
             }
           ]
         },
@@ -114,12 +114,12 @@
           ]
         },
         "runtime": {
-          "description": "What the brick needs from the container it is given: the network it is attached to, whether it speaks JSON Lines, the account it runs as and the state of its root filesystem. The runner builds the host configuration from these, within what its own policy allows.",
+          "description": "What the brick needs from the container it is given: the network it is attached to, whether it speaks JSON Lines, and the account it runs as. The runner builds the host configuration from these, within what its own policy allows. The root filesystem is not among them: it is mounted read-only for every container whatever a manifest says, so there is nothing here to declare about it.",
           "type": "object",
           "required": ["user"],
           "additionalProperties": false,
           "examples": [
-            { "network": "egress", "streaming": false, "user": "65532:65532", "read_only_root": true },
+            { "network": "egress", "streaming": false, "user": "65532:65532" },
             { "network": "none", "user": "65532:65532" }
           ],
           "properties": {
@@ -143,12 +143,6 @@
               "pattern": "^[A-Za-z0-9_.][A-Za-z0-9_.-]*(?::[A-Za-z0-9_.][A-Za-z0-9_.-]*)?$",
               "not": { "pattern": "^(?:0+|root)(?::|$)" },
               "examples": ["65532:65532", "1000:1000", "nonroot"]
-            },
-            "read_only_root": {
-              "description": "Declares that the brick runs with its root filesystem mounted read-only, which is what the runner applies to every container in any case. The only writable paths are /agk/out and /tmp, both sized tmpfs, so a brick that needs scratch space writes there.",
-              "type": "boolean",
-              "default": true,
-              "examples": [true]
             }
           }
         },
@@ -183,7 +177,7 @@
           }
         },
         "definitions": {
-          "description": "Schemas that the ports and the parameters of this manifest point at with $ref. A request shape used by an input and echoed by an output is written once here, which is also what a client generating types reads.",
+          "description": "Schemas that the ports and the parameters of this manifest point at with $ref. A request shape used by an input and echoed by an output is written once here, which is also what a client generating types reads. A pointer inside a manifest is a JSON Pointer resolved against the manifest document, so an entry here is named #/spec/definitions/<name> and not #/definitions/<name>.",
           "type": "object",
           "propertyNames": { "$ref": "#/$defs/definitionName" },
           "additionalProperties": { "$ref": "#/$defs/jsonSchema" },
@@ -211,10 +205,10 @@
         "summary": "Issues one HTTP request per item and returns the response."
       },
       "spec": {
-        "inputs": { "in": { "schema": { "$ref": "#/definitions/request" } } },
+        "inputs": { "in": { "schema": { "$ref": "#/spec/definitions/request" } } },
         "outputs": {
-          "out": { "schema": { "$ref": "#/definitions/response" } },
-          "error": { "schema": { "$ref": "#/definitions/failure" } }
+          "out": { "schema": { "$ref": "#/spec/definitions/response" } },
+          "error": { "schema": { "$ref": "#/spec/definitions/failure" } }
         },
         "params": {
           "url": { "type": "string", "format": "uri", "required": true },
@@ -230,8 +224,7 @@
         "runtime": {
           "network": "egress",
           "streaming": false,
-          "user": "65532:65532",
-          "read_only_root": true
+          "user": "65532:65532"
         },
         "resources": { "cpu": "0.5", "memory": "256Mi", "pids": 128 },
         "definitions": {
@@ -257,7 +250,7 @@
       "propertyNames": { "$ref": "#/$defs/portName" },
       "additionalProperties": { "$ref": "#/$defs/port" },
       "examples": [
-        { "out": { "schema": { "$ref": "#/definitions/response" } }, "error": {} }
+        { "out": { "schema": { "$ref": "#/spec/definitions/response" } }, "error": {} }
       ]
     },
     "port": {
@@ -265,13 +258,13 @@
       "description": "One named input or output of the brick. Declaring it is what lets a workflow be validated before it runs: a step may only feed a port declared here and may only name outputs that are a subset of these.",
       "type": "object",
       "additionalProperties": false,
-      "examples": [{ "schema": { "$ref": "#/definitions/request" } }, {}],
+      "examples": [{ "schema": { "$ref": "#/spec/definitions/request" } }, {}],
       "properties": {
         "schema": {
           "$ref": "#/$defs/jsonSchema",
           "description": "Schema declared for what travels on this port. It is what a workflow author reads to know what to feed the port or what to expect from it, and what the catalog renders as the shape of the port. A port with no schema declared accepts whatever arrives, which is what a passthrough brick says.",
           "examples": [
-            { "$ref": "#/definitions/request" },
+            { "$ref": "#/spec/definitions/request" },
             { "type": "object", "properties": { "status": { "type": "integer" } } }
           ]
         }
@@ -361,7 +354,7 @@
       "description": "A JSON Schema 2020-12 document, either an object of keywords or a boolean. The manifest carries schemas rather than a shape of its own so that a brick author writes what they already know and a client can generate types from what the catalog serves.",
       "type": ["object", "boolean"],
       "examples": [
-        { "$ref": "#/definitions/request" },
+        { "$ref": "#/spec/definitions/request" },
         { "type": "object", "required": ["url"], "properties": { "url": { "type": "string" } } },
         true
       ]

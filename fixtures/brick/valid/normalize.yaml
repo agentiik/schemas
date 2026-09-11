@@ -13,12 +13,12 @@ metadata:
 spec:
   inputs:
     orders:
-      schema: { $ref: "#/definitions/order" }
+      schema: { $ref: "#/spec/definitions/order" }
     customers:
-      schema: { $ref: "#/definitions/customer" }
+      schema: { $ref: "#/spec/definitions/customer" }
   outputs:
     ok:
-      schema: { $ref: "#/definitions/order" }
+      schema: { $ref: "#/spec/definitions/order" }
     rejected: {}
 
   params:
@@ -27,7 +27,6 @@ spec:
   runtime:
     network: none
     user: "65532:65532"
-    read_only_root: true
 
   resources:
     cpu: "1"

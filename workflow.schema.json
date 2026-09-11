@@ -222,6 +222,13 @@
         }
       }
     },
+    "timeout": {
+      "title": "Run timeout",
+      "description": "Maximum duration of the whole run. It is not the step keyword of the same name: that one bounds a single shard, this one bounds everything the run does, from the first task to the last. A run still going when it expires is stopped and ends in the timed_out state, which is what makes that state reachable from a file rather than only from an operator cancelling something. It is capped by the namespace quota max_run_duration, so a workflow may always ask for less and never for more, exactly as retain is capped by max_retention_days.",
+      "$comment": "The ceiling is not written into the grammar, unlike the sync call timeout, whose 120 seconds are the same for every namespace and are therefore in its pattern. max_run_duration is a per-namespace quota, so a pattern refusing anything above it would refuse for one namespace what another is entitled to. The validator reads the quota and refuses the file, the way it does for a retain above max_retention_days.",
+      "$ref": "#/$defs/duration",
+      "examples": ["30m", "6h", "24h"]
+    },
     "steps": {
       "title": "The graph",
       "description": "The steps of the workflow, named. The order they appear in has no bearing on scheduling: a step becomes runnable once every declared input port is satisfied, and an edge is the only form of dependency there is. A name starting with a dot is a hidden block, never executed, there to be extended.",
@@ -357,9 +364,12 @@
           "examples": ["90d", { "for": "24h", "fetches": 1 }]
         },
         "schema": {
-          "description": "What the items of this output carry. It is optional, and when it is there an MCP tool publishing this output advertises it as its outputSchema.",
+          "description": "What the items of this output carry, written as a JSON Schema 2020-12 document. It is what a tool published from this output advertises as its outputSchema, so a client is told the shape of a result and not only its text. It is the mirror of a tool input, which has to have a schema because a tool has to advertise an inputSchema; here it stays optional, and an output declaring none is published as a tool with no outputSchema beside it.",
           "$ref": "#/$defs/jsonSchema",
-          "examples": [{ "$ref": "./schemas/invoice.json" }]
+          "examples": [
+            { "$ref": "./schemas/invoice.json" },
+            { "type": "object", "properties": { "total": { "type": "number" } } }
+          ]
         }
       }
     },
@@ -654,7 +664,7 @@
           }
         },
         "output": {
-          "description": "The workflow output whose envelope becomes the result, carried as structuredContent with a text rendering beside it. Optional, because a tool may have an effect and return only that it succeeded.",
+          "description": "The workflow output whose envelope becomes the result, carried as structuredContent with a text rendering beside it, and whose schema, when the output declares one, becomes the tool's outputSchema. Optional, because a tool may have an effect and return only that it succeeded, and an output carrying no schema is published with no outputSchema beside it.",
           "type": "object",
           "required": ["from"],
           "additionalProperties": false,
@@ -1227,8 +1237,8 @@
     },
     "timeout": {
       "title": "Timeout",
-      "description": "Maximum duration of one shard, not of the step and not of the run. On expiry the container is sent SIGTERM and then SIGKILL once its grace period is over, so a step with something to flush or to write gets the chance to do it.",
-      "$comment": "The documentation names grace as an identifier on this row of the step keyword table, and says only that SIGKILL follows SIGTERM after it. It never says where grace is written: a step keyword beside timeout, a sub-key of timeout, or a runner policy nobody states in the file. No keyword is declared for it here, because inventing one of the three would be inventing product behaviour; the day the documentation places it, it belongs beside this definition.",
+      "description": "Maximum duration of one shard, not of the step and not of the run: the whole run is bounded by the timeout at the root. On expiry the container is sent SIGTERM and then SIGKILL after a grace period the runner policy sets, so a step with something to flush or to write gets the chance to do it.",
+      "$comment": "The grace period between SIGTERM and SIGKILL is a runner setting and not a keyword. The step keyword table places it in runner policy and says that no keyword in the file sets it, so none is declared here and none is expected beside this one.",
       "$ref": "#/$defs/duration",
       "examples": ["2m", "10m"]
     },

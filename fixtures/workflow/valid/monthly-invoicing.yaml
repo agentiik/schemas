@@ -1,8 +1,9 @@
 # valid: the worked example of the workflow language, with the digests the
 # documentation elides written out in full.
-# covers: metadata, inputs, outputs, on, mcp, include, vars, secrets, defaults,
-#         steps with image, inputs, outputs, params, needs, if, when, merge,
-#         strategy, retry, timeout, egress, network, secrets, cache, extends.
+# covers: metadata, inputs, outputs with a schema on the published one, on, mcp,
+#         include, vars, secrets, defaults, timeout at the root, steps with image,
+#         inputs, outputs, params, needs, if, when, merge, strategy, retry,
+#         timeout, egress, network, secrets, cache, extends.
 # reference: https://agentiik.github.io/docs/#yaml
 
 apiVersion: agentiik.dev/v1
@@ -26,6 +27,7 @@ inputs:
 outputs:
   invoices:
     from: { step: archive, port: out }
+    schema: { $ref: "./schemas/invoice.json" }
     retain: 90d
   errors:
     from: { step: invoice, port: error }
@@ -80,6 +82,9 @@ defaults:
   resources: { cpu: "1", memory: 512Mi }
   network: none
   runs_on: [arch=amd64]
+
+# --- Deadline for the whole run -------------------------------------
+timeout: 4h
 
 # --- Graph ----------------------------------------------------------
 steps:

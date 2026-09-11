@@ -13,12 +13,12 @@ metadata:
 spec:
   inputs:
     in:
-      schema: { $ref: "#/definitions/request" }
+      schema: { $ref: "#/spec/definitions/request" }
   outputs:
     out:
-      schema: { $ref: "#/definitions/response" }
+      schema: { $ref: "#/spec/definitions/response" }
     error:
-      schema: { $ref: "#/definitions/failure" }
+      schema: { $ref: "#/spec/definitions/failure" }
 
   params:
     url:      { type: string, format: uri, required: true }
@@ -35,7 +35,6 @@ spec:
     network: egress          # none | egress | internal
     streaming: false         # true = JSON Lines on stdin and stdout
     user: "65532:65532"
-    read_only_root: true
 
   resources:
     cpu: "0.5"

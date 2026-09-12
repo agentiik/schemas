@@ -4,9 +4,10 @@ The contract every other repository reads: JSON Schema 2020-12 documents for the
 workflow file, the brick manifest and the envelope. The OpenAPI document of the API
 belongs here too and arrives in a later release.
 
-This repository is versioned and released on its own, and pinned by every repository
-that consumes it: the core, the bricks, the console, the iOS application and the Android
-application. A schema change is a release here first.
+This repository carries the same version as every other and is tagged at the same
+moment, and every repository that consumes it pins that version: the core, the bricks,
+the console, the iOS application and the Android application. A schema change therefore
+ships in a release of the whole project, and it lands here first.
 
 What the schemas are written against is the specification at
 <https://agentiik.github.io/docs>. Where the documentation states a rule, the schema
@@ -105,7 +106,7 @@ them.
 | A sync webhook response | `response: sync` "returns a named workflow output", and no key names which output. | The enum stays bare. A workflow cannot yet write what the sentence describes, and a companion key would be one this release made up. Recorded as a `$comment` on `webhookTrigger.response`. |
 | An exit code in a manifest | The exit code table reserves 121 to 124 for the runner and says a brick exiting with one has failed the contract whatever its manifest says, and no manifest property carries a code. | No definition is published, and no keyword either: a manifest has nothing to say about an exit code. The range is 0 success, 1 to 99 application failure, 100 to 119 transient, 120 invalid input, 121 to 124 reserved for the runner, 125 and above reserved for the runtime; it is kept here rather than as a `$defs` entry nothing refers to, because the language reference is a projection of these documents and would otherwise teach a manifest key that does not exist. |
 | A brick's secret name meeting a workflow's | The manifest names what it needs and "the workflow decides which secret of its own namespace answers that name", and no keyword expresses that mapping. | Both names are written on one grammar, so that a manifest cannot require a name no workflow is able to declare. The mount path `/agk/secrets/<name>` is the only link the two documents draw, and they now spell it the same way. |
-| `run_id`, in the envelope | A run "carries a ULID", which is twenty-six Crockford base32 characters, while every run identifier the documentation prints is shorter and no two are the same length: twenty in the envelope, fifteen and twelve in the task message. | No length is imposed. A twenty-six character pattern would refuse the documentation's own example. Recorded as a `$comment` on `envelope.meta.run_id`. |
+| `run_id`, in the envelope | A run "carries a ULID", which is twenty-six Crockford base32 characters, while the run identifiers the documentation prints are not all of that length: twenty-six in the envelope, fifteen and twelve in the task message. | No length is imposed. A twenty-six character pattern would refuse the documentation's own task message examples. Recorded as a `$comment` on `envelope.meta.run_id`. |
 
 ### Shapes the schemas allow that the documentation does not show
 

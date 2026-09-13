@@ -48,14 +48,37 @@ ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = ROOT / "fixtures"
 INDEX = FIXTURES / "index.json"
 
-# Fixture group name, and the schema the fixtures in that group validate against.
-# fixtures/index.json names the same pairs, and check 4 refuses to run if the two
-# disagree.
+# Fixture group name, and what the fixtures in that group validate against: a document,
+# and a pointer into it where the group pins one message of a family rather than a whole
+# document. fixtures/index.json names the same pairs, and check 4 refuses to run if the
+# two disagree.
+#
+# The wire is one document holding many messages because they share a vocabulary, the run
+# and task states and the identifiers being the same strings everywhere, and a $ref may
+# not leave a document here. A group per message is what lets a fixture still pin one
+# message rather than "something the wire allows".
 SCHEMAS = {
-    "workflow": "workflow.schema.json",
-    "brick": "brick.schema.json",
-    "envelope": "envelope.schema.json",
+    "workflow": {"file": "workflow.schema.json"},
+    "brick": {"file": "brick.schema.json"},
+    "envelope": {"file": "envelope.schema.json"},
+    "task-message": {"file": "wire.schema.json", "pointer": "#/$defs/taskMessage"},
+    "task-result": {"file": "wire.schema.json", "pointer": "#/$defs/taskResult"},
+    "runner-registration": {"file": "wire.schema.json", "pointer": "#/$defs/runnerRegistration"},
+    "runner-heartbeat": {"file": "wire.schema.json", "pointer": "#/$defs/runnerHeartbeat"},
+    "grant-redemption": {"file": "wire.schema.json", "pointer": "#/$defs/grantRedemption"},
+    "log-shipment": {"file": "wire.schema.json", "pointer": "#/$defs/logShipment"},
+    "runner-pool": {"file": "wire.schema.json", "pointer": "#/$defs/runnerPool"},
 }
+
+
+def schema_file(name):
+    """The document a fixture group validates against."""
+    return SCHEMAS[name]["file"]
+
+
+def schema_pointer(name):
+    """The pointer into that document, or None for the document itself."""
+    return SCHEMAS[name].get("pointer")
 
 # What the index may say refuses an invalid fixture. See check_fixtures.
 REFUSED_BY = ("schema", "validator")
@@ -278,12 +301,12 @@ def check_schemas_are_legal(documents, report):
     """
     sound = {}
     for name, document in documents.items():
-        where = SCHEMAS[name]
+        where = name
         usable = True
 
         if document.get("$schema") != DIALECT:
             report.fail(where, "$schema is not %s" % DIALECT)
-        expected_id = ID_PREFIX + SCHEMAS[name]
+        expected_id = ID_PREFIX + name
         if document.get("$id") != expected_id:
             report.fail(where, "$id is %r, expected %r" % (document.get("$id"), expected_id))
 
@@ -331,8 +354,15 @@ def check_every_keyword_is_documented(documents, report):
     keyword declared elsewhere, so neither is asked for prose of its own.
     """
     for name, document in documents.items():
-        where = SCHEMAS[name]
+        where = name
         counted = 0
+
+        # A document that is a family of messages rather than one message has nothing at
+        # its root to illustrate: the wire holds the task message, the task result and the
+        # rest under $defs, and a reader validates against the member it is holding. Such a
+        # root still says what the document is; it is only asked for an example of an
+        # instance when it describes one.
+        family = not any(key in document for key in ("type", "properties", "items", "enum", "const", "oneOf", "anyOf", "allOf"))
 
         for found in walk(document):
             if found.pointer != "" and not found.declares_a_keyword:
@@ -343,6 +373,9 @@ def check_every_keyword_is_documented(documents, report):
             description = found.schema.get("description")
             if not isinstance(description, str) or not description.strip():
                 report.fail(where, "%s (%s) has no description" % (found.pointer or "/", subject))
+
+            if found.pointer == "" and family:
+                continue
 
             examples = found.schema.get("examples")
             if not isinstance(examples, list):
@@ -356,7 +389,7 @@ def check_every_keyword_is_documented(documents, report):
 def check_every_example_validates(documents, report):
     """Check 3: an example that does not validate teaches syntax the engine refuses."""
     for name, document in documents.items():
-        where = SCHEMAS[name]
+        where = name
         counted = 0
 
         for found in walk(document):
@@ -401,8 +434,8 @@ def read_index(report):
     for name, relative in sorted(listed.items()):
         if name not in SCHEMAS:
             report.fail("fixtures/index.json", "names a group, %s, that this check knows nothing about" % name)
-        elif (FIXTURES / relative).resolve() != (ROOT / SCHEMAS[name]).resolve():
-            report.fail("fixtures/index.json", "points %s at %s, expected %s" % (name, relative, SCHEMAS[name]))
+        elif (FIXTURES / relative).resolve() != (ROOT / schema_file(name)).resolve():
+            report.fail("fixtures/index.json", "points %s at %s, expected %s" % (name, relative, schema_file(name)))
     for name in sorted(set(SCHEMAS) - set(listed)):
         report.fail("fixtures/index.json", "lists no fixtures for %s" % name)
     return index
@@ -448,7 +481,13 @@ def check_fixtures(documents, report):
             # Either the index names a group this check does not know, which read_index
             # has already reported, or the schema behind it did not survive check 1.
             continue
-        validator = Draft202012Validator(documents[name])
+        document = documents[schema_file(name)]
+        pointer = schema_pointer(name)
+        subschema = document if pointer is None else resolve_pointer(document, pointer)
+        if subschema is None:
+            report.fail(schema_file(name), "%s points at %s, which is not there" % (name, pointer))
+            continue
+        validator = validator_for(document, subschema)
         group = groups[name] if isinstance(groups[name], dict) else {}
         accepted = refused = deferred = aside = 0
 
@@ -530,7 +569,7 @@ def check_fixtures(documents, report):
                         report.note("schema valid on purpose, left to the validator: %s" % relative)
 
         summary = "%s: %d fixtures accepted, %d refused, %d left to the validator" % (
-            SCHEMAS[name],
+            name if schema_pointer(name) else schema_file(name),
             accepted,
             refused,
             deferred,
@@ -575,11 +614,13 @@ def main():
     arguments = parser.parse_args()
     report = Report(verbose=arguments.verbose)
 
+    # Keyed by file rather than by group, because the wire is one document holding
+    # several groups and reporting it three times over would be three copies of one fault.
     documents = {}
-    for name, filename in SCHEMAS.items():
+    for filename in sorted({entry["file"] for entry in SCHEMAS.values()}):
         path = ROOT / filename
         try:
-            documents[name] = json.loads(path.read_text(encoding="utf-8"))
+            documents[filename] = json.loads(path.read_text(encoding="utf-8"))
         except FileNotFoundError:
             report.fail(filename, "is missing")
         except json.JSONDecodeError as error:

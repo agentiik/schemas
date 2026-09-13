@@ -6,6 +6,14 @@ Every repository of the project carries the same version and is tagged at the sa
 
 `0.y.z` promises nothing beyond itself: what a release here describes may be gone in the next one.
 
+## Unreleased
+
+**The wire, written down first.** `wire.schema.json` describes every message that travels between the controller, the bus, the runner and the API: the task message and the task result, a runner's registration, its ten second heartbeat, the redemption of a task's grant, a log shipment, and a runner pool with the token issued from it. One document rather than one per message, because they share a vocabulary and a `$ref` may not leave a document here, so the run and task states, the identifiers, the digests and the idempotency key are written once and referenced.
+
+What the shapes refuse is the point. A task message carries no secret value, no input URL and no image tag, and the objects are closed so that none of the three can be written at all rather than merely being undocumented. A task result ends in a task state and never a run state. A registration carries the public key and has no room for the private one. Twelve invalid fixtures pin those refusals, one rule each.
+
+`tools/check.py` grew two things to hold it: a fixture group may name a member of a document rather than a whole document, so a fixture still pins one message, and a document that is a family has no instance at its root to illustrate.
+
 ## v0.1.2, 2026-09-13
 
 Nothing changed here. The version moves because every repository carries the same one, which [Versioning](https://agentiik.github.io/docs#versioning) sets out.

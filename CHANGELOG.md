@@ -8,6 +8,8 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**A task result can say it timed out.** The wire took the seven task states the page drew and the engine has produced nine since v0.1.0: a task stopped at its deadline and a task stopped by a cancellation are neither of them `failed`. So a runner could produce a result the controller would refuse. The page names all nine now and the enumeration follows it, with the four endings told apart in the description because a retry policy reads the cause.
+
 **The wire accepts the page it was written from.** The first version imposed twenty-six characters on a run and task identifier, which is what the engine mints, and so refused the task message the documentation prints, in four places at once: its `task_id`, its `run_id`, its idempotency key and its grant. The page elides identifiers deliberately, to fifteen and twelve characters, and `envelope.schema.json` had already settled the question and written down why. The alphabet is held and the length is not, the same reading in both documents, and the message the page prints is now a fixture so that the next version cannot refuse it either.
 
 **The wire, written down first.** `wire.schema.json` describes every message that travels between the controller, the bus, the runner and the API: the task message and the task result, a runner's registration, its ten second heartbeat, the redemption of a task's grant, a log shipment, and a runner pool with the token issued from it. One document rather than one per message, because they share a vocabulary and a `$ref` may not leave a document here, so the run and task states, the identifiers, the digests and the idempotency key are written once and referenced.

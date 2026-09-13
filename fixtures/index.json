@@ -633,6 +633,10 @@
         {
           "file": "wire/valid/task-result-lost.json",
           "covers": "a task declared lost, which carries no exit code and no result of its own, because it is the absence of three heartbeats that declares it"
+        },
+        {
+          "file": "wire/valid/task-result-timed-out.json",
+          "covers": "a task stopped at its deadline, which carries no exit code because nothing decided anything: the ending the wire could not express until the page named all nine states"
         }
       ],
       "invalid": [

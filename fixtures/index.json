@@ -18,7 +18,8 @@
     "Digests are written out in full. The documentation elides them in the middle, as 9f2c1d...b7e0, which is a typographic elision and not a value; the fixtures keep the first and last characters and fill the rest so that each one is a well formed sha256.",
     "A fixture carrying a manifest key is checked against a brick manifest that lives elsewhere in this corpus. The rule it pins is about the two documents together, so neither file alone shows it.",
     "A fixture carrying a role key is not an entry point. mcp-in-included-file.yaml is the included file itself, which is where the rule it pins can be seen at all.",
-    "The wire is one document holding several messages, because they share a vocabulary and a $ref may not leave a document here. A group therefore names the document and the member inside it that its fixtures pin, so a fixture still pins one message rather than something the wire allows somewhere."
+    "The wire is one document holding several messages, because they share a vocabulary and a $ref may not leave a document here. A group therefore names the document and the member inside it that its fixtures pin, so a fixture still pins one message rather than something the wire allows somewhere.",
+    "A valid fixture is taken from the documentation's own printed message wherever the documentation prints one. The wire's first version was built from its own examples instead and refused the page's task message in four places, which is the failure this fixture exists to make impossible."
   ],
   "fixtures": {
     "workflow": {
@@ -589,6 +590,10 @@
         {
           "file": "wire/valid/task-message-fanned-out.json",
           "covers": "shard, the four-segment idempotency key it produces, and egress_allow beside network: egress"
+        },
+        {
+          "file": "wire/valid/task-message-as-the-page-prints-it.json",
+          "covers": "the message the documentation prints, identifiers and all: it elides them to fifteen and twelve characters, and a schema that imposed the twenty-six a ULID is minted at would refuse the page it was written from"
         }
       ],
       "invalid": [

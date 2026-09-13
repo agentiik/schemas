@@ -2548,12 +2548,13 @@
     },
     "ulid": {
       "title": "ULID",
-      "description": "A run or task identifier, minted by the engine and carried unchanged by everything that speaks about it. Crockford base32, twenty-six characters, which is what the engine mints; no length is imposed on a run identifier inside an envelope, for the reason recorded there, and the wire is written against what this implementation produces rather than against what it will accept from a stranger.",
+      "description": "A run or task identifier, minted by the engine and carried unchanged by everything that speaks about it. Crockford base32, which is what a ULID is written in, and no length is imposed: the engine mints twenty-six characters, and the identifiers the documentation prints are fifteen and twelve in the task message it shows, which a twenty-six character pattern would refuse. The envelope took the same reading for the same reason, and two answers to one question would be worse than either. What is held is the alphabet, which is what makes an identifier safe as a path segment and as an object key.",
       "type": "string",
-      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]+$",
       "examples": [
         "01JMZ8V1P9C4XQ7K2N4D6F8H0A",
-        "01M2AAZ9G62NQXFAFCXKRPJEH5"
+        "01M2AAZ9G62NQXFAFCXKRPJEH5",
+        "01JMZ8V1P9C4"
       ]
     },
     "identifier": {
@@ -2654,11 +2655,12 @@
     },
     "idempotencyKey": {
       "title": "Idempotency key",
-      "description": "What names one attempt at one unit of work, written run_id/step/attempt/shard, with the shard omitted where the step is not fanned out. The bus guarantees at-least-once delivery, so every task has to be replayable: a runner refuses to start a container for a key that has already completed, and two deliveries of one message are therefore one container. It is unique across the installation, because the run identifier is.",
+      "description": "What names one attempt at one unit of work, written run_id/step/attempt/shard, with the shard omitted where the step is not fanned out. The bus guarantees at-least-once delivery, so every task has to be replayable: a runner refuses to start a container for a key that has already completed, and two deliveries of one message are therefore one container. It is unique across the installation, because the run identifier is. The run segment holds the alphabet and not a length, as the identifier itself does and for the same reason.",
       "type": "string",
-      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}/[A-Za-z0-9][A-Za-z0-9_-]*/[1-9][0-9]*(?:/[1-9][0-9]*)?$",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]+/[A-Za-z0-9][A-Za-z0-9_-]*/[1-9][0-9]*(?:/[1-9][0-9]*)?$",
       "examples": [
         "01JMZ8V1P9C4XQ7K2N4D6F8H0A/invoice/2/3",
+        "01JMZ8V1P9C4/invoice/2/3",
         "01JMZ8V1P9C4XQ7K2N4D6F8H0A/normalize/1"
       ]
     },
@@ -2729,9 +2731,10 @@
       "title": "Grant",
       "description": "The bearer token issued with one task, and the only thing that turns the names in a task message into values. It is scoped to that task and expires with it: the message names the secrets the step mounts and carries none of them, and the input URLs it names work for nobody holding anything else.",
       "type": "string",
-      "pattern": "^agkgrant_[0-9A-HJKMNP-TV-Z]{26}_[A-Za-z0-9_-]{16,}$",
+      "pattern": "^agkgrant_[0-9A-HJKMNP-TV-Z]+_[A-Za-z0-9_-]{16,}$",
       "examples": [
-        "agkgrant_01JMZ8V1P9C4XQ7K2N4D6F8H0A_Zm9vYmFyYmF6cXV4MTIzNA"
+        "agkgrant_01JMZ8V1P9C4XQ7K2N4D6F8H0A_Zm9vYmFyYmF6cXV4MTIzNA",
+        "agkgrant_01JMZ8V1PC7K3M0_Zm9vYmFyYmF6cXV4MTIzNA"
       ]
     },
     "resources": {

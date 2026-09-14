@@ -20,7 +20,7 @@
     ]
   },
   "response": {
-    "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/invoice/log",
+    "uri": "agk://log/01JMZ8V1P9C4XQ7K2N4D6F8H0A/01JMZ8V1P9C4XQ7K2N4D6F8H0A%2Finvoice%2F1",
     "accepted": 3,
     "next_seq": 8,
     "lines": 391,

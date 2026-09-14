@@ -704,12 +704,12 @@
           "properties": {
             "uri": {
               "title": "Log URI",
-              "description": "Where the log is addressed from, in the same agk://run/ space as an artifact. The documentation prints agk://run/<run>/<step>/log; what is pinned here is the scheme and the run scope rather than a segment count, because a step fanned out into eight shards has eight logs and one printed example does not say how they are told apart. Pinning the count would be inventing a rule the documentation has not made.",
+              "description": "Where the log is addressed from. The scheme names a kind in its first segment and a log is its own: agk://log/<run>/<task>, not the agk://run/ space an artifact is addressed in. A log belongs to one task and not to one port, which is why it cannot be addressed like an artifact: a step fanned out into eight shards has eight logs and no port to tell them apart, and a task identifier tells them apart exactly. The task carries slashes of its own, so it is escaped as a path segment.",
               "type": "string",
               "format": "uri",
-              "pattern": "^agk://run/",
+              "pattern": "^agk://log/",
               "examples": [
-                "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/invoice/log"
+                "agk://log/01JMZ8V1P9C4XQ7K2N4D6F8H0A/01JMZ8V1P9C4XQ7K2N4D6F8H0A%2Finvoice%2F2%2F3%2F8"
               ]
             },
             "lines": {
@@ -734,7 +734,7 @@
           },
           "examples": [
             {
-              "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/invoice/log",
+              "uri": "agk://log/01JMZ8V1P9C4XQ7K2N4D6F8H0A/01JMZ8V1P9C4XQ7K2N4D6F8H0A%2Finvoice%2F1",
               "lines": 412,
               "truncated": false
             }
@@ -818,7 +818,7 @@
             }
           ],
           "log": {
-            "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/invoice/log",
+            "uri": "agk://log/01JMZ8V1P9C4XQ7K2N4D6F8H0A/01JMZ8V1P9C4XQ7K2N4D6F8H0A%2Finvoice%2F1",
             "lines": 412,
             "truncated": false
           },
@@ -855,7 +855,7 @@
             }
           ],
           "log": {
-            "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/normalize/log",
+            "uri": "agk://log/01JMZ8V1P9C4XQ7K2N4D6F8H0A/01JMZ8V1P9C4XQ7K2N4D6F8H0A%2Fnormalize%2F1",
             "lines": 0,
             "truncated": false
           },
@@ -871,7 +871,7 @@
           "runner": "runner-dmz-02",
           "state": "failed",
           "log": {
-            "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/invoice/log",
+            "uri": "agk://log/01JMZ8V1P9C4XQ7K2N4D6F8H0A/01JMZ8V1P9C4XQ7K2N4D6F8H0A%2Finvoice%2F1",
             "lines": 3,
             "truncated": false
           }
@@ -2176,11 +2176,11 @@
             "uri": {
               "type": "string",
               "format": "uri",
-              "pattern": "^agk://run/",
-              "description": "Where the task's log is addressed from, in the form the documentation prints, agk://run/<run>/<step>/log. The API answers it on every shipment so that the runner copies an address rather than building one, since a runner deciding where something lives is a runner making a decision the controller and the API are meant to keep. The documentation prints this address for a task that is one shard of eight with no shard segment in it, so the scheme and the run prefix are fixed here and what follows is not, rather than a shape being imposed that the page's own example would fail.",
+              "pattern": "^agk://log/",
+              "description": "Where the task's log is addressed from: agk://log/<run>/<task>. The API answers it on every shipment so that the runner copies an address rather than building one, since a runner deciding where something lives is a runner making a decision the controller and the API are meant to keep. It is not the agk://run/ space an artifact is addressed in, because a log belongs to one task and not to one port: a step fanned out into eight shards has eight logs and no port to tell them apart. The task carries slashes of its own and is escaped as a path segment.",
               "examples": [
-                "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/invoice/log",
-                "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/normalize/log"
+                "agk://log/01JMZ8V1P9C4XQ7K2N4D6F8H0A/01JMZ8V1P9C4XQ7K2N4D6F8H0A%2Finvoice%2F2%2F3%2F8",
+                "agk://log/01JMZ8V1P9C4XQ7K2N4D6F8H0A/01JMZ8V1P9C4XQ7K2N4D6F8H0A%2Fnormalize%2F1"
               ]
             },
             "accepted": {
@@ -2221,14 +2221,14 @@
           },
           "examples": [
             {
-              "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/invoice/log",
+              "uri": "agk://log/01JMZ8V1P9C4XQ7K2N4D6F8H0A/01JMZ8V1P9C4XQ7K2N4D6F8H0A%2Finvoice%2F1",
               "accepted": 3,
               "next_seq": 8,
               "lines": 391,
               "truncated": false
             },
             {
-              "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/invoice/log",
+              "uri": "agk://log/01JMZ8V1P9C4XQ7K2N4D6F8H0A/01JMZ8V1P9C4XQ7K2N4D6F8H0A%2Finvoice%2F1",
               "accepted": 0,
               "next_seq": 8,
               "lines": 391,
@@ -2260,7 +2260,7 @@
             ]
           },
           "response": {
-            "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/invoice/log",
+            "uri": "agk://log/01JMZ8V1P9C4XQ7K2N4D6F8H0A/01JMZ8V1P9C4XQ7K2N4D6F8H0A%2Finvoice%2F1",
             "accepted": 3,
             "next_seq": 8,
             "lines": 391,

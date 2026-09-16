@@ -589,11 +589,16 @@
         },
         {
           "file": "wire/valid/task-message-fanned-out.json",
-          "covers": "shard, the four-segment idempotency key it produces, and egress_allow beside network: egress"
+          "covers": "shard, the five-segment idempotency key it produces, and egress_allow beside network: egress"
         },
         {
           "file": "wire/valid/task-message-as-the-page-prints-it.json",
           "covers": "the message the documentation prints, identifiers and all: it elides them to fifteen and twelve characters, and a schema that imposed the twenty-six a ULID is minted at would refuse the page it was written from"
+        },
+        {
+          "file": "wire/valid/task-message-script-step.json",
+          "covers": "script, before_script, after_script, shell, files, timeout, idempotent and cache_key: what a runner needs for a step whose image is a base image rather than a brick",
+          "source": "https://agentiik.github.io/docs/#running-a-script-instead-of-a-brick"
         }
       ],
       "invalid": [

@@ -1945,12 +1945,20 @@
                 "properties": {
                   "path": {
                     "type": "string",
-                    "pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$))[^/][^\\u0000]*$",
-                    "description": "Where the file goes under /agk/repo, relative to that root. It is the path the container will see and not the path the file happens to have in the repository: the short form of the step's files is a path or a glob relative to the root, and it is already expanded here. It carries no parent segment, so a tree can only ever be written inside the mount it was resolved for. The grammar is the workflow file's own, a string of any character the repository allows, because a repository holds the names it holds and a narrower class here would refuse a file git accepts.",
+                    "pattern": "^[^/][^\\x00]*$",
+                    "description": "Where the file goes under /agk/repo, relative to that root. It is the path the container will see and not the path the file happens to have in the repository: the short form of the step's files is a path or a glob relative to the root, and it is already expanded here. It carries no parent segment, so a tree can only ever be written inside the mount it was resolved for. The grammar is the workflow file's own, a string of any character the repository allows, because a repository holds the names it holds and a narrower class here would refuse a file git accepts. The pattern holds the shape, and the refusal beside it holds the one segment a path may not contain.",
                     "examples": [
                       "agentiik.yaml",
                       "scripts/normalise.sh"
-                    ]
+                    ],
+                    "not": {
+                      "pattern": "(^|/)\\.\\.(/|$)",
+                      "description": "And no .. segment, which is what would let a path climb out of the tree it is relative to. It is a refusal rather than a lookahead inside the pattern above, because JSON Schema's pattern is ECMA-262 and a lookahead is legal there while a good half of the engines that read this document cannot compile one: Go, Rust and everything else built on RE2 refuse it outright. A schema only some consumers can read is half a schema.",
+                      "examples": [
+                        "../etc/passwd",
+                        "config/../../secrets"
+                      ]
+                    }
                   },
                   "mode": {
                     "type": "string",
@@ -1983,7 +1991,7 @@
                     "title": "Relocation",
                     "description": "Where the file is bound instead, absolute, for the one case the short form cannot express: the long form of files \"relocates a path to wherever a tool insists on finding it\", which is how a private authority reaches /etc/ssl/certs/internal-ca.pem in an image that will read it nowhere else. Absent for every ordinary file, which is the ordinary case, and present only where the step wrote the long form. The runner binds rather than copies, so the file stays read-only and outside the mount it came from.",
                     "type": "string",
-                    "pattern": "^/[^\\u0000]*$",
+                    "pattern": "^/[^\\x00]*$",
                     "examples": [
                       "/etc/ssl/certs/internal-ca.pem"
                     ]

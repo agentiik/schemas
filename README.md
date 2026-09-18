@@ -39,14 +39,20 @@ No arguments, from anywhere in the repository. It is the same command
 locally means a green run there. Add `-v` to have it name every fixture and say why each
 refused one was refused.
 
-Five things fail the build:
+Six things fail the build:
 
 1. a schema that is not a legal JSON Schema 2020-12 document, that does not carry the
    `$id` it is published under, or that holds a `$ref` leading nowhere;
 2. a keyword without a `description` or without `examples`;
 3. an example that does not validate against the keyword it illustrates;
 4. a fixture that does not behave as `fixtures/index.json` says it does;
-5. an em dash, anywhere in any text file.
+5. a `pattern` no RE2 engine can compile, which is a lookahead, a lookbehind, a
+   backreference or a unicode escape written the ECMA-262 way. JSON Schema says `pattern`
+   is ECMA-262 and all four are legal there; Go, Rust and everything else built on RE2
+   refuse the whole document rather than the one keyword, and a schema only some consumers
+   can read is half a schema. What a lookahead expresses, a `not` beside the pattern
+   expresses too;
+6. an em dash, anywhere in any text file.
 
 ## Why every keyword carries a description and examples
 

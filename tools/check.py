@@ -603,6 +603,55 @@ def check_no_em_dash(report):
     report.heading("%d text files, none holding an em dash" % counted)
 
 
+RE2_CANNOT = (
+    ("(?=", "a lookahead"),
+    ("(?!", "a negative lookahead"),
+    ("(?<=", "a lookbehind"),
+    ("(?<!", "a negative lookbehind"),
+    ("\\u", "a \\u escape, which is \\x in every engine that is not ECMA-262"),
+    ("\\1", "a backreference"),
+    ("(?P<", "a named group of the Python spelling"),
+)
+
+
+def patterns_in(node, pointer=""):
+    """Yields every pattern in a document, with the pointer that names it."""
+    if isinstance(node, dict):
+        if isinstance(node.get("pattern"), str):
+            yield pointer + "/pattern", node["pattern"]
+        for key, value in node.items():
+            yield from patterns_in(value, pointer + "/" + str(key).replace("~", "~0").replace("/", "~1"))
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            yield from patterns_in(value, pointer + "/%d" % index)
+
+
+def check_every_pattern_is_portable(documents, report):
+    """Check 6: a pattern every consumer can compile, not only the ones with a backtracking engine.
+
+    JSON Schema says pattern is ECMA-262, and a lookahead is legal there. It is also
+    unreadable to Go, to Rust and to everything else built on RE2, which refuse the
+    whole document rather than the one keyword. A schema exists so that a consumer can
+    hold a message to it, and a schema only some consumers can read is half a schema.
+
+    What a lookahead expressed, a `not` beside the pattern expresses too, and every
+    engine reads that.
+    """
+    counted = 0
+    for filename, document in sorted(documents.items()):
+        for pointer, pattern in patterns_in(document):
+            counted += 1
+            for fragment, what in RE2_CANNOT:
+                if fragment in pattern:
+                    report.fail(
+                        filename,
+                        "%s holds %s, which Go, Rust and every other RE2 engine refuse: %s"
+                        % (pointer, what, pattern),
+                    )
+                    break
+    report.heading("%d patterns, each one every engine can compile" % counted)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -637,6 +686,8 @@ def main():
         check_every_example_validates(sound, report)
         print("Fixtures")
         check_fixtures(sound, report)
+        print("Patterns")
+        check_every_pattern_is_portable(documents, report)
     print("Prose")
     check_no_em_dash(report)
 

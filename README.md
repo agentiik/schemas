@@ -39,7 +39,7 @@ No arguments, from anywhere in the repository. It is the same command
 locally means a green run there. Add `-v` to have it name every fixture and say why each
 refused one was refused.
 
-Six things fail the build:
+Seven things fail the build:
 
 1. a schema that is not a legal JSON Schema 2020-12 document, that does not carry the
    `$id` it is published under, or that holds a `$ref` leading nowhere;
@@ -52,7 +52,12 @@ Six things fail the build:
    refuse the whole document rather than the one keyword, and a schema only some consumers
    can read is half a schema. What a lookahead expresses, a `not` beside the pattern
    expresses too;
-6. an em dash, anywhere in any text file.
+6. a grammar two documents share, written differently in one of them. A `$ref` may not
+   leave a document here, so a grammar the manifest and the wire both hold is two copies,
+   and copies that drift let the engine dispatch a secret mount a strict runner then
+   refuses to write. The shared grammars, a secret mount, a name the workflow file writes
+   and a parameter name, are listed in `ONE_GRAMMAR` in `tools/check.py` with every place each is written;
+7. an em dash, anywhere in any text file.
 
 ## Why every keyword carries a description and examples
 

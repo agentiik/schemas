@@ -2907,7 +2907,7 @@
     "secretMount": {
       "title": "Secret mount",
       "description": "Where a secret's value is mounted inside the container: one file on tmpfs directly under /agk/secrets/, and nowhere else. The file name begins with a letter or a digit and goes on in letters, digits, dots, hyphens and underscores. The dot is kept because a file name naturally carries one, as client.key does, and the first character is what refuses . and .., which name the directory or its parent rather than a file in it. It is one grammar for the task message, for the redemption that answers it and for the brick manifest the mount was read from, because a mount one of them accepts and the next refuses is a secret the engine dispatches and a strict runner then cannot write.",
-      "$comment": "The same pattern is brick.schema.json $defs/secret/properties/mount. A $ref may not leave a document here, so the two are kept identical by hand, and changing one is changing both.",
+      "$comment": "The same pattern is brick.schema.json $defs/secret/properties/mount. A $ref may not leave a document here, so the two are copies, and tools/check.py fails the build when they differ: changing one is changing both.",
       "type": "string",
       "pattern": "^/agk/secrets/[A-Za-z0-9][A-Za-z0-9._-]*$",
       "examples": [

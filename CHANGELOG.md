@@ -8,6 +8,8 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**A grammar two documents share is held to one spelling.** A secret mount, a name the workflow file writes and a parameter name are each written in more than one document, because a `$ref` may not leave one, and nothing compared the copies: only a `$comment` asked for it. The build compares them now and names both pointers when one moves.
+
 **The build reads the fixtures again.** Since the wire, `tools/check.py` kept its documents by file name and looked each fixture group up by message name, so it validated no fixture at all and still said everything checked out. It looks the group up by its file now and fails a group it skips. The one fixture that went stale meanwhile, a task result in `cancelled`, which is a task state too since the nine, now says `queued`.
 
 **A secret mount has one grammar.** The brick manifest and the task message accepted `/agk/secrets/client.key` and the grant redemption refused it, so the engine could dispatch a mount a strict runner then could not write; the first two also accepted `/agk/secrets/..`. All three now read `^/agk/secrets/[A-Za-z0-9][A-Za-z0-9._-]*$`, written once in the wire as `$defs/secretMount`: a dot inside a name is kept and a name made of dots is refused.

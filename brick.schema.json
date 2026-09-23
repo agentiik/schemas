@@ -343,7 +343,7 @@
         },
         "mount": {
           "description": "Path the value is mounted at, on tmpfs, for the brick to read as a file. The runner obtains the value at the last moment by redeeming a per-task grant, so the path exists only for the lifetime of the task. It is one file directly under /agk/secrets/, and a mount elsewhere, /run/secrets/bearer written out of habit, is refused. The file name begins with a letter or a digit and goes on in letters, digits, dots, hyphens and underscores: the dot is kept because a file name naturally carries one, as client.key does, and the first character is what refuses . and .., which name the directory or its parent rather than a file in it. The task message and the grant redemption carry the mount on this same grammar, because a mount the manifest accepts and the wire refuses is a secret the engine dispatches and a strict runner then cannot write.",
-          "$comment": "The same pattern is wire.schema.json $defs/secretMount. A $ref may not leave a document here, so the two are kept identical by hand, and changing one is changing both.",
+          "$comment": "The same pattern is wire.schema.json $defs/secretMount. A $ref may not leave a document here, so the two are copies, and tools/check.py fails the build when they differ: changing one is changing both.",
           "type": "string",
           "pattern": "^/agk/secrets/[A-Za-z0-9][A-Za-z0-9._-]*$",
           "examples": ["/agk/secrets/bearer", "/agk/secrets/billing", "/agk/secrets/client.key"]

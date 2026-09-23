@@ -8,6 +8,8 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**A secret mount has one grammar.** The brick manifest and the task message accepted `/agk/secrets/client.key` and the grant redemption refused it, so the engine could dispatch a mount a strict runner then could not write; the first two also accepted `/agk/secrets/..`. All three now read `^/agk/secrets/[A-Za-z0-9][A-Za-z0-9._-]*$`, written once in the wire as `$defs/secretMount`: a dot inside a name is kept and a name made of dots is refused.
+
 **A workflow names its secrets and nothing more.** The root `secrets` block is a list of names, `secrets: [billing]`, and no longer says where a value lives: the namespace declares each secret's provider and path, through the API or `agentiik_secret` and under `secret:write`, and is confined to its own paths. `$defs/secret` goes, and every example and fixture that wrote a provider or a path moves.
 
 **The grant names the tree.** `taskMessage.grant` now says the redemption answers the tree's URLs too, as `grantRedemption` already required.

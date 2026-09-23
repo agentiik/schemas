@@ -678,7 +678,7 @@
         },
         {
           "file": "wire/invalid/task-result-state-of-a-run.json",
-          "rule": "cancelled is a run state, not a task state, and the two vocabularies are separate on purpose",
+          "rule": "queued is a run state, not a task state, and the two vocabularies are separate on purpose",
           "refused_by": "schema"
         }
       ]

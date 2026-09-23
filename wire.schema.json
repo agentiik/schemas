@@ -313,7 +313,7 @@
         },
         "grant": {
           "$ref": "#/$defs/grant",
-          "description": "The bearer token issued with this task, and the only thing that turns the names in this message into values. The runner redeems it at the API for the input URLs, the secret values and the upload URLs, and for nothing that belongs to another task: it is scoped to this one and expires with it. It is the hinge the whole message turns on, since everything else here is a name, and a name without this token names what was going to happen and grants none of it.",
+          "description": "The bearer token issued with this task, and the only thing that turns the names in this message into values. The runner redeems it at the API for the input URLs, the URLs of the workflow tree, the secret values and the upload URLs, and for nothing that belongs to another task: it is scoped to this one and expires with it. It is the hinge the whole message turns on, since everything else here is a name, and a name without this token names what was going to happen and grants none of it.",
           "examples": [
             "agkgrant_01JMZ8V1PC7K3M0QY4B8ZR6TDN_Zm9vYmFyYmF6cXV4MTIzNA"
           ]

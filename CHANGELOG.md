@@ -8,6 +8,8 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**The grant names the tree.** `taskMessage.grant` now says the redemption answers the tree's URLs too, as `grantRedemption` already required.
+
 **A schema every engine can read.** Two patterns in the grant redemption could not be compiled by any RE2 engine: one used a negative lookahead to say that a path holds no parent segment, and the other wrote the null character the ECMA-262 way. JSON Schema says `pattern` is ECMA-262 and both are legal there, but Go, Rust and everything else built on RE2 refuse the whole document rather than the one keyword, so the wire was a schema only Python could read. Found the first time something outside this repository compiled it, which was a conformance test in the engine. The lookahead becomes a `not` beside the pattern, which says the same thing to everybody, and the build gains a sixth check so it cannot come back.
 
 **A task message names everything the runner needs, and now it can.** The message could not describe a step whose image is a base image rather than a brick: `script`, `before_script`, `after_script` and `shell` had nowhere to be written, and neither did `files`, `timeout`, `idempotent` or `cache_key`. A closed document refuses what it does not name, so the wire was refusing the engine's own step kind. All eight arrive, with a fixture that is a script step end to end. None of them is a payload or a secret: a command is what the workflow author wrote in `agentiik.yaml`, and the bytes of a file are still fetched from the tree by redeeming the grant.

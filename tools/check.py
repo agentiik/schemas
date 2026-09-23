@@ -5,8 +5,8 @@ Run it with no arguments, from anywhere:
 
     python tools/check.py
 
-Five checks run in order, and all of them run even when an earlier one fails, so one
-pass reports everything that is wrong rather than the first thing:
+Seven checks run, and all of them run even when an earlier one fails, so one pass
+reports everything that is wrong rather than the first thing:
 
   1. every schema is a legal JSON Schema 2020-12 document, carries the $schema and the
      $id it is published under, and every $ref inside it resolves;
@@ -15,7 +15,9 @@ pass reports everything that is wrong rather than the first thing:
   4. every fixture behaves as fixtures/index.json says it does, which means every valid
      fixture is accepted and every invalid one is refused by whatever the index says
      refuses it;
-  5. no em dash appears in any text file of the repository.
+  5. no em dash appears in any text file of the repository;
+  6. every pattern is one Go, Rust and every other RE2 engine can compile;
+  7. a grammar written in more than one document reads the same in each of them.
 
 Check 2 is the one the documentation asks for by name: the language reference on the
 site and the workflow.language tool are projections of the description and examples
@@ -476,11 +478,15 @@ def check_fixtures(documents, report):
                 if isinstance(entry, dict) and isinstance(entry.get("file"), str):
                     listed_paths.add((FIXTURES / entry["file"]).resolve())
 
+    # The groups that were validated, so that one skipped in silence is caught below.
+    checked = set()
+
     for name in sorted(groups):
-        if name not in documents:
+        if name not in SCHEMAS or schema_file(name) not in documents:
             # Either the index names a group this check does not know, which read_index
             # has already reported, or the schema behind it did not survive check 1.
             continue
+        checked.add(name)
         document = documents[schema_file(name)]
         pointer = schema_pointer(name)
         subschema = document if pointer is None else resolve_pointer(document, pointer)
@@ -578,6 +584,14 @@ def check_fixtures(documents, report):
             summary += ", %d read as documents of another kind" % aside
         report.heading(summary)
 
+    # A group whose schema came through check 1 and whose fixtures were never validated is
+    # the failure this check can least afford, because it looks like success: the build
+    # printed that everything checks out while looking at no fixture at all, from the day
+    # the documents came to be keyed by file and the groups stayed keyed by message.
+    for name in sorted(set(SCHEMAS) - checked):
+        if schema_file(name) in documents:
+            report.fail("fixtures/index.json", "the %s fixtures were not validated, and a group skipped in silence proves nothing" % name)
+
     # A fixture nobody indexed is a fixture nobody documented, and the build has no way
     # to know what it was supposed to prove.
     for path in sorted(FIXTURES.rglob("*")):
@@ -652,6 +666,70 @@ def check_every_pattern_is_portable(documents, report):
     report.heading("%d patterns, each one every engine can compile" % counted)
 
 
+# Grammars written in more than one document. A $ref may not leave a document here, so a
+# grammar two documents share is two copies of it, and the copies drifting apart is the
+# very fault the sharing exists to prevent: a secret mount the manifest accepted and the
+# grant redemption refused was a secret the engine dispatched and a strict runner could
+# not write. Each entry names what the grammar is for and every place it is written.
+ONE_GRAMMAR = (
+    (
+        "a secret mount",
+        (
+            ("wire.schema.json", "#/$defs/secretMount/pattern"),
+            ("brick.schema.json", "#/$defs/secret/properties/mount/pattern"),
+        ),
+    ),
+    (
+        "a name the workflow file writes",
+        (
+            ("workflow.schema.json", "#/$defs/identifier/pattern"),
+            ("brick.schema.json", "#/$defs/portName/pattern"),
+            ("brick.schema.json", "#/$defs/secret/properties/name/pattern"),
+            ("wire.schema.json", "#/$defs/identifier/pattern"),
+            ("envelope.schema.json", "#/$defs/identifier/pattern"),
+        ),
+    ),
+    (
+        "a parameter name",
+        (
+            ("workflow.schema.json", "#/$defs/paramName/pattern"),
+            ("brick.schema.json", "#/$defs/paramName/pattern"),
+            ("wire.schema.json", "#/$defs/taskMessage/properties/params/propertyNames/pattern"),
+        ),
+    ),
+)
+
+
+def check_every_copy_agrees(documents, report):
+    """Check 7: a grammar written in several documents reads the same in each of them.
+
+    The first place an entry of ONE_GRAMMAR names is the one the others are held to, so
+    a failure names both pointers and both patterns, and a reader can see which copy moved
+    without opening either document.
+    """
+    for what, copies in ONE_GRAMMAR:
+        written = []
+        for filename, pointer in copies:
+            if filename not in documents:
+                # A document that did not load has been reported already.
+                continue
+            pattern = resolve_pointer(documents[filename], pointer)
+            if not isinstance(pattern, str):
+                report.fail(filename, "%s is where the grammar of %s is written, and holds no pattern" % (pointer, what))
+                continue
+            written.append((filename, pointer, pattern))
+
+        for filename, pointer, pattern in written[1:]:
+            first_file, first_pointer, first = written[0]
+            if pattern != first:
+                report.fail(
+                    filename,
+                    "%s reads %s and %s%s reads %s, and both are the grammar of %s"
+                    % (pointer, pattern, first_file, first_pointer, first, what),
+                )
+    report.heading("%d grammars, each written the same wherever it is copied" % len(ONE_GRAMMAR))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -688,6 +766,8 @@ def main():
         check_fixtures(sound, report)
         print("Patterns")
         check_every_pattern_is_portable(documents, report)
+        print("Grammars")
+        check_every_copy_agrees(documents, report)
     print("Prose")
     check_no_em_dash(report)
 

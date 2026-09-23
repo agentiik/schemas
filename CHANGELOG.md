@@ -8,6 +8,8 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**The build reads the fixtures again.** Since the wire, `tools/check.py` kept its documents by file name and looked each fixture group up by message name, so it validated no fixture at all and still said everything checked out. It looks the group up by its file now and fails a group it skips. The one fixture that went stale meanwhile, a task result in `cancelled`, which is a task state too since the nine, now says `queued`.
+
 **A secret mount has one grammar.** The brick manifest and the task message accepted `/agk/secrets/client.key` and the grant redemption refused it, so the engine could dispatch a mount a strict runner then could not write; the first two also accepted `/agk/secrets/..`. All three now read `^/agk/secrets/[A-Za-z0-9][A-Za-z0-9._-]*$`, written once in the wire as `$defs/secretMount`: a dot inside a name is kept and a name made of dots is refused.
 
 **A workflow names its secrets and nothing more.** The root `secrets` block is a list of names, `secrets: [billing]`, and no longer says where a value lives: the namespace declares each secret's provider and path, through the API or `agentiik_secret` and under `secret:write`, and is confined to its own paths. `$defs/secret` goes, and every example and fixture that wrote a provider or a path moves.

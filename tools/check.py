@@ -476,11 +476,15 @@ def check_fixtures(documents, report):
                 if isinstance(entry, dict) and isinstance(entry.get("file"), str):
                     listed_paths.add((FIXTURES / entry["file"]).resolve())
 
+    # The groups that were validated, so that one skipped in silence is caught below.
+    checked = set()
+
     for name in sorted(groups):
-        if name not in documents:
+        if name not in SCHEMAS or schema_file(name) not in documents:
             # Either the index names a group this check does not know, which read_index
             # has already reported, or the schema behind it did not survive check 1.
             continue
+        checked.add(name)
         document = documents[schema_file(name)]
         pointer = schema_pointer(name)
         subschema = document if pointer is None else resolve_pointer(document, pointer)
@@ -577,6 +581,14 @@ def check_fixtures(documents, report):
         if aside:
             summary += ", %d read as documents of another kind" % aside
         report.heading(summary)
+
+    # A group whose schema came through check 1 and whose fixtures were never validated is
+    # the failure this check can least afford, because it looks like success: the build
+    # printed that everything checks out while looking at no fixture at all, from the day
+    # the documents came to be keyed by file and the groups stayed keyed by message.
+    for name in sorted(set(SCHEMAS) - checked):
+        if schema_file(name) in documents:
+            report.fail("fixtures/index.json", "the %s fixtures were not validated, and a group skipped in silence proves nothing" % name)
 
     # A fixture nobody indexed is a fixture nobody documented, and the build has no way
     # to know what it was supposed to prove.

@@ -105,7 +105,7 @@
           ]
         },
         "secrets": {
-          "description": "Secrets the brick needs, under the names it expects to read them by. The workflow maps its own declared secrets onto these names, and the runner mounts each value on tmpfs at the mount point, never as an environment variable, because a process environment is readable by its children and ends up in diagnostic dumps.",
+          "description": "Secrets the brick needs, under the names it expects to read them by. The workflow maps the secrets it names onto these names, and the runner mounts each value on tmpfs at the mount point, never as an environment variable, because a process environment is readable by its children and ends up in diagnostic dumps.",
           "type": "array",
           "items": { "$ref": "#/$defs/secret" },
           "examples": [
@@ -330,7 +330,7 @@
       ],
       "properties": {
         "name": {
-          "description": "Name the brick knows this secret by, on the grammar a workflow secret name is written on, because the two are the same name: the workflow declares a secret under it and the runner mounts the value at /agk/secrets/<name>. A name this accepts and a workflow cannot write would be a requirement no workflow could satisfy. A workflow can only map secrets of the namespace that owns it, so moving a workflow elsewhere breaks the reference at validation rather than silently carrying access along.",
+          "description": "Name the brick knows this secret by, on the grammar a workflow secret name is written on, because the two are the same name: the workflow names a secret by it and the runner mounts the value at /agk/secrets/<name>. A name this accepts and a workflow cannot write would be a requirement no workflow could satisfy. A workflow can only map secrets the namespace that owns it declares, so moving a workflow elsewhere breaks the reference at validation rather than silently carrying access along.",
           "type": "string",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
           "examples": ["bearer", "billing"]

@@ -8,6 +8,8 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**A workflow names its secrets and nothing more.** The root `secrets` block is a list of names, `secrets: [billing]`, and no longer says where a value lives: the namespace declares each secret's provider and path, through the API or `agentiik_secret` and under `secret:write`, and is confined to its own paths. `$defs/secret` goes, and every example and fixture that wrote a provider or a path moves.
+
 **The grant names the tree.** `taskMessage.grant` now says the redemption answers the tree's URLs too, as `grantRedemption` already required.
 
 **A schema every engine can read.** Two patterns in the grant redemption could not be compiled by any RE2 engine: one used a negative lookahead to say that a path holds no parent segment, and the other wrote the null character the ECMA-262 way. JSON Schema says `pattern` is ECMA-262 and both are legal there, but Go, Rust and everything else built on RE2 refuse the whole document rather than the one keyword, so the wire was a schema only Python could read. Found the first time something outside this repository compiled it, which was a conformance test in the engine. The lookahead becomes a `not` beside the pattern, which says the same thing to everybody, and the build gains a sixth check so it cannot come back.

@@ -131,7 +131,7 @@
             "properties": {
               "name": {
                 "$ref": "#/$defs/identifier",
-                "description": "The secret's name, as the workflow secrets block declares it and as the brick manifest asks for it. Only secrets of the owning namespace can be named, and this is what the runner presents when it redeems the grant, so the name is the whole of what the message says about the secret.",
+                "description": "The secret's name, as the workflow secrets block names it and as the brick manifest asks for it. Only secrets the owning namespace declares can be named, and this is what the runner presents when it redeems the grant, so the name is the whole of what the message says about the secret.",
                 "examples": [
                   "billing",
                   "bearer"
@@ -1862,7 +1862,7 @@
             },
             "secrets": {
               "type": "array",
-              "description": "The values of the secrets the step mounts, and only those: the grant is scoped to this task and to the secrets this task named, so a runner cannot ask for one the workflow did not declare, and a workflow can only declare secrets of the namespace that owns it. The API is the only component that reads the secret store. The controller decided which secrets this task may have and never saw a value, no role reads one through the API at any time, and these strings are what the runner masks out of collected logs by literal match before a line is written to the store. A step that mounts nothing carries an empty list.",
+              "description": "The values of the secrets the step mounts, and only those: the grant is scoped to this task and to the secrets this task named, so a runner cannot ask for one the workflow did not name, and a workflow can only name secrets the namespace that owns it declares. The API is the only component that reads the secret store. The controller decided which secrets this task may have and never saw a value, no role reads one through the API at any time, and these strings are what the runner masks out of collected logs by literal match before a line is written to the store. A step that mounts nothing carries an empty list.",
               "items": {
                 "type": "object",
                 "required": [

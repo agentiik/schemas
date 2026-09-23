@@ -269,10 +269,16 @@
           "reference": "https://agentiik.github.io/docs/#step-keywords"
         },
         {
-          "file": "workflow/invalid/secret-without-provider.yaml",
-          "rule": "A secret declared without the store it is read from. The value is never written in the file, so the provider is all there is to resolve it by.",
+          "file": "workflow/invalid/secret-with-provider-and-path.yaml",
+          "rule": "A secret written with the store it is read from. The namespace declares where each of its secrets lives, provider and path, and is confined to its own paths; the file names a secret and nothing more, so that pushing a workflow cannot aim it at whatever the store holds.",
           "refused_by": "schema",
-          "reference": "https://agentiik.github.io/docs/#yaml"
+          "reference": "https://agentiik.github.io/docs/#secrets"
+        },
+        {
+          "file": "workflow/invalid/secret-name-is-a-path.yaml",
+          "rule": "A secret named by where it sits in the store. A secret is named on the identifier grammar, the name a step mounts it by and the namespace declares it under, and where its value lives belongs to that declaration rather than to the file.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#secrets"
         },
         {
           "file": "workflow/invalid/cron-not-five-fields.yaml",
@@ -326,7 +332,7 @@
         },
         {
           "file": "workflow/invalid/secret-not-declared.yaml",
-          "rule": "A step mounting a secret the workflow never declared. Secrets are mounted by the name the secrets block gives them, and only secrets of the owning namespace can be named there.",
+          "rule": "A step mounting a secret the workflow never names. Secrets are mounted by the name the secrets block lists them under, and only secrets the owning namespace declares can be named there.",
           "refused_by": "validator",
           "reference": "https://agentiik.github.io/docs/#step-keywords"
         },

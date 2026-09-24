@@ -8,6 +8,8 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**A namespace is never a word the API routes on.** `$defs/namespace` in the wire and the workflow file refuses `auth`, `me`, `users`, `groups`, `service-accounts`, `namespaces`, `runners`, `runner-pools`, `bus`, `tasks`, `bricks`, `runs` and `artifacts`, since the API's first path segment decides the route; `metadata.namespace` now refers to it, and a workflow path or a call may not start with one. The build holds the copies to one spelling, and two invalid fixtures pin the rule.
+
 **A runner renews its credential on the wire.** `$defs/runnerRotation` is the exchange behind `POST /api/v1/runners/rotate`: the runner and `at`, signed by the key the runner joined with, answered with a new credential and its `rotate_by`. A fixture group `runner-rotation` holds one rotation that must be accepted and one that must be refused, a request carrying the credential it renews.
 
 **`internal` says what it isolates.** The `network` descriptions in the wire, the workflow file and the brick manifest said an internal network reaches the installation's own services. It is a network of the task's own with no route out and no address of the runner host in it, which is what the runner builds.

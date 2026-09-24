@@ -97,6 +97,12 @@
           "reference": "https://agentiik.github.io/docs/#yaml"
         },
         {
+          "file": "workflow/invalid/namespace-reserved.yaml",
+          "rule": "A namespace named after a word the API routes on. The API's first path segment decides the route, so auth, me, users, groups, service-accounts, namespaces, runners, runner-pools, bus, tasks, bricks, runs and artifacts cannot name a namespace.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#scopes-and-resolution"
+        },
+        {
           "file": "workflow/invalid/step-name-not-an-identifier.yaml",
           "rule": "A step name that is not an identifier. The name is used in needs, in expressions and in the run detail, so it stays to letters, digits, hyphens and underscores.",
           "refused_by": "schema",
@@ -648,6 +654,11 @@
         {
           "file": "wire/invalid/task-message-without-grant.json",
           "rule": "the grant is what turns the names in the message into values, and a message without one asks a runner to do work it cannot fetch the inputs for",
+          "refused_by": "schema"
+        },
+        {
+          "file": "wire/invalid/task-message-namespace-reserved.json",
+          "rule": "a namespace is never one of the words the API's first path segment routes on, so a message naming runs as its namespace names one no run can be owned by",
           "refused_by": "schema"
         },
         {

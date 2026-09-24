@@ -699,6 +699,20 @@ ONE_GRAMMAR = (
             ("wire.schema.json", "#/$defs/taskMessage/properties/params/propertyNames/pattern"),
         ),
     ),
+    (
+        "the words a namespace may not be",
+        (
+            ("wire.schema.json", "#/$defs/namespace/not/pattern"),
+            ("workflow.schema.json", "#/$defs/namespace/not/pattern"),
+        ),
+    ),
+    (
+        "the words a workflow path may not start with",
+        (
+            ("workflow.schema.json", "#/$defs/workflowPath/not/pattern"),
+            ("workflow.schema.json", "#/$defs/step/properties/workflow/oneOf/0/not/pattern"),
+        ),
+    ),
 )
 
 

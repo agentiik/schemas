@@ -70,6 +70,7 @@ SCHEMAS = {
     "grant-redemption": {"file": "wire.schema.json", "pointer": "#/$defs/grantRedemption"},
     "log-shipment": {"file": "wire.schema.json", "pointer": "#/$defs/logShipment"},
     "runner-pool": {"file": "wire.schema.json", "pointer": "#/$defs/runnerPool"},
+    "stop": {"file": "wire.schema.json", "pointer": "#/$defs/stop"},
 }
 
 

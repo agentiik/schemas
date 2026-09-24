@@ -67,6 +67,7 @@ SCHEMAS = {
     "task-result": {"file": "wire.schema.json", "pointer": "#/$defs/taskResult"},
     "runner-registration": {"file": "wire.schema.json", "pointer": "#/$defs/runnerRegistration"},
     "runner-heartbeat": {"file": "wire.schema.json", "pointer": "#/$defs/runnerHeartbeat"},
+    "runner-rotation": {"file": "wire.schema.json", "pointer": "#/$defs/runnerRotation"},
     "grant-redemption": {"file": "wire.schema.json", "pointer": "#/$defs/grantRedemption"},
     "log-shipment": {"file": "wire.schema.json", "pointer": "#/$defs/logShipment"},
     "runner-pool": {"file": "wire.schema.json", "pointer": "#/$defs/runnerPool"},

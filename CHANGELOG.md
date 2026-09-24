@@ -8,6 +8,8 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**A heartbeat's cancel list never names a lost key.** `runnerHeartbeat.response.cancel` said it carried a key declared lost and requeued elsewhere, which would stop the one host whose ending a requeue that comes back to it is answered from: a host that was only cut off finishes its key. It now says what it carries, each named key whose dispatch bound to this runner the control plane ended `cancelled` or `timed_out`, and that it is the backstop for a stop on `agentiik.stops`, which keeps nothing. The response no longer calls itself the only way an order reaches a runner, since a stop reaches one sooner on the bus.
+
 **A stop is on the wire.** The controller publishes `{task, reason}` on `agentiik.stops` to have a task in flight stopped, and a runner reads it, and the wire named neither half, so each side was written against the other rather than against one document. `$defs/stop` is that message: the idempotency key of the task, and a reason of `superseded`, `sibling_failed`, `deadline` or `cancelled`, closed because the reason decides whether the stopped task ends `timed_out` or `cancelled`. A fixture group `stop` holds one stop that must be accepted and one that must be refused, a reason written as the task state it ends in.
 
 **A grammar two documents share is held to one spelling.** A secret mount, a name the workflow file writes and a parameter name are each written in more than one document, because a `$ref` may not leave one, and nothing compared the copies: only a `$comment` asked for it. The build compares them now and names both pointers when one moves.

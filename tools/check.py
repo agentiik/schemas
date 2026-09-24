@@ -65,6 +65,7 @@ SCHEMAS = {
     "envelope": {"file": "envelope.schema.json"},
     "task-message": {"file": "wire.schema.json", "pointer": "#/$defs/taskMessage"},
     "task-result": {"file": "wire.schema.json", "pointer": "#/$defs/taskResult"},
+    "task-progress": {"file": "wire.schema.json", "pointer": "#/$defs/taskProgress"},
     "runner-registration": {"file": "wire.schema.json", "pointer": "#/$defs/runnerRegistration"},
     "runner-heartbeat": {"file": "wire.schema.json", "pointer": "#/$defs/runnerHeartbeat"},
     "runner-rotation": {"file": "wire.schema.json", "pointer": "#/$defs/runnerRotation"},

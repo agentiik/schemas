@@ -8,6 +8,14 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**A log is addressed by its task's key.** The log shipment's answer, the result examples and seven fixtures gave `log.uri` as `.../invoice%2F1` for a task whose key is `invoice/2/3/8`; each now escapes the key it sits beside. The shipment's description no longer says one sentence twice.
+
+**A log shipment says every way a chunk is taken.** `accepted` names a chunk past a gap, kept nowhere, as a reason for zero beside a redelivery and a chunk after the cap, and `next_seq` says it never runs past a gap only until the cap, after which a chunk moves it past itself.
+
+**A step goes to one pool.** `taskMessage.runs_on` says an empty list goes to the pool `default` that every installation is created with, and `$defs/runsOn` in the workflow file says the step goes to the one pool whose labels include every label, failing with 125 on none or several.
+
+**A peak resident set is a sampled one.** `max_rss_bytes` no longer claims that a task killed for memory reports its ceiling: it is the largest of the samples read, so a peak between two is missed.
+
 **A usage block says what was measured.** `taskResult.usage` required `cpu_seconds` and `max_rss_bytes`, which a runner reads off samples of the container's statistics taken while it runs, so a container that exited before the first sample had to report two zeros nobody measured. The two are now optional and travel together or not at all (`dependentRequired`), and `image_pull_ms`, timed before the container starts, is still required. A fixture holds a success with no sample, and another refuses a block carrying one figure without the other.
 
 **A task result says how a stopped or refused container ended.** A `timed_out` or `cancelled` task reports the code its stop left wherever its container started, a runner reports 121 for a container that exited 0 and whose outputs broke the output contract, and a task that did not succeed publishes no port, as the engine rules for a failed shard: the outputs description no longer says a failed task may carry ports, and the failed example and fixture, as the page prints them, list none. The timed out fixture carries 137. The code of a stopped task is described and not enforced, so that a requeue answered from a record written before the code was kept is still answered.

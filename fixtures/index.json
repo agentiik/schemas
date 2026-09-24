@@ -7,6 +7,7 @@
     "envelope": "../envelope.schema.json",
     "task-message": "../wire.schema.json",
     "task-result": "../wire.schema.json",
+    "task-progress": "../wire.schema.json",
     "runner-registration": "../wire.schema.json",
     "runner-heartbeat": "../wire.schema.json",
     "runner-rotation": "../wire.schema.json",
@@ -626,6 +627,11 @@
           "source": "https://agentiik.github.io/docs/#running-a-script-instead-of-a-brick"
         },
         {
+          "file": "wire/valid/task-message-files-short-form.json",
+          "covers": "the files of the load step the documentation prints: the short form of a selector, a path or glob with no to because the step asked for no relocation and the file stays where it is under /agk/repo/, beside a long form that relocates one",
+          "source": "https://agentiik.github.io/docs/#the-workflow-repository"
+        },
+        {
           "file": "wire/valid/task-message-secret-mount-with-a-dot.json",
           "covers": "a secret whose mount carries a dot, client.key, on the grammar the brick manifest declared it on and the grant redemption answers it on"
         }
@@ -692,6 +698,30 @@
         {
           "file": "wire/invalid/task-result-state-of-a-run.json",
           "rule": "queued is a run state, not a task state, and the two vocabularies are separate on purpose",
+          "refused_by": "schema"
+        }
+      ]
+    },
+    "task-progress": {
+      "valid": [
+        {
+          "file": "wire/valid/task-progress-running.json",
+          "covers": "a runner saying the container of a task it holds has started"
+        },
+        {
+          "file": "wire/valid/task-progress-publishing.json",
+          "covers": "a runner saying the container has exited and its outputs are being collected and uploaded"
+        }
+      ],
+      "invalid": [
+        {
+          "file": "wire/invalid/task-progress-an-ending.json",
+          "rule": "progress is running or publishing and never an ending, which only a result reports",
+          "refused_by": "schema"
+        },
+        {
+          "file": "wire/invalid/task-progress-carrying-state.json",
+          "rule": "progress never carries state, the keyword a result is told apart by, so that no document is both a result and a progress message",
           "refused_by": "schema"
         }
       ]

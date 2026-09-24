@@ -8,6 +8,10 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**A task's progress is on the wire.** A runner publishes `running` once a task's container has started and `publishing` once it has exited and its outputs are being uploaded, on the subject its results take, and the wire named neither. `$defs/taskProgress` is that message: the dispatch and its idempotency key, the runner, and `progress`, spelled apart from a result's `state` so that no document is both, and closed so that it cannot come to carry an outcome. `taskResult.state` now names it as what says a task is running. A fixture group `task-progress` holds one message for each state and refuses an ending and a message carrying `state`.
+
+**A file selector may leave `to` out.** A task message named every file with a `to`, which the short form of a selector, `- ./sql/**`, never gives: the file stays where it is under `/agk/repo/`. `files[].to` is optional now and `from` says it holds a path or a glob, with a fixture taken from the `load` step the documentation prints, one short form beside one relocation.
+
 **A namespace is never a word the API routes on.** `$defs/namespace` in the wire and the workflow file refuses `auth`, `me`, `users`, `groups`, `service-accounts`, `namespaces`, `runners`, `runner-pools`, `bus`, `tasks`, `bricks`, `runs` and `artifacts`, since the API's first path segment decides the route; `metadata.namespace` now refers to it, and a workflow path or a call may not start with one. The build holds the copies to one spelling, and two invalid fixtures pin the rule.
 
 **A runner renews its credential on the wire.** `$defs/runnerRotation` is the exchange behind `POST /api/v1/runners/rotate`: the runner and `at`, signed by the key the runner joined with, answered with a new credential and its `rotate_by`. A fixture group `runner-rotation` holds one rotation that must be accepted and one that must be refused, a request carrying the credential it renews.

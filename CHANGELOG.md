@@ -8,6 +8,8 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**A stop is on the wire.** The controller publishes `{task, reason}` on `agentiik.stops` to have a task in flight stopped, and a runner reads it, and the wire named neither half, so each side was written against the other rather than against one document. `$defs/stop` is that message: the idempotency key of the task, and a reason of `superseded`, `sibling_failed`, `deadline` or `cancelled`, closed because the reason decides whether the stopped task ends `timed_out` or `cancelled`. A fixture group `stop` holds one stop that must be accepted and one that must be refused, a reason written as the task state it ends in.
+
 **A grammar two documents share is held to one spelling.** A secret mount, a name the workflow file writes and a parameter name are each written in more than one document, because a `$ref` may not leave one, and nothing compared the copies: only a `$comment` asked for it. The build compares them now and names both pointers when one moves.
 
 **The build reads the fixtures again.** Since the wire, `tools/check.py` kept its documents by file name and looked each fixture group up by message name, so it validated no fixture at all and still said everything checked out. It looks the group up by its file now and fails a group it skips. The one fixture that went stale meanwhile, a task result in `cancelled`, which is a task state too since the nine, now says `queued`.

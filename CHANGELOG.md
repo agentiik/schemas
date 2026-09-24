@@ -8,6 +8,10 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**A runner renews its credential on the wire.** `$defs/runnerRotation` is the exchange behind `POST /api/v1/runners/rotate`: the runner and `at`, signed by the key the runner joined with, answered with a new credential and its `rotate_by`. A fixture group `runner-rotation` holds one rotation that must be accepted and one that must be refused, a request carrying the credential it renews.
+
+**`internal` says what it isolates.** The `network` descriptions in the wire, the workflow file and the brick manifest said an internal network reaches the installation's own services. It is a network of the task's own with no route out and no address of the runner host in it, which is what the runner builds.
+
 **A heartbeat's cancel list never names a lost key.** `runnerHeartbeat.response.cancel` said it carried a key declared lost and requeued elsewhere, which would stop the one host whose ending a requeue that comes back to it is answered from: a host that was only cut off finishes its key. It now says what it carries, each named key whose dispatch bound to this runner the control plane ended `cancelled` or `timed_out`, and that it is the backstop for a stop on `agentiik.stops`, which keeps nothing. The response no longer calls itself the only way an order reaches a runner, since a stop reaches one sooner on the bus.
 
 **A stop is on the wire.** The controller publishes `{task, reason}` on `agentiik.stops` to have a task in flight stopped, and a runner reads it, and the wire named neither half, so each side was written against the other rather than against one document. `$defs/stop` is that message: the idempotency key of the task, and a reason of `superseded`, `sibling_failed`, `deadline` or `cancelled`, closed because the reason decides whether the stopped task ends `timed_out` or `cancelled`. A fixture group `stop` holds one stop that must be accepted and one that must be refused, a reason written as the task state it ends in.

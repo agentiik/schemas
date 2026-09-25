@@ -8,6 +8,8 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+**A truncated log says why.** `taskResult.log.truncated` means the store holds less than the container wrote: the cap was reached, the closing chunk was never answered, or the log was resumed after an agent restart, and the shipment's answer says the result reports those too.
+
 **A log is addressed by its task's key.** The log shipment's answer, the result examples and seven fixtures gave `log.uri` as `.../invoice%2F1` for a task whose key is `invoice/2/3/8`; each now escapes the key it sits beside. The shipment's description no longer says one sentence twice.
 
 **A log shipment says every way a chunk is taken.** `accepted` names a chunk past a gap, kept nowhere, as a reason for zero beside a redelivery and a chunk after the cap, and `next_seq` says it never runs past a gap only until the cap, after which a chunk moves it past itself.

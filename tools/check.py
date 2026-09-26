@@ -17,7 +17,8 @@ reports everything that is wrong rather than the first thing:
      refuses it;
   5. no em dash appears in any text file of the repository;
   6. every pattern is one Go, Rust and every other RE2 engine can compile;
-  7. a grammar written in more than one document reads the same in each of them.
+  7. a grammar written in more than one document reads the same in each of them, and a
+     grammar written inside a longer pattern reads the same as where it is defined.
 
 Check 2 is the one the documentation asks for by name: the language reference on the
 site and the workflow.language tool are projections of the description and examples
@@ -73,6 +74,15 @@ SCHEMAS = {
     "log-shipment": {"file": "wire.schema.json", "pointer": "#/$defs/logShipment"},
     "runner-pool": {"file": "wire.schema.json", "pointer": "#/$defs/runnerPool"},
     "stop": {"file": "wire.schema.json", "pointer": "#/$defs/stop"},
+    "principal": {"file": "wire.schema.json", "pointer": "#/$defs/principal"},
+    "principal-ref": {"file": "wire.schema.json", "pointer": "#/$defs/principalRef"},
+    "credential": {"file": "wire.schema.json", "pointer": "#/$defs/credential"},
+    "api-token": {"file": "wire.schema.json", "pointer": "#/$defs/apiToken"},
+    "access-grant": {"file": "wire.schema.json", "pointer": "#/$defs/accessGrant"},
+    "role": {"file": "wire.schema.json", "pointer": "#/$defs/role"},
+    "permission": {"file": "wire.schema.json", "pointer": "#/$defs/permission"},
+    "namespace-record": {"file": "wire.schema.json", "pointer": "#/$defs/namespaceRecord"},
+    "auth-policy": {"file": "wire.schema.json", "pointer": "#/$defs/authPolicy"},
 }
 
 
@@ -717,6 +727,47 @@ ONE_GRAMMAR = (
 )
 
 
+# Grammars written inside a longer pattern. A principal reference is one string holding a
+# name, group:team-finance or finance/agentiik, and JSON Schema has no way to build a
+# pattern out of another one, so the name grammar is written again inside it. Each entry
+# names what the pattern is, where it is written, how it is composed, and the patterns it
+# is composed of: {0} stands for the first of them without its anchors, {1} for the
+# second. The composed pattern has to be exactly the template filled in, so a name
+# grammar that moves takes every reference written on it along, or the build fails.
+COMPOSED_GRAMMAR = (
+    (
+        "a group reference",
+        ("wire.schema.json", "#/$defs/groupRef/pattern"),
+        "^group:{0}$",
+        (("wire.schema.json", "#/$defs/namespace/pattern"),),
+    ),
+    (
+        "a service account reference",
+        ("wire.schema.json", "#/$defs/serviceAccountRef/pattern"),
+        "^{0}/{0}$",
+        (("wire.schema.json", "#/$defs/namespace/pattern"),),
+    ),
+    (
+        "a workflow a grant is scoped to",
+        ("wire.schema.json", "#/$defs/grantScope/oneOf/1/pattern"),
+        "^{0}/{1}$",
+        (
+            ("wire.schema.json", "#/$defs/namespace/pattern"),
+            ("wire.schema.json", "#/$defs/identifier/pattern"),
+        ),
+    ),
+)
+
+
+def unanchored(pattern):
+    """A pattern without the ^ and $ that anchor it, ready to be written inside another."""
+    if pattern.startswith("^"):
+        pattern = pattern[1:]
+    if pattern.endswith("$"):
+        pattern = pattern[:-1]
+    return pattern
+
+
 def check_every_copy_agrees(documents, report):
     """Check 7: a grammar written in several documents reads the same in each of them.
 
@@ -745,6 +796,30 @@ def check_every_copy_agrees(documents, report):
                     % (pointer, pattern, first_file, first_pointer, first, what),
                 )
     report.heading("%d grammars, each written the same wherever it is copied" % len(ONE_GRAMMAR))
+
+    for what, (filename, pointer), template, parts in COMPOSED_GRAMMAR:
+        if filename not in documents or any(part_file not in documents for part_file, _ in parts):
+            continue
+        composed = resolve_pointer(documents[filename], pointer)
+        if not isinstance(composed, str):
+            report.fail(filename, "%s is where the grammar of %s is written, and holds no pattern" % (pointer, what))
+            continue
+        pieces = []
+        for part_file, part_pointer in parts:
+            piece = resolve_pointer(documents[part_file], part_pointer)
+            if not isinstance(piece, str):
+                report.fail(part_file, "%s is what %s is composed of, and holds no pattern" % (part_pointer, what))
+                break
+            pieces.append(unanchored(piece))
+        else:
+            expected = template.format(*pieces)
+            if composed != expected:
+                report.fail(
+                    filename,
+                    "%s reads %s, and the grammar of %s composed from %s reads %s"
+                    % (pointer, composed, what, ", ".join(p for _, p in parts), expected),
+                )
+    report.heading("%d composed grammars, each written as the grammars it is made of" % len(COMPOSED_GRAMMAR))
 
 
 def main():

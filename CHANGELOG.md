@@ -6,63 +6,42 @@ Every repository of the project carries the same version and is tagged at the sa
 
 `0.y.z` promises nothing beyond itself: what a release here describes may be gone in the next one.
 
-## Unreleased
+## v0.2.0, 2026-09-26
 
-**A truncated log says why.** `taskResult.log.truncated` means the store holds less than the container wrote: the cap was reached, the closing chunk was never answered, or the log was resumed after an agent restart, and the shipment's answer says the result reports those too.
+### Wire
 
-**A log is addressed by its task's key.** The log shipment's answer, the result examples and seven fixtures gave `log.uri` as `.../invoice%2F1` for a task whose key is `invoice/2/3/8`; each now escapes the key it sits beside. The shipment's description no longer says one sentence twice.
+- `wire.schema.json` describes every message between the controller, the bus, the runner and the API: the task message and result, a runner's registration and heartbeat, the grant redemption, a log shipment, and a runner pool with its join token. Twelve invalid fixtures pin what the shapes refuse: no secret value, input URL or image tag in a task message, no run state in a task result, no private key in a registration.
+- Run and task identifiers hold their alphabet and not a length, so the task message the documentation prints is accepted, and is a fixture.
+- A task result carries all nine task states, `timed_out` and `cancelled` among them.
+- A log is addressed `agk://log/<run>/<task>`, the task escaped as a path segment, and every example and fixture escapes the key it sits beside.
+- An idempotency key a fan-out produced has five segments, the shard carrying its cardinality.
+- The task message carries `script`, `before_script`, `after_script`, `shell`, `files`, `timeout`, `idempotent` and `cache_key`, so it can describe a script step.
+- `files[].to` is optional, and `from` holds a path or a glob.
+- `taskMessage.grant` says the redemption answers the tree's URLs too.
+- The two grant redemption patterns no RE2 engine could compile are rewritten, the lookahead as a `not`.
+- `$defs/secretMount` is the one grammar of a secret mount in the brick manifest, the task message and the redemption: `^/agk/secrets/[A-Za-z0-9][A-Za-z0-9._-]*$`.
+- `$defs/stop` is the message on `agentiik.stops`: a task's idempotency key and a reason of `superseded`, `sibling_failed`, `deadline` or `cancelled`.
+- `$defs/runnerRotation` is the exchange behind `POST /api/v1/runners/rotate`.
+- `$defs/taskProgress` carries `running` and `publishing`, apart from a result's `state`.
+- `runnerHeartbeat.response.cancel` names each key whose bound dispatch ended `cancelled` or `timed_out`, never a lost one, as the backstop for a stop on `agentiik.stops`.
+- A `timed_out` or `cancelled` task reports the exit code its stop left, a broken output contract reports 121, and a task that did not succeed publishes no port.
+- In `taskResult.usage`, `cpu_seconds` and `max_rss_bytes` are optional and travel together, and `image_pull_ms` stays required. `max_rss_bytes` is the largest sample read.
+- `taskMessage.runs_on` with an empty list goes to the pool `default`.
+- `taskResult.log.truncated` covers the cap, an unanswered closing chunk and a log resumed after a restart.
+- A log shipment's `accepted` and `next_seq` describe a chunk past a gap and a chunk after the cap.
 
-**A log shipment says every way a chunk is taken.** `accepted` names a chunk past a gap, kept nowhere, as a reason for zero beside a redelivery and a chunk after the cap, and `next_seq` says it never runs past a gap only until the cap, after which a chunk moves it past itself.
+### Workflow file and brick manifest
 
-**A step goes to one pool.** `taskMessage.runs_on` says an empty list goes to the pool `default` that every installation is created with, and `$defs/runsOn` in the workflow file says the step goes to the one pool whose labels include every label, failing with 125 on none or several.
+- The root `secrets` block is a list of names, `secrets: [billing]`: the namespace declares each secret's provider and path. `$defs/secret` is gone.
+- `$defs/namespace` refuses the words the API's first path segment routes on: `auth`, `me`, `users`, `groups`, `service-accounts`, `namespaces`, `runners`, `runner-pools`, `bus`, `tasks`, `bricks`, `runs` and `artifacts`.
+- `$defs/runsOn`: a step goes to the one pool whose labels include every label, and fails with 125 on none or several.
+- `network: internal` is described as a network of the task's own, with no route out and no address of the runner host, in the wire, the workflow file and the manifest.
 
-**A peak resident set is a sampled one.** `max_rss_bytes` no longer claims that a task killed for memory reports its ceiling: it is the largest of the samples read, so a peak between two is missed.
+### Build
 
-**A usage block says what was measured.** `taskResult.usage` required `cpu_seconds` and `max_rss_bytes`, which a runner reads off samples of the container's statistics taken while it runs, so a container that exited before the first sample had to report two zeros nobody measured. The two are now optional and travel together or not at all (`dependentRequired`), and `image_pull_ms`, timed before the container starts, is still required. A fixture holds a success with no sample, and another refuses a block carrying one figure without the other.
-
-**A task result says how a stopped or refused container ended.** A `timed_out` or `cancelled` task reports the code its stop left wherever its container started, a runner reports 121 for a container that exited 0 and whose outputs broke the output contract, and a task that did not succeed publishes no port, as the engine rules for a failed shard: the outputs description no longer says a failed task may carry ports, and the failed example and fixture, as the page prints them, list none. The timed out fixture carries 137. The code of a stopped task is described and not enforced, so that a requeue answered from a record written before the code was kept is still answered.
-
-**A task's progress is on the wire.** A runner publishes `running` once a task's container has started and `publishing` once it has exited and its outputs are being uploaded, on the subject its results take, and the wire named neither. `$defs/taskProgress` is that message: the dispatch and its idempotency key, the runner, and `progress`, spelled apart from a result's `state` so that no document is both, and closed so that it cannot come to carry an outcome. `taskResult.state` now names it as what says a task is running. A fixture group `task-progress` holds one message for each state and refuses an ending and a message carrying `state`.
-
-**A file selector may leave `to` out.** A task message named every file with a `to`, which the short form of a selector, `- ./sql/**`, never gives: the file stays where it is under `/agk/repo/`. `files[].to` is optional now and `from` says it holds a path or a glob, with a fixture taken from the `load` step the documentation prints, one short form beside one relocation.
-
-**A namespace is never a word the API routes on.** `$defs/namespace` in the wire and the workflow file refuses `auth`, `me`, `users`, `groups`, `service-accounts`, `namespaces`, `runners`, `runner-pools`, `bus`, `tasks`, `bricks`, `runs` and `artifacts`, since the API's first path segment decides the route; `metadata.namespace` now refers to it, and a workflow path or a call may not start with one. The build holds the copies to one spelling, and two invalid fixtures pin the rule.
-
-**A runner renews its credential on the wire.** `$defs/runnerRotation` is the exchange behind `POST /api/v1/runners/rotate`: the runner and `at`, signed by the key the runner joined with, answered with a new credential and its `rotate_by`. A fixture group `runner-rotation` holds one rotation that must be accepted and one that must be refused, a request carrying the credential it renews.
-
-**`internal` says what it isolates.** The `network` descriptions in the wire, the workflow file and the brick manifest said an internal network reaches the installation's own services. It is a network of the task's own with no route out and no address of the runner host in it, which is what the runner builds.
-
-**A heartbeat's cancel list never names a lost key.** `runnerHeartbeat.response.cancel` said it carried a key declared lost and requeued elsewhere, which would stop the one host whose ending a requeue that comes back to it is answered from: a host that was only cut off finishes its key. It now says what it carries, each named key whose dispatch bound to this runner the control plane ended `cancelled` or `timed_out`, and that it is the backstop for a stop on `agentiik.stops`, which keeps nothing. The response no longer calls itself the only way an order reaches a runner, since a stop reaches one sooner on the bus.
-
-**A stop is on the wire.** The controller publishes `{task, reason}` on `agentiik.stops` to have a task in flight stopped, and a runner reads it, and the wire named neither half, so each side was written against the other rather than against one document. `$defs/stop` is that message: the idempotency key of the task, and a reason of `superseded`, `sibling_failed`, `deadline` or `cancelled`, closed because the reason decides whether the stopped task ends `timed_out` or `cancelled`. A fixture group `stop` holds one stop that must be accepted and one that must be refused, a reason written as the task state it ends in.
-
-**A grammar two documents share is held to one spelling.** A secret mount, a name the workflow file writes and a parameter name are each written in more than one document, because a `$ref` may not leave one, and nothing compared the copies: only a `$comment` asked for it. The build compares them now and names both pointers when one moves.
-
-**The build reads the fixtures again.** Since the wire, `tools/check.py` kept its documents by file name and looked each fixture group up by message name, so it validated no fixture at all and still said everything checked out. It looks the group up by its file now and fails a group it skips. The one fixture that went stale meanwhile, a task result in `cancelled`, which is a task state too since the nine, now says `queued`.
-
-**A secret mount has one grammar.** The brick manifest and the task message accepted `/agk/secrets/client.key` and the grant redemption refused it, so the engine could dispatch a mount a strict runner then could not write; the first two also accepted `/agk/secrets/..`. All three now read `^/agk/secrets/[A-Za-z0-9][A-Za-z0-9._-]*$`, written once in the wire as `$defs/secretMount`: the file name begins with a letter or a digit and goes on in letters, digits, dots, hyphens and underscores. So `client.key` is kept, and `.`, `..`, a dotfile such as `.netrc` and any other character, `+` or `~` among them, are refused where the manifest and the task message used to take them. The manifest and the step now also say that a value lands at the mount the manifest gives, and at `/agk/secrets/<name>` only where it gives none.
-
-**A workflow names its secrets and nothing more.** The root `secrets` block is a list of names, `secrets: [billing]`, and no longer says where a value lives: the namespace declares each secret's provider and path, through the API or `agentiik_secret` and under `secret:write`, and is confined to its own paths. `$defs/secret` goes, and every example and fixture that wrote a provider or a path moves.
-
-**The grant names the tree.** `taskMessage.grant` now says the redemption answers the tree's URLs too, as `grantRedemption` already required.
-
-**A schema every engine can read.** Two patterns in the grant redemption could not be compiled by any RE2 engine: one used a negative lookahead to say that a path holds no parent segment, and the other wrote the null character the ECMA-262 way. JSON Schema says `pattern` is ECMA-262 and both are legal there, but Go, Rust and everything else built on RE2 refuse the whole document rather than the one keyword, so the wire was a schema only Python could read. Found the first time something outside this repository compiled it, which was a conformance test in the engine. The lookahead becomes a `not` beside the pattern, which says the same thing to everybody, and the build gains a sixth check so it cannot come back.
-
-**A task message names everything the runner needs, and now it can.** The message could not describe a step whose image is a base image rather than a brick: `script`, `before_script`, `after_script` and `shell` had nowhere to be written, and neither did `files`, `timeout`, `idempotent` or `cache_key`. A closed document refuses what it does not name, so the wire was refusing the engine's own step kind. All eight arrive, with a fixture that is a script step end to end. None of them is a payload or a secret: a command is what the workflow author wrote in `agentiik.yaml`, and the bytes of a file are still fetched from the tree by redeeming the grant.
-
-**The idempotency key is five segments where a fan-out produced it.** The pattern admitted four, which was neither what the page prints, nor what the engine mints, nor what the database generates. A shard is an index and a cardinality, `AGK_SHARD` carries `3/8`, and a key that dropped the `8` could not say which fan-out it belonged to: the third of eight and the third of six are different units of work with one name. Every example and every fixture that wrote a four-segment key moves, and the fixture named for a fan-out now carries the shard it was named for and did not have.
-
-**A log has a URI of its own.** The wire pinned a log's address as `^agk://run/`, which is where an artifact lives, and left the rest unpinned because the documentation's printed example, `agk://run/<run>/<step>/log`, could not be right: a step fanned out into eight shards has eight logs and that address names no shard. The answer is that a log is not addressed like an artifact at all. The scheme names a kind in its first segment, and a log is its own: `agk://log/<run>/<task>`. A log belongs to one task, and a task identifier tells eight shards apart exactly, that being what a task identifier is for. The task carries slashes, so it is escaped as a path segment. Both places the wire names a log URI move, with their examples and the seven fixtures that carry one.
-
-**A task result can say it timed out.** The wire took the seven task states the page drew and the engine has produced nine since v0.1.0: a task stopped at its deadline and a task stopped by a cancellation are neither of them `failed`. So a runner could produce a result the controller would refuse. The page names all nine now and the enumeration follows it, with the four endings told apart in the description because a retry policy reads the cause.
-
-**The wire accepts the page it was written from.** The first version imposed twenty-six characters on a run and task identifier, which is what the engine mints, and so refused the task message the documentation prints, in four places at once: its `task_id`, its `run_id`, its idempotency key and its grant. The page elides identifiers deliberately, to fifteen and twelve characters, and `envelope.schema.json` had already settled the question and written down why. The alphabet is held and the length is not, the same reading in both documents, and the message the page prints is now a fixture so that the next version cannot refuse it either.
-
-**The wire, written down first.** `wire.schema.json` describes every message that travels between the controller, the bus, the runner and the API: the task message and the task result, a runner's registration, its ten second heartbeat, the redemption of a task's grant, a log shipment, and a runner pool with the token issued from it. One document rather than one per message, because they share a vocabulary and a `$ref` may not leave a document here, so the run and task states, the identifiers, the digests and the idempotency key are written once and referenced.
-
-What the shapes refuse is the point. A task message carries no secret value, no input URL and no image tag, and the objects are closed so that none of the three can be written at all rather than merely being undocumented. A task result ends in a task state and never a run state. A registration carries the public key and has no room for the private one. Twelve invalid fixtures pin those refusals, one rule each.
-
-`tools/check.py` grew two things to hold it: a fixture group may name a member of a document rather than a whole document, so a fixture still pins one message, and a document that is a family has no instance at its root to illustrate.
+- `tools/check.py` reads the fixtures again, having validated none since the wire, and fails a group it skips. A fixture group may name a member of a document.
+- The build compares the copies of a grammar two documents share and names both pointers when one moves.
+- A sixth check refuses a pattern an RE2 engine cannot compile.
 
 ## v0.1.2, 2026-09-13
 

@@ -1032,7 +1032,7 @@
         },
         {
           "file": "wire/valid/access-grant-deny.json",
-          "covers": "the documentation's deny: alice keeps workflow:run on monthly-invoicing and loses run:read_data, whatever any allow gives"
+          "covers": "the documentation's deny: alice, editor of monthly-invoicing, keeps the rest of the role there and loses run:read_data, whatever any allow gives"
         }
       ],
       "invalid": [

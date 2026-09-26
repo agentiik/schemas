@@ -1,8 +1,6 @@
 # schemas
 
-The contract every other repository reads: JSON Schema 2020-12 documents for the
-workflow file, the brick manifest and the envelope. The OpenAPI document of the API
-belongs here too and arrives in a later release.
+The contract every other repository reads: JSON Schema 2020-12 documents for the workflow file, the brick manifest, the envelope and the wire, and the OpenAPI document of the API.
 
 This repository carries the same version as every other and is tagged at the same
 moment, and every repository that consumes it pins that version: the core, the bricks,
@@ -21,8 +19,11 @@ states it; where it is silent, the schema takes the reading that cannot contradi
 | [`brick.schema.json`](brick.schema.json) | `https://schemas.agentiik.dev/brick.schema.json` | `/agk/brick.yaml`, the manifest an image carries to become a brick: its ports, its parameters, the secrets it expects and what it needs from the container it is given. |
 | [`envelope.schema.json`](envelope.schema.json) | `https://schemas.agentiik.dev/envelope.schema.json` | `{ meta, items }`, the one document that travels along a port. |
 | [`wire.schema.json`](wire.schema.json) | `https://schemas.agentiik.dev/wire.schema.json` | Every message between the controller, the bus, the runner and the API: the task message, the progress of the task and its result, a runner's registration, its heartbeat, the rotation of its credential, the redemption of a task's grant, a log shipment, and a runner pool with the token issued from it. Beside them, the identity and access records the API keeps: a principal and the one string that names it, a credential, an API token without its value, a grant, the roles and the permissions, a namespace with its quotas, and the authentication policy. |
+| [`openapi.json`](openapi.json) | `https://schemas.agentiik.dev/openapi.json` | The routes of `/api/v1`, so far those of v0.3.0's access: signing in with a passkey or a password, `agk login`'s exchange, the authentication policy, `/me` and the caller's credentials, users and their enrolment, groups and their members, service accounts, namespaces and their quotas, grants at namespace and workflow scope, and API tokens. OpenAPI 3.1, whose schemas are JSON Schema 2020-12. |
 
 `wire.schema.json` is a family rather than one document's shape: a reader validates against the member it is holding, `#/$defs/taskMessage` or `#/$defs/taskResult` and so on. They sit in one document because they share a vocabulary, the run and task states and the identifiers being the same strings everywhere, and because a `$ref` may not leave a document here: an enumeration written twice is an enumeration that drifts. The fixture index names one group per member for the same reason, so a fixture pins one message rather than something the wire allows somewhere.
+
+`openapi.json` is the one document whose `$ref` leaves it, and only for a schema beside it: a user is `wire.schema.json#/$defs/user`, resolved relative to the document as every OpenAPI consumer resolves a reference. The wire is where the access records are defined, and a copy of them here would be the drift the rest of this repository refuses. What the document defines itself is what only a route carries: a request body, a list, a token shown once, and Web Authentication's own JSON forms. A generator reads the two files side by side, or a bundler inlines the wire's definitions first. It describes the routes the documentation's table lists at [#api](https://agentiik.github.io/docs#api), and the build holds the two to each other.
 
 Beside them, [`fixtures/`](fixtures) holds the documents that pin what the schemas accept
 and what they refuse, and [`tools/check.py`](tools/check.py) is the check the build runs.
@@ -152,6 +153,32 @@ The access shapes sit in `wire.schema.json` rather than in a document of their o
 | `quotas.*` | The six names and what each bounds. | Every quota optional, absent setting no bound of the namespace's own. The four counts start at one. `max_run_duration` refers to the task message's timeout grammar. `allowed_runner_pools` refers to the pool's name and refuses an empty list, because a pool's own empty list of namespaces means every one. |
 | `namespaceRecord.auth_policy` | "A namespace may tighten it, never loosen it". | The same shape as the installation's, each key absent inheriting the installation's value. Whether it tightens needs the installation's policy and is left to the API. |
 | `authPolicy.min_passkeys` | "integer, default 2". | At least one: zero would let a password go from an account with nothing to replace it. |
+
+### The API's routes
+
+The documentation's table names each route and what it does, and settles few of the shapes a client needs. Where it is silent, `openapi.json` took these readings, each written as a description in the document too.
+
+| Where | What the documentation gives | Reading taken |
+| --- | --- | --- |
+| `DELETE /api/v1/me/credentials` | "GET, DELETE /api/v1/me/credentials", with no path segment for the one credential removed. | The credential is named by a required `id` query parameter, keeping the route as the table writes it. A path segment, as tokens and grants have, would be a route the table does not list. |
+| Every body | The Request bodies table caps the runner's bodies, a run and a push, and lists none of these. | 64 KiB, the cap of the other small bodies, and closed to fields the route does not read, save Web Authentication's own objects, which the browser extends. |
+| Statuses | None, for these routes. | 400 for a body refused as Request bodies says or a value outside its grammar. 401 for no credential or one not accepted, and for every failed sign-in, one sentence for every reason. 403 at installation scope, for an enrolment-only session, for a scoped token minting another, and where a policy setting forbids the credential offered. 404 at namespace and workflow scope for the absent and the hidden alike, as the API already answers. 409 for a name already held and a change the rules forbid. 422 for a body naming what does not exist or is not the caller's, or an expiry out of bounds. 201 for what is created, 204 for a removal, 200 otherwise. |
+| An administrator's route naming a namespace | "PUT is an administrator's", on a namespace's policy and quotas. | 403 before the namespace is looked up, so that a refusal says nothing of whether it exists. |
+| `POST /api/v1/auth/passkey/options`, `/verify` | Options carrying the challenge, the Relying Party Identifier and the user verification; a verification that records the flags and opens a session. | Asked for by `{ceremony}`. The options are Web Authentication Level 3's `PublicKeyCredentialCreationOptionsJSON` and `PublicKeyCredentialRequestOptionsJSON`, and the credential is the `RegistrationResponseJSON` or `AuthenticationResponseJSON` the browser's `toJSON()` gives, spelled as the Recommendation spells them. A sign-in asks for a discoverable passkey, `allowCredentials` empty, so no login is sent before the ceremony. |
+| An enrolment link's code | Carried after `#`, which reaches no access log. | The enrolment page sends it as `code` with the registration options; it is held against the challenge and consumed by the verification, so a ceremony dismissed halfway does not burn it. A recovery code is the same kind of code. |
+| `agk login` | The page is handed "the loopback address and the verifier's SHA-256" and redirects "with a one-time code". | The page takes `redirect_uri` and `code_challenge`, the names RFC 6749 and RFC 7636 give them, and passes them on as `terminal` with the sign-in; the answer's `redirect_to` is the whole address, written by the API. The loopback is `127.0.0.1` or `[::1]`, never a name, as RFC 8252 advises. The exchange takes `{code, code_verifier, device_label}` and answers 201 with the token. A password sign-in carries `terminal` too, which is how `agk login` works on an installation addressed by an IP address. |
+| Credential values | 256 bits, stored hashed, shown once; the wire's `agkjoin_`, `agkrunner_` and `agkgrant_`. | `agktoken_` for an API token, `agkenrol_` for an enrolment or a recovery code, `agkcode_` for `agk login`'s code, each followed by at least 43 base64url characters. |
+| The session cookie | An opaque identifier in a cookie, `HttpOnly`, `Secure`, `SameSite=Lax`. | Named `__Host-agentiik_session`, which a browser refuses unless it is `Secure`, set for the whole origin and bound to no domain. |
+| An enrolment-only session | It "can enrol passkeys and nothing else". | It reaches the registration ceremony, and every other route answers it 403. |
+| Lists | `GET /api/v1/{ns}/secrets` answers `{"secrets": [...]}`. | Every list is an object with one plural key: `credentials`, `tokens`, `namespaces`, `users`, `groups`, `service_accounts`, `grants`. An expired grant and a token no longer accepted are left out. |
+| `GET /api/v1/auth/policy`, `/{ns}/auth/policy`, `/namespaces/{ns}/quotas` | Who may read them is not said. | The installation's policy, any authenticated principal, every setting written out. A namespace's policy and quotas, an administrator and anyone holding a grant in the namespace; its policy answers only the settings it sets, so that what `PUT` wrote reads back. |
+| `PUT` on a policy or quotas | "PUT is an administrator's". | The body is the whole: a setting left out returns to its default, a quota left out sets no bound. |
+| `POST /api/v1/users`, asked again | The first administrator may be created again "for a fresh link until they have enrolled". | 200 with a fresh link for the same login, display name and `admin`, the link before revoked; 409 for any other difference or once the user has enrolled. |
+| Reading grants | Who may list them is not said. | `grant:manage` at the scope, since the list names everyone who holds access. |
+| A token minting a token | A scope "can only narrow its principal's rights". | A token narrowed by a scope cannot mint another, which would escape the narrowing. |
+| `GET /api/v1/me` | "Identity, group memberships, effective permissions per namespace, and notifications". | `permissions` keyed by scope: a namespace's key, and a workflow's `NS/NAME` where a grant or a deny on it changes that, narrowed by the presenting token's scope. `admin` says whether the caller administers, the bootstrap token included. One notification kind, `admin_access_widened`, carrying the grant; no route marks one read yet. |
+| `POST /api/v1/service-accounts` | "A new one in one of them, written NS/NAME". | `{namespace, name}`, the record's own shape, `agentiik` refused by the grammar. |
+| `PUT`, `DELETE /api/v1/groups/{group}/members/{login}` | "Adds or removes one member, touching no grant". | No body, and the group answered either way; adding a member already there or removing one who is not changes nothing. |
 
 ## Fixtures
 

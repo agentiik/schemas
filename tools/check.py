@@ -5,7 +5,7 @@ Run it with no arguments, from anywhere:
 
     python tools/check.py
 
-Seven checks run, and all of them run even when an earlier one fails, so one pass
+Ten checks run, and all of them run even when an earlier one fails, so one pass
 reports everything that is wrong rather than the first thing:
 
   1. every schema is a legal JSON Schema 2020-12 document, carries the $schema and the
@@ -18,12 +18,24 @@ reports everything that is wrong rather than the first thing:
   5. no em dash appears in any text file of the repository;
   6. every pattern is one Go, Rust and every other RE2 engine can compile;
   7. a grammar written in more than one document reads the same in each of them, and a
-     grammar written inside a longer pattern reads the same as where it is defined.
+     grammar written inside a longer pattern reads the same as where it is defined;
+  8. openapi.json is an OpenAPI 3.1 document whose schemas are JSON Schema 2020-12: it
+     carries the fields a reader needs, every path parameter is declared and every declared
+     one is in its path, every operationId is unique, and every $ref resolves, inside it or
+     in a schema of this repository;
+  9. every operation, parameter, request body, response, header and schema in it carries a
+     description and examples, and every example validates against what it illustrates;
+ 10. the routes it describes and the route table of the documentation agree: a route in one
+     and not in the other fails, unless NOT_DESCRIBED_YET names it and says why.
 
 Check 2 is the one the documentation asks for by name: the language reference on the
 site and the workflow.language tool are projections of the description and examples
 fields of these schemas, so a keyword without them is a keyword the language reference
-cannot teach. It is enforced here rather than left to a reviewer.
+cannot teach. It is enforced here rather than left to a reviewer. Check 9 is the same rule
+for the API, whose reference and clients are generated from openapi.json.
+
+Check 10 reads the documentation, from the site by default and from a checkout with
+--docs, because the documentation decides which routes exist and this document follows it.
 
 Exit status is 0 when everything passes and 1 otherwise.
 """
@@ -34,12 +46,17 @@ import argparse
 import json
 import re
 import sys
+import urllib.request
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import quote
 
 try:
     import yaml
     from jsonschema import Draft202012Validator
     from jsonschema.exceptions import SchemaError
+    from referencing import Registry, Resource
+    from referencing.jsonschema import DRAFT202012
 except ImportError as missing:  # pragma: no cover, this is the first-run message
     sys.exit(
         "%s. Install the pinned dependencies first:\n"
@@ -822,6 +839,754 @@ def check_every_copy_agrees(documents, report):
     report.heading("%d composed grammars, each written as the grammars it is made of" % len(COMPOSED_GRAMMAR))
 
 
+# --------------------------------------------------------------------------------------
+# The OpenAPI document
+#
+# openapi.json describes the routes of /api/v1 for the three clients that speak them. It is
+# checked here with the standard library and the jsonschema this file already uses, rather
+# than with a validator package: what matters is small enough to say in a page, the shapes
+# the clients generate from and the rule every schema here follows, and a dependency that
+# brings its own opinions of OpenAPI would be one more thing to pin and to disagree with.
+# --------------------------------------------------------------------------------------
+
+OPENAPI = "openapi.json"
+OPENAPI_URI = ID_PREFIX + OPENAPI
+
+# 3.1 because it is the version whose schemas are JSON Schema 2020-12, the dialect every
+# document of this repository is written in, so that a record the wire defines can be
+# referred to rather than copied into a dialect of its own.
+OPENAPI_VERSION = re.compile(r"^3\.1\.[0-9]+$")
+
+HTTP_METHODS = ("get", "put", "post", "delete", "options", "head", "patch", "trace")
+PATH_ITEM_KEYS = {"summary", "description", "servers", "parameters", "$ref"} | set(HTTP_METHODS)
+PARAMETER_LOCATIONS = ("path", "query", "header", "cookie")
+STATUS_CODE = re.compile(r"^(?:[1-5][0-9]{2}|[1-5]XX|default)$")
+COMPONENT_NAME = re.compile(r"^[A-Za-z0-9._-]+$")
+PATH_TEMPLATE = re.compile(r"\{([^}]+)\}")
+
+# OpenAPI 3.0 spellings that 2020-12 reads as unknown keywords and silently ignores: a
+# nullable that allows nothing and an example nobody validates are both worse than an
+# error. Media types, parameters and headers carry examples, the map, and nothing else, so
+# that there is one way to write an example and every one of them is checked.
+IGNORED_IN_2020_12 = ("nullable", "example")
+
+# Where each operation's externalDocs points: the section of the documentation that
+# specifies it. Check 10 holds the anchor to one the page carries.
+DOCS_ANCHOR_PREFIX = "https://agentiik.github.io/docs#"
+
+
+def pointer_of(tokens):
+    """A JSON Pointer written as a URI fragment, each token escaped then percent-encoded."""
+    return "".join("/" + quote(str(t).replace("~", "~0").replace("/", "~1"), safe="") for t in tokens)
+
+
+def readable(tokens):
+    """A JSON Pointer for a person: escaped, not percent-encoded."""
+    return "".join("/" + str(t).replace("~", "~0").replace("/", "~1") for t in tokens) or "/"
+
+
+def refs_in(node, tokens=()):
+    """Yields every $ref of a document with the tokens of the object holding it."""
+    if isinstance(node, dict):
+        if isinstance(node.get("$ref"), str):
+            yield tokens, node["$ref"]
+        for key, value in node.items():
+            yield from refs_in(value, tokens + (key,))
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            yield from refs_in(value, tokens + (index,))
+
+
+def resolve_ref(reference, openapi, documents):
+    """Follows a $ref of openapi.json, returning the target or None.
+
+    A reference either stays in the document or leads to one of the schemas beside it, by
+    the file name that is its $id relative to this document's: that is what lets a user or
+    a grant be the wire's record rather than a copy of it, and what a consumer resolves
+    against the two files sitting side by side.
+    """
+    target, _, fragment = reference.partition("#")
+    if target == "":
+        document = openapi
+    elif target in documents:
+        document = documents[target]
+    else:
+        return None
+    return resolve_pointer(document, fragment)
+
+
+def followed(node, openapi):
+    """A Reference Object of the document replaced by its target, its description kept."""
+    if isinstance(node, dict) and isinstance(node.get("$ref"), str) and node["$ref"].startswith("#"):
+        target = resolve_pointer(openapi, node["$ref"].partition("#")[2])
+        if isinstance(target, dict):
+            merged = dict(target)
+            for key in ("summary", "description"):
+                if key in node:
+                    merged[key] = node[key]
+            return merged
+        return None
+    return node
+
+
+def operations_of(openapi):
+    """Yields (path, method, path item, operation) for every operation, in reading order."""
+    paths = openapi.get("paths")
+    if not isinstance(paths, dict):
+        return
+    for path, item in paths.items():
+        if not isinstance(item, dict):
+            continue
+        for method in HTTP_METHODS:
+            if isinstance(item.get(method), dict):
+                yield path, method, item, item[method]
+
+
+class Declared:
+    """One object the document declares in place: what it is, where, and the object."""
+
+    def __init__(self, kind, tokens, node, name=None):
+        self.kind = kind  # parameter, requestBody, response, header, mediaType, schema
+        self.tokens = tokens
+        self.node = node
+        self.name = name  # a component's name, for a schema that is one
+
+    @property
+    def where(self):
+        return readable(self.tokens)
+
+
+def declared_in(openapi):
+    """Yields every parameter, request body, response, header, media type and schema.
+
+    A Reference Object is not yielded where it is written: its target is, where that is
+    declared, so each object is checked once whatever refers to it.
+    """
+
+    def is_ref(node):
+        return isinstance(node, dict) and "$ref" in node
+
+    def media_types(content, tokens):
+        for media, entry in (content or {}).items():
+            if not isinstance(entry, dict):
+                continue
+            here = tokens + ("content", media)
+            yield Declared("mediaType", here, entry)
+            if isinstance(entry.get("schema"), (dict, bool)):
+                yield Declared("schema", here + ("schema",), entry["schema"])
+
+    def header(node, tokens):
+        yield Declared("header", tokens, node)
+        if isinstance(node.get("schema"), (dict, bool)):
+            yield Declared("schema", tokens + ("schema",), node["schema"])
+
+    def parameter(node, tokens):
+        yield Declared("parameter", tokens, node)
+        if isinstance(node.get("schema"), (dict, bool)):
+            yield Declared("schema", tokens + ("schema",), node["schema"])
+
+    def request_body(node, tokens):
+        yield Declared("requestBody", tokens, node)
+        yield from media_types(node.get("content"), tokens)
+
+    def response(node, tokens):
+        yield Declared("response", tokens, node)
+        for name, entry in (node.get("headers") or {}).items():
+            if isinstance(entry, dict) and not is_ref(entry):
+                yield from header(entry, tokens + ("headers", name))
+        yield from media_types(node.get("content"), tokens)
+
+    components = openapi.get("components") if isinstance(openapi.get("components"), dict) else {}
+    for name, node in (components.get("schemas") or {}).items():
+        yield Declared("schema", ("components", "schemas", name), node, name)
+    for name, node in (components.get("parameters") or {}).items():
+        if isinstance(node, dict) and not is_ref(node):
+            yield from parameter(node, ("components", "parameters", name))
+    for name, node in (components.get("headers") or {}).items():
+        if isinstance(node, dict) and not is_ref(node):
+            yield from header(node, ("components", "headers", name))
+    for name, node in (components.get("requestBodies") or {}).items():
+        if isinstance(node, dict) and not is_ref(node):
+            yield from request_body(node, ("components", "requestBodies", name))
+    for name, node in (components.get("responses") or {}).items():
+        if isinstance(node, dict) and not is_ref(node):
+            yield from response(node, ("components", "responses", name))
+
+    for path, item in (openapi.get("paths") or {}).items():
+        if not isinstance(item, dict):
+            continue
+        for index, node in enumerate(item.get("parameters") or []):
+            if isinstance(node, dict) and not is_ref(node):
+                yield from parameter(node, ("paths", path, "parameters", index))
+        for method in HTTP_METHODS:
+            operation = item.get(method)
+            if not isinstance(operation, dict):
+                continue
+            here = ("paths", path, method)
+            for index, node in enumerate(operation.get("parameters") or []):
+                if isinstance(node, dict) and not is_ref(node):
+                    yield from parameter(node, here + ("parameters", index))
+            body = operation.get("requestBody")
+            if isinstance(body, dict) and not is_ref(body):
+                yield from request_body(body, here + ("requestBody",))
+            for status, node in (operation.get("responses") or {}).items():
+                if isinstance(node, dict) and not is_ref(node):
+                    yield from response(node, here + ("responses", status))
+
+
+def check_openapi_is_sound(openapi, documents, report):
+    """Check 8: an OpenAPI 3.1 document a generator can read, with nothing leading nowhere.
+
+    Returns whether the checks below it can use the document. One whose references lead
+    nowhere cannot have its examples validated, so they are told to leave it alone rather
+    than crash on it.
+    """
+    where = OPENAPI
+    usable = True
+
+    if not OPENAPI_VERSION.match(str(openapi.get("openapi", ""))):
+        report.fail(where, "openapi is %r, expected 3.1.x" % openapi.get("openapi"))
+    # Said outright rather than left to the default, which is OpenAPI's own dialect: the
+    # schemas here are read as every other document of this repository is.
+    if openapi.get("jsonSchemaDialect") != DIALECT:
+        report.fail(where, "jsonSchemaDialect is not %s" % DIALECT)
+
+    info = openapi.get("info") if isinstance(openapi.get("info"), dict) else {}
+    for key in ("title", "version", "description"):
+        if not str(info.get(key, "")).strip():
+            report.fail(where, "info has no %s" % key)
+
+    for index, server in enumerate(openapi.get("servers") or []):
+        if not isinstance(server, dict) or not str(server.get("url", "")).strip() or not str(server.get("description", "")).strip():
+            report.fail(where, "/servers/%d needs a url and a description" % index)
+            continue
+        for name, variable in (server.get("variables") or {}).items():
+            if "default" not in variable or not str(variable.get("description", "")).strip():
+                report.fail(where, "/servers/%d/variables/%s needs a default and a description" % (index, name))
+
+    components = openapi.get("components") if isinstance(openapi.get("components"), dict) else {}
+    for section, entries in components.items():
+        for name in entries if isinstance(entries, dict) else ():
+            if not COMPONENT_NAME.match(name):
+                report.fail(where, "/components/%s/%s is not a name OpenAPI allows a component" % (section, name))
+
+    schemes = components.get("securitySchemes") if isinstance(components.get("securitySchemes"), dict) else {}
+    for name, scheme in schemes.items():
+        if not isinstance(scheme, dict) or not scheme.get("type") or not str(scheme.get("description", "")).strip():
+            report.fail(where, "/components/securitySchemes/%s needs a type and a description" % name)
+
+    def check_security(requirements, at):
+        if not isinstance(requirements, list):
+            report.fail(where, "%s/security is not a list of requirements" % at)
+            return
+        for requirement in requirements:
+            for name in requirement if isinstance(requirement, dict) else ():
+                if name not in schemes:
+                    report.fail(where, "%s/security names %s, which no securityScheme declares" % (at, name))
+
+    if "security" in openapi:
+        check_security(openapi["security"], "")
+
+    declared_tags = {}
+    for tag in openapi.get("tags") or []:
+        if isinstance(tag, dict) and tag.get("name"):
+            declared_tags[tag["name"]] = tag
+            if not str(tag.get("description", "")).strip():
+                report.fail(where, "the tag %s has no description" % tag["name"])
+    used_tags = set()
+
+    paths = openapi.get("paths")
+    if not isinstance(paths, dict) or not paths:
+        report.fail(where, "describes no path")
+        paths = {}
+
+    def parameters_of(node, at):
+        """The (name, in) pairs a parameters list declares, references followed."""
+        found = {}
+        for index, entry in enumerate(node.get("parameters") or []):
+            target = followed(entry, openapi)
+            if not isinstance(target, dict):
+                report.fail(where, "%s/parameters/%d leads nowhere" % (at, index))
+                continue
+            key = (target.get("name"), target.get("in"))
+            if target.get("in") not in PARAMETER_LOCATIONS:
+                report.fail(where, "%s/parameters/%d is in %r, expected one of %s" % (at, index, target.get("in"), ", ".join(PARAMETER_LOCATIONS)))
+            if key in found:
+                report.fail(where, "%s declares the %s parameter %s twice" % (at, key[1], key[0]))
+            found[key] = target
+        return found
+
+    operation_ids = {}
+    counted = 0
+    for path, item in paths.items():
+        at = readable(("paths", path))
+        if not path.startswith("/"):
+            report.fail(where, "%s does not start with /" % at)
+        if not isinstance(item, dict):
+            report.fail(where, "%s is not a path item" % at)
+            continue
+        for key in item:
+            if key not in PATH_ITEM_KEYS and not key.startswith("x-"):
+                report.fail(where, "%s holds %s, which a path item does not" % (at, key))
+
+        inherited = parameters_of(item, at)
+        templated = set(PATH_TEMPLATE.findall(path))
+
+        for method in HTTP_METHODS:
+            operation = item.get(method)
+            if not isinstance(operation, dict):
+                continue
+            counted += 1
+            here = readable(("paths", path, method))
+
+            operation_id = operation.get("operationId")
+            if not str(operation_id or "").strip():
+                report.fail(where, "%s has no operationId" % here)
+            elif operation_id in operation_ids:
+                report.fail(where, "%s repeats the operationId %s of %s" % (here, operation_id, operation_ids[operation_id]))
+            else:
+                operation_ids[operation_id] = here
+
+            tags = operation.get("tags")
+            if not isinstance(tags, list) or not tags:
+                report.fail(where, "%s carries no tag, and a generated client groups by tag" % here)
+            for tag in tags or []:
+                used_tags.add(tag)
+                if tag not in declared_tags:
+                    report.fail(where, "%s is tagged %s, which the document does not declare" % (here, tag))
+
+            docs = operation.get("externalDocs")
+            if not isinstance(docs, dict) or not str(docs.get("url", "")).startswith(DOCS_ANCHOR_PREFIX):
+                report.fail(where, "%s has no externalDocs pointing at the section of %s that specifies it" % (here, DOCS_ANCHOR_PREFIX))
+
+            if "security" in operation:
+                check_security(operation["security"], here)
+
+            parameters = dict(inherited)
+            parameters.update(parameters_of(operation, here))
+            in_path = {name for (name, location) in parameters if location == "path"}
+            for name in sorted(templated - in_path):
+                report.fail(where, "%s leaves the path parameter {%s} undeclared" % (here, name))
+            for name in sorted(in_path - templated):
+                report.fail(where, "%s declares a path parameter %s that %s does not hold" % (here, name, path))
+            for (name, location), target in parameters.items():
+                if location == "path" and target.get("required") is not True:
+                    report.fail(where, "%s: the path parameter %s is not required: true, which OpenAPI requires" % (here, name))
+
+            responses = operation.get("responses")
+            if not isinstance(responses, dict) or not responses:
+                report.fail(where, "%s answers nothing" % here)
+                continue
+            for status, answer in responses.items():
+                if not STATUS_CODE.match(str(status)):
+                    report.fail(where, "%s/responses/%s is not a status code" % (here, status))
+                target = followed(answer, openapi)
+                if not isinstance(target, dict):
+                    report.fail(where, "%s/responses/%s leads nowhere" % (here, status))
+                elif not str(target.get("description", "")).strip():
+                    report.fail(where, "%s/responses/%s has no description, which OpenAPI requires" % (here, status))
+
+    for name in sorted(set(declared_tags) - used_tags):
+        report.fail(where, "declares the tag %s and no operation carries it" % name)
+
+    # Every reference, schema or not, leads somewhere: inside the document, or into one of
+    # the schemas beside it. A reference anywhere else is one a consumer cannot follow.
+    for tokens, reference in refs_in(openapi):
+        target = resolve_ref(reference, openapi, documents)
+        if target is None:
+            usable = False
+            report.fail(where, "%s refers to %s, which is not there" % (readable(tokens), reference))
+
+    # Every schema is a legal 2020-12 document, and none uses a keyword 2020-12 ignores.
+    for found in declared_in(openapi):
+        if found.kind != "schema" or not isinstance(found.node, dict):
+            continue
+        try:
+            Draft202012Validator.check_schema(found.node)
+        except SchemaError as error:
+            at = "/".join(str(step) for step in error.absolute_path)
+            report.fail(where, "%s: the metaschema refuses it: %s at /%s" % (found.where, error.message, at))
+            usable = False
+        for inner in walk(found.node):
+            for keyword in IGNORED_IN_2020_12:
+                if keyword in inner.schema:
+                    report.fail(where, "%s%s writes %s, which JSON Schema 2020-12 ignores" % (found.where, inner.pointer, keyword))
+
+    report.heading(
+        "%s is an OpenAPI 3.1 document: %d operations on %d paths, every reference resolving"
+        % (where, counted, len(paths))
+    )
+    return usable
+
+
+def check_openapi_is_documented(openapi, report):
+    """Check 9, first half: the rule of check 2, for the API.
+
+    The API reference and the clients are generated from this document, so an operation, a
+    parameter or a field without a description is one the reference cannot explain, and one
+    without an example is one nobody has shown working. A media type, a parameter or a
+    header carries its examples as OpenAPI's map; a schema carries them as JSON Schema's
+    list, which check 9's second half validates the same way.
+    """
+    where = OPENAPI
+    counts = {"operation": 0, "parameter": 0, "response": 0, "schema": 0}
+
+    for path, method, item, operation in operations_of(openapi):
+        counts["operation"] += 1
+        here = readable(("paths", path, method))
+        for key in ("summary", "description"):
+            if not str(operation.get(key, "")).strip():
+                report.fail(where, "%s has no %s" % (here, key))
+
+    for found in declared_in(openapi):
+        node = found.node
+        if found.kind in ("parameter", "header", "requestBody", "response"):
+            if not str(node.get("description", "")).strip():
+                report.fail(where, "%s (a %s) has no description" % (found.where, found.kind))
+        if found.kind in ("parameter", "header", "mediaType"):
+            if "example" in node:
+                report.fail(where, "%s writes example; write examples, the map, so every one is checked" % found.where)
+            if "schema" not in node:
+                report.fail(where, "%s (a %s) has no schema" % (found.where, found.kind))
+            examples = node.get("examples")
+            if not isinstance(examples, dict) or not examples:
+                report.fail(where, "%s (a %s) has no examples" % (found.where, found.kind))
+            else:
+                for name, example in examples.items():
+                    example = followed(example, openapi)
+                    if not isinstance(example, dict) or "value" not in example:
+                        report.fail(where, "%s/examples/%s has no value" % (found.where, name))
+        if found.kind == "parameter":
+            counts["parameter"] += 1
+        if found.kind == "requestBody" and not node.get("content"):
+            report.fail(where, "%s is a request body with no content" % found.where)
+        if found.kind == "response":
+            counts["response"] += 1
+
+        if found.kind == "schema" and isinstance(node, dict):
+            # A component is a keyword of the API's language, named and projected into the
+            # reference, so it is held to what a $defs entry is held to. A schema written
+            # in place is described by the parameter, header or media type holding it, and
+            # only the keywords it declares inside are asked for their own.
+            for inner in walk(node, "", found.name):
+                if inner.pointer == "" and found.name is None:
+                    continue
+                if inner.pointer != "" and not inner.declares_a_keyword:
+                    continue
+                counts["schema"] += 1
+                subject = inner.name or found.name
+                at = found.where + inner.pointer
+                if not str(inner.schema.get("description", "")).strip():
+                    report.fail(where, "%s (%s) has no description" % (at, subject))
+                examples = inner.schema.get("examples")
+                if not isinstance(examples, list) or not examples:
+                    report.fail(where, "%s (%s) has no examples" % (at, subject))
+
+    report.heading(
+        "%s: %d operations, %d parameters, %d responses and %d schema keywords, each with a description and examples"
+        % (where, counts["operation"], counts["parameter"], counts["response"], counts["schema"])
+    )
+
+
+def check_openapi_examples_validate(openapi, documents, report):
+    """Check 9, second half: every example of the document validates against what it shows.
+
+    The validator resolves a reference into the wire as a consumer does, relative to this
+    document, through a registry holding every schema of the repository under its $id and
+    this document under the $id it would have. Each example is validated against its schema
+    where it stands, by pointer, so that a reference inside it to another component resolves
+    against this document and not against the schema lifted out of it.
+    """
+    where = OPENAPI
+    registry = Registry().with_resources(
+        [(document["$id"], DRAFT202012.create_resource(document)) for document in documents.values() if isinstance(document.get("$id"), str)]
+        + [(OPENAPI_URI, Resource(contents=openapi, specification=DRAFT202012))]
+    )
+
+    def validator_at(tokens):
+        return Draft202012Validator({"$ref": OPENAPI_URI + "#" + pointer_of(tokens)}, registry=registry)
+
+    counted = 0
+
+    def validate(tokens, value, at):
+        nonlocal counted
+        counted += 1
+        try:
+            errors = sorted(validator_at(tokens).iter_errors(value), key=lambda error: error.json_path)
+        except Exception as error:
+            report.fail(where, "%s cannot be validated against: %s" % (at, error))
+            return
+        if errors:
+            report.fail(where, "%s does not validate: %s at %s" % (at, errors[0].message, errors[0].json_path))
+
+    for found in declared_in(openapi):
+        node = found.node
+        if found.kind in ("parameter", "header", "mediaType") and isinstance(node.get("examples"), dict) and "schema" in node:
+            for name, example in node["examples"].items():
+                example = followed(example, openapi)
+                if isinstance(example, dict) and "value" in example:
+                    validate(found.tokens + ("schema",), example["value"], "%s/examples/%s" % (found.where, name))
+        if found.kind == "schema" and isinstance(node, dict):
+            for inner in walk(node):
+                examples = inner.schema.get("examples")
+                if not isinstance(examples, list):
+                    continue
+                inner_tokens = found.tokens + tuple(inner.pointer.split("/")[1:])
+                for index, example in enumerate(examples):
+                    validate(inner_tokens, example, "%s%s/examples/%d" % (found.where, inner.pointer, index))
+
+    report.heading("%s: %d examples, each valid against what it illustrates" % (where, counted))
+
+
+# --------------------------------------------------------------------------------------
+# The documentation's route table
+#
+# The documentation decides which routes exist, and the table at #api is where it lists
+# them. This document follows it: a route the table lists and the document does not
+# describe is either work not done or work deliberately not done yet, and the difference is
+# written down in NOT_DESCRIBED_YET rather than left to whoever notices.
+# --------------------------------------------------------------------------------------
+
+# Where the documentation is read from when --docs does not say: the documentation of main,
+# which the site serves at /docs/v/main/, rather than of the last release, which /docs
+# serves. This repository's main describes what is being built, and the documentation
+# decides that first, so the two mains are what have to agree.
+DOCS_URL = "https://agentiik.github.io/docs/v/main/"
+
+# The routes of the documentation's table this document does not describe yet, each group
+# with the reason. A route listed here and described anyway, or listed here and gone from
+# the table, fails too: this list is kept exact, so that it never hides a route by habit.
+NOT_DESCRIBED_YET = (
+    (
+        "a phone's device and notification preferences, which the roadmap serves with the mobile applications in v1.0.0",
+        (
+            "POST /api/v1/me/devices",
+            "PUT /api/v1/me/notifications",
+        ),
+    ),
+    (
+        "the runners, their pools and the bus, served since v0.2.0 and exchanged in the shapes wire.schema.json describes; no roadmap task adds them to this document yet",
+        (
+            "POST /api/v1/runners",
+            "GET /api/v1/runners",
+            "POST /api/v1/runners/{runner}/drain",
+            "POST /api/v1/runners/{runner}/revoke",
+            "POST /api/v1/runners/rotate",
+            "POST /api/v1/runners/heartbeat",
+            "POST /api/v1/bus/token",
+            "GET /api/v1/runner-pools",
+            "POST /api/v1/runner-pools",
+            "POST /api/v1/runner-pools/{pool}/join-tokens",
+            "POST /api/v1/tasks/redeem",
+            "POST /api/v1/tasks/logs",
+        ),
+    ),
+    (
+        "secrets, workflows, their versions and the catalog; no roadmap task adds them to this document yet",
+        (
+            "GET /api/v1/{ns}/secrets",
+            "GET /api/v1/{ns}/secrets/{name}",
+            "PUT /api/v1/{ns}/secrets/{name}",
+            "DELETE /api/v1/{ns}/secrets/{name}",
+            "POST /api/v1/{ns}/workflows",
+            "GET /api/v1/{ns}/workflows/{name}",
+            "GET /api/v1/{ns}/workflows/{name}/tree/{ref}",
+            "PUT /api/v1/{ns}/workflows/{name}/versions/{commit}",
+            "GET /api/v1/bricks",
+            "GET /api/v1/bricks/{name}",
+        ),
+    ),
+    (
+        "runs and their data; no roadmap task adds them to this document yet",
+        (
+            "POST /api/v1/{ns}/workflows/{name}/runs",
+            "GET /api/v1/runs",
+            "GET /api/v1/runs/{id}",
+            "POST /api/v1/runs/{id}/cancel",
+            "POST /api/v1/runs/{id}/approve",
+            "POST /api/v1/runs/{id}/reject",
+            "POST /api/v1/runs/{id}/replay",
+            "GET /api/v1/runs/{id}/steps/{step}/logs",
+            "GET /api/v1/runs/{id}/outputs/{name}",
+            "GET /api/v1/runs/{id}/steps/{step}/outputs/{port}",
+            "GET /api/v1/runs/{id}/steps/{step}/inputs/{port}",
+            "GET /api/v1/artifacts/{uri}",
+        ),
+    ),
+    (
+        "the routes outside /api/v1 that carry no JSON: the object store, which a presigned URL or a signed policy authorises, git over smart HTTP, and webhooks",
+        (
+            "GET /objects/{key...}",
+            "PUT /objects/{key...}",
+            "POST /objects/{ns}",
+            "GET /{ns}/{name}.git/*",
+            "POST /{ns}/{name}.git/*",
+            "POST /hooks/{ns}/{path}",
+        ),
+    ),
+)
+
+ROUTE_METHODS = ("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS")
+ROUTE_LINE = re.compile(r"^((?:%s)(?:,\s*(?:%s))*)\s+(\S.*)$" % ("|".join(ROUTE_METHODS), "|".join(ROUTE_METHODS)))
+
+
+class RouteTable(HTMLParser):
+    """The route table of the documentation's #api section, and every id on the page.
+
+    The first table inside <section id="api"> is the route table; its first cell names one
+    or more routes, a line each, and a row whose cells are headers is a group heading.
+    """
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.state = "before"  # before, section, table, done
+        self.rows = []
+        self.row = None
+        self.cell = None
+        self.ids = set()
+
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        if attributes.get("id"):
+            self.ids.add(attributes["id"])
+        if self.state == "before" and tag == "section" and attributes.get("id") == "api":
+            self.state = "section"
+        elif self.state == "section" and tag == "table":
+            self.state = "table"
+        elif self.state == "table":
+            if tag == "tr":
+                self.row = []
+            elif tag in ("td", "th"):
+                self.cell = {"header": tag == "th", "text": ""}
+            elif tag == "br" and self.cell is not None:
+                self.cell["text"] += "\n"
+
+    def handle_endtag(self, tag):
+        if self.state != "table":
+            return
+        if tag in ("td", "th") and self.cell is not None and self.row is not None:
+            self.row.append(self.cell)
+            self.cell = None
+        elif tag == "tr" and self.row is not None:
+            self.rows.append(self.row)
+            self.row = None
+        elif tag == "table":
+            self.state = "done"
+
+    def handle_data(self, data):
+        if self.cell is not None:
+            self.cell["text"] += data
+
+
+def routes_in_cell(text):
+    """The routes one cell of the table names, and what could not be read in it.
+
+    A cell holds a route a line: methods, then one or more paths. A path written after a
+    comma continues the first one's /api/v1, as `GET /api/v1/bricks, /bricks/{name}` does,
+    and a query string is not part of a route, which OpenAPI writes as parameters.
+    """
+    routes, unread = [], []
+    for line in text.split("\n"):
+        line = " ".join(line.split())
+        if not line:
+            continue
+        match = ROUTE_LINE.match(line)
+        if not match:
+            unread.append(line)
+            continue
+        methods = [method.strip() for method in match.group(1).split(",")]
+        paths = [path.strip() for path in match.group(2).split(",")]
+        first = paths[0]
+        for index, path in enumerate(paths):
+            path = path.split("?", 1)[0]
+            if not path.startswith("/") or " " in path:
+                unread.append(line)
+                break
+            if index and first.startswith("/api/v1/") and not path.startswith("/api/v1/"):
+                path = "/api/v1" + path
+            routes.extend("%s %s" % (method, path) for method in methods)
+    return routes, unread
+
+
+def read_documentation(source):
+    """The documentation's page, from a URL or a path; raises when it cannot be read."""
+    if re.match(r"^https?://", source):
+        request = urllib.request.Request(source, headers={"User-Agent": "agentiik-schemas-check"})
+        with urllib.request.urlopen(request, timeout=30) as answer:
+            return answer.read().decode("utf-8")
+    path = Path(source)
+    if path.is_dir():
+        for candidate in (path / "docs" / "index.html", path / "index.html"):
+            if candidate.is_file():
+                path = candidate
+                break
+    return path.read_text(encoding="utf-8")
+
+
+def check_routes_agree(openapi, source, report):
+    """Check 10: the documentation's route table and the document list the same routes.
+
+    A read that comes back partial is a failure, never an agreement: a page that could not
+    be fetched, a page without the #api section, a table with no route, or a row this check
+    cannot read. A tool that treats an empty read as nothing to do agrees with everything,
+    which is the one answer this check exists not to give.
+    """
+    where = "the documentation"
+    try:
+        page = read_documentation(source)
+    except Exception as error:
+        report.fail(where, "cannot be read from %s (%s); the routes are not compared. Pass --docs with a checkout of agentiik.github.io to compare against one" % (source, error))
+        return
+
+    table = RouteTable()
+    table.feed(page)
+    if table.state == "before":
+        report.fail(where, "%s has no <section id=\"api\">, so it is not the page listing the routes" % source)
+        return
+    if table.state == "section":
+        report.fail(where, "the #api section of %s holds no table" % source)
+        return
+
+    listed = []
+    for row in table.rows:
+        if not row or row[0]["header"]:
+            continue  # a group heading, or the table's own head
+        routes, unread = routes_in_cell(row[0]["text"])
+        for line in unread:
+            report.fail(where, "the route table has a row this check cannot read: %r" % line)
+        listed.extend(routes)
+    if not listed:
+        report.fail(where, "the route table of %s lists no route this check can read" % source)
+        return
+
+    documented = set(listed)
+    described = {"%s %s" % (method.upper(), path) for path, method, _, _ in operations_of(openapi)}
+    deferred = {}
+    for reason, routes in NOT_DESCRIBED_YET:
+        for route in routes:
+            deferred[route] = reason
+
+    for route in sorted(documented - described - set(deferred)):
+        report.fail(where, "lists %s, which %s does not describe; describe it, or name it in NOT_DESCRIBED_YET with the reason" % (route, OPENAPI))
+    for route in sorted(described - documented):
+        report.fail(OPENAPI, "describes %s, which the documentation's route table does not list" % route)
+    for route in sorted(set(deferred) & described):
+        report.fail("tools/check.py", "NOT_DESCRIBED_YET names %s, which %s now describes; take it off the list" % (route, OPENAPI))
+    for route in sorted(set(deferred) - documented):
+        report.fail("tools/check.py", "NOT_DESCRIBED_YET names %s, which the documentation's route table no longer lists" % route)
+
+    # Every operation says which section specifies it, and that section is on the page.
+    for path, method, _, operation in operations_of(openapi):
+        url = str((operation.get("externalDocs") or {}).get("url", ""))
+        if url.startswith(DOCS_ANCHOR_PREFIX) and url[len(DOCS_ANCHOR_PREFIX):] not in table.ids:
+            report.fail(OPENAPI, "%s points at %s, an anchor the documentation does not carry" % (readable(("paths", path, method)), url))
+
+    report.heading(
+        "the documentation lists %d routes: %d described here, %d not yet, as NOT_DESCRIBED_YET says why"
+        % (len(documented), len(documented & described), len(documented & set(deferred)))
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -829,6 +1594,12 @@ def main():
         "--verbose",
         action="store_true",
         help="name every fixture, and say why each refused one was refused",
+    )
+    parser.add_argument(
+        "--docs",
+        default=DOCS_URL,
+        metavar="SOURCE",
+        help="where check 10 reads the documentation's route table: a URL, the page itself, or a checkout of agentiik.github.io (default: %(default)s)",
     )
     arguments = parser.parse_args()
     report = Report(verbose=arguments.verbose)
@@ -845,6 +1616,17 @@ def main():
         except json.JSONDecodeError as error:
             report.fail(filename, "is not valid JSON: %s" % error)
 
+    # The OpenAPI document is read beside the schemas rather than among them: it is not a
+    # schema, and it refers into them.
+    openapi = None
+    try:
+        openapi = json.loads((ROOT / OPENAPI).read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        report.fail(OPENAPI, "is missing")
+    except json.JSONDecodeError as error:
+        report.fail(OPENAPI, "is not valid JSON: %s" % error)
+
+    sound = {}
     if documents:
         print("Schemas")
         # Checks 3 and 4 validate through the documents, so they only see the ones that
@@ -856,10 +1638,20 @@ def main():
         check_every_example_validates(sound, report)
         print("Fixtures")
         check_fixtures(sound, report)
+    if documents or openapi is not None:
         print("Patterns")
-        check_every_pattern_is_portable(documents, report)
+        check_every_pattern_is_portable(dict(documents, **({OPENAPI: openapi} if openapi is not None else {})), report)
+    if documents:
         print("Grammars")
         check_every_copy_agrees(documents, report)
+    if openapi is not None:
+        print("OpenAPI")
+        usable = check_openapi_is_sound(openapi, documents, report)
+        check_openapi_is_documented(openapi, report)
+        if usable:
+            check_openapi_examples_validate(openapi, sound, report)
+        print("Routes")
+        check_routes_agree(openapi, arguments.docs, report)
     print("Prose")
     check_no_em_dash(report)
 

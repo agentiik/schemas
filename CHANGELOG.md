@@ -10,6 +10,7 @@ Every repository of the project carries the same version and is tagged at the sa
 
 - `wire.schema.json` describes the identity and access records: `principal` and `principalRef`, `credential`, `apiToken`, `accessGrant`, `role`, `permission`, `namespaceRecord` with its `quotas`, and `authPolicy`, with fixtures for each.
 - `openapi.json` describes the access routes of v0.3.0: passkey and password sign-in, `agk login`'s exchange, the authentication policy, `/me` and its credentials, users, groups, service accounts, namespaces and quotas, grants and API tokens, referring to `wire.schema.json` for every record.
+- `tools/check.py` validates `openapi.json` and fails where its routes and the documentation's route table disagree.
 
 ## v0.2.5, 2026-09-26
 

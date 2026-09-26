@@ -35,12 +35,11 @@ python -m pip install -r requirements.txt
 python tools/check.py
 ```
 
-No arguments, from anywhere in the repository. It is the same command
-[`.github/workflows/validate.yml`](.github/workflows/validate.yml) runs, so a green run
-locally means a green run there. Add `-v` to have it name every fixture and say why each
-refused one was refused.
+No arguments, from anywhere in the repository. It is the same command [`.github/workflows/validate.yml`](.github/workflows/validate.yml) runs, so a green run locally means a green run there. Add `-v` to have it name every fixture and say why each refused one was refused.
 
-Seven things fail the build:
+The route check reads the documentation of main from <https://agentiik.github.io/docs/v/main/>, because this repository's main follows it. Where the two change together, or offline, point it at a checkout instead: `python tools/check.py --docs ../agentiik.github.io`. The documentation's pull request merges first, since it is the authority, and this repository's build is green against the site from then on.
+
+Ten things fail the build:
 
 1. a schema that is not a legal JSON Schema 2020-12 document, that does not carry the
    `$id` it is published under, or that holds a `$ref` leading nowhere;
@@ -58,7 +57,10 @@ Seven things fail the build:
    and copies that drift let the engine dispatch a secret mount a strict runner then
    refuses to write. The shared grammars, a secret mount, a name the workflow file writes
    and a parameter name, are listed in `ONE_GRAMMAR` in `tools/check.py` with every place each is written. A grammar written inside a longer pattern, the namespace name inside `group:team-finance` or `finance/agentiik`, is listed in `COMPOSED_GRAMMAR` with the template it is written into, and has to read exactly as that template filled in;
-7. an em dash, anywhere in any text file.
+7. an em dash, anywhere in any text file;
+8. an `openapi.json` a generator cannot rely on: not OpenAPI 3.1, a field a reader needs missing, a path parameter declared and not in its path or the other way round, an `operationId` used twice, a status that is not one, a schema the 2020-12 metaschema refuses or one writing `nullable` or `example`, which 2020-12 ignores, or a `$ref` leading nowhere, inside it or into a schema beside it;
+9. an operation, a parameter, a request body, a response, a header or a schema keyword of it without a description or without examples, or an example that does not validate against what it illustrates, a reference into the wire resolved as a consumer resolves it;
+10. a route the documentation's table lists and `openapi.json` does not describe, or the other way round, or an operation whose `externalDocs` points at an anchor the page does not carry. A route deliberately not described yet is named in `NOT_DESCRIBED_YET` in `tools/check.py` with the reason, and the list is held exact: a route on it that is now described, or gone from the table, fails too. A read of the page that comes back partial, no page, no `#api` section, no table or a row that cannot be read, fails rather than agreeing with nothing.
 
 ## Why every keyword carries a description and examples
 
@@ -72,6 +74,8 @@ validation then rejects.
 So the rule is the build's job rather than a reviewer's. A keyword with nothing to say
 for itself fails the run, and a description that only restates the keyword's own name
 fails review.
+
+The API is held to the same rule for the same reason: the API reference is generated from `openapi.json`, and the console, `agk` and the Terraform provider read it as their one description of the API, so an operation or a field without a description is one none of them can explain.
 
 ## Readings taken where the documentation is silent
 

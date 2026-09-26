@@ -20,7 +20,7 @@ states it; where it is silent, the schema takes the reading that cannot contradi
 | [`workflow.schema.json`](workflow.schema.json) | `https://schemas.agentiik.dev/workflow.schema.json` | `agentiik.yaml`, the entry point of a workflow repository: `apiVersion`, `kind`, `metadata`, `inputs`, `outputs`, `on`, `mcp`, `include`, `vars`, `secrets`, `defaults`, `concurrency`, `timeout` and `steps`, with every step keyword. |
 | [`brick.schema.json`](brick.schema.json) | `https://schemas.agentiik.dev/brick.schema.json` | `/agk/brick.yaml`, the manifest an image carries to become a brick: its ports, its parameters, the secrets it expects and what it needs from the container it is given. |
 | [`envelope.schema.json`](envelope.schema.json) | `https://schemas.agentiik.dev/envelope.schema.json` | `{ meta, items }`, the one document that travels along a port. |
-| [`wire.schema.json`](wire.schema.json) | `https://schemas.agentiik.dev/wire.schema.json` | Every message between the controller, the bus, the runner and the API: the task message, the progress of the task and its result, a runner's registration, its heartbeat, the rotation of its credential, the redemption of a task's grant, a log shipment, and a runner pool with the token issued from it. |
+| [`wire.schema.json`](wire.schema.json) | `https://schemas.agentiik.dev/wire.schema.json` | Every message between the controller, the bus, the runner and the API: the task message, the progress of the task and its result, a runner's registration, its heartbeat, the rotation of its credential, the redemption of a task's grant, a log shipment, and a runner pool with the token issued from it. Beside them, the identity and access records the API keeps: a principal and the one string that names it, a credential, an API token without its value, a grant, the roles and the permissions, a namespace with its quotas, and the authentication policy. |
 
 `wire.schema.json` is a family rather than one document's shape: a reader validates against the member it is holding, `#/$defs/taskMessage` or `#/$defs/taskResult` and so on. They sit in one document because they share a vocabulary, the run and task states and the identifiers being the same strings everywhere, and because a `$ref` may not leave a document here: an enumeration written twice is an enumeration that drifts. The fixture index names one group per member for the same reason, so a fixture pins one message rather than something the wire allows somewhere.
 
@@ -56,7 +56,7 @@ Seven things fail the build:
    leave a document here, so a grammar the manifest and the wire both hold is two copies,
    and copies that drift let the engine dispatch a secret mount a strict runner then
    refuses to write. The shared grammars, a secret mount, a name the workflow file writes
-   and a parameter name, are listed in `ONE_GRAMMAR` in `tools/check.py` with every place each is written;
+   and a parameter name, are listed in `ONE_GRAMMAR` in `tools/check.py` with every place each is written. A grammar written inside a longer pattern, the namespace name inside `group:team-finance` or `finance/agentiik`, is listed in `COMPOSED_GRAMMAR` with the template it is written into, and has to read exactly as that template filled in;
 7. an em dash, anywhere in any text file.
 
 ## Why every keyword carries a description and examples
@@ -131,6 +131,27 @@ them.
 | `defaults` | Sixteen keys where the documentation's example writes six. A default is defined as what a step inherits where it states nothing of its own, so every step keyword that is a setting rather than graph shape belongs here; `image`, `script`, `needs`, `inputs`, `outputs`, `params`, `if`, `merge`, `strategy`, `extends` and `workflow` say what the step is and what it depends on, and are refused. |
 | `brick.runtime.user` | The refusal of root reads the uid half, so `nobody:0` is accepted. The documentation states the rule as a non-root user and justifies it by a process running as uid 0, and says nothing about the group. Recorded as a `$comment` beside the pattern. |
 | `envelope.item` | `id`, `data` and `files` are all required. The documentation writes every item with all three and says an item with nothing attached carries an empty list, so absent is never the same as empty here. |
+
+### Identity and access
+
+The access shapes sit in `wire.schema.json` rather than in a document of their own because they are written on the wire's names: a login is a namespace name, a quota lists runner pools by the pool's name, and a maximum run duration is a timeout. A `$ref` may not leave a document here, so a separate document would have held a copy of each, and a copy is what drifts. Where one string holds a name, a group or a service account reference, the copy cannot be avoided and `COMPOSED_GRAMMAR` holds it to the original.
+
+| Where | What the documentation gives | Reading taken |
+| --- | --- | --- |
+| `principalRef` | Grants written `group:team-ops` and `group:finance-leads`; the settled decisions add the login and `NS/NAME` for a service account. | One string, `oneOf` the three forms. A login holds neither a colon nor a slash, so the forms never overlap. `operator` is refused as a login and accepted only by `actor`, on the rows the v0.2.5 token wrote. |
+| `group.name`, `serviceAccount.name` | Names spelled `team-finance`, `finance-leads`, `agentiik`, and no grammar. | The namespace grammar and its reserved words, by `$ref`. Inside a reference only the grammar is checked: a reserved word never names a namespace, so a reference through one names nothing and the API refuses it for that. |
+| `group.members` | "Named set of users". | Logins only. A group inside a group would turn effective permissions into a graph walk. |
+| `accessGrant` | "Principal, role, optional expiry, optional deny", and a deny drawn as `deny alice → run:read_data`. | Exactly one of `role` and `deny`, and `deny` names one permission, since no role is `run:read_data` alone. Named `accessGrant` because `$defs/grant` is already a task's bearer token. |
+| `accessGrant.scope`, `apiToken.scope.within` | A Terraform scope holding a workflow's identifier, `finance/monthly-invoicing`, and a namespace imported as `finance`. | A string, the namespace or `NS/NAME` with the workflow half on the identifier grammar the workflow file writes. |
+| `apiToken.scope` | "An optional scope that can only narrow its principal's rights", and nothing on its shape. | `permissions` and `within`, each optional, at least one present; the rights are the principal's intersected with both. |
+| `apiToken.expires_at` | 90 days by default, at most a year. | Required. The two bounds are relative to `created_at` and left to the API, pinned by a validator fixture. |
+| `passkey.kind` | A table printing `synced` and `device-bound`, recorded from the BE and BS flags. | Spelled as printed, and held to `backup_eligible`: set means `synced`. `backup_state` cannot be set without it. |
+| `principal`, `credential` | Kinds printed "user", "group", "service account". | Discriminated by `kind` for a principal (`service_account`, with an underscore like every multi-word value here) and by `type` for a credential, since a passkey already has a `kind`. |
+| `user.admin`, `user.suspended` | An administrator created with `--admin`; an account that has not enrolled "suspended". | Two booleans, false by default. |
+| `namespaceRecord.quotas` | The quota table lists six, `allowed_runner_pools` among them; the Terraform example writes it beside the `quotas` block. | Inside `quotas`, as the table has it. The provider is free to spell its HCL either way; this is the API's record. |
+| `quotas.*` | The six names and what each bounds. | Every quota optional, absent setting no bound of the namespace's own. The four counts start at one. `max_run_duration` refers to the task message's timeout grammar. `allowed_runner_pools` refers to the pool's name and refuses an empty list, because a pool's own empty list of namespaces means every one. |
+| `namespaceRecord.auth_policy` | "A namespace may tighten it, never loosen it". | The same shape as the installation's, each key absent inheriting the installation's value. Whether it tightens needs the installation's policy and is left to the API. |
+| `authPolicy.min_passkeys` | "integer, default 2". | At least one: zero would let a password go from an account with nothing to replace it. |
 
 ## Fixtures
 

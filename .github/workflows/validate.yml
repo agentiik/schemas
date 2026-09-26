@@ -37,12 +37,14 @@ jobs:
       - name: Install the pinned dependencies
         run: python -m pip install --disable-pip-version-check -r requirements.txt
 
-      # Five checks, and the build fails on any of them: the schemas are legal JSON
-      # Schema 2020-12 and published under the $id they declare, every keyword carries a
-      # description and examples, every example validates against the keyword it
-      # illustrates, every fixture behaves as fixtures/index.json says it does, and no em
-      # dash reaches a description. The keyword rule is the documentation's own: the
-      # language reference and the workflow.language tool are generated from these fields,
-      # so a keyword without them is a keyword the language reference cannot teach.
+      # The build fails on any of the checks tools/check.py lists at its top: among them,
+      # the schemas are legal JSON Schema 2020-12 published under the $id they declare,
+      # every keyword carries a description and examples that validate, every fixture
+      # behaves as fixtures/index.json says it does, openapi.json is a sound OpenAPI 3.1
+      # document held to the same rule, and its routes agree with the documentation's
+      # route table, which the check reads from https://agentiik.github.io/docs/v/main/.
+      # The keyword rule is the documentation's own: the language reference and the
+      # workflow.language tool are generated from these fields, so a keyword without them
+      # is a keyword the language reference cannot teach.
       - name: Check the contract
         run: python tools/check.py

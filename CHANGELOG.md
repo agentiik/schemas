@@ -15,6 +15,14 @@ Every repository of the project carries the same version and is tagged at the sa
 - The identity records follow what the tables settled: `installation` is refused as a login beside `operator`, a namespace from before v0.3.0 has no `owner`, a user answers `last_sign_in_at`, an API token is never a group's, a passkey's kind is derived from Backup Eligibility alone, and `max_concurrent_tasks` and `max_retention_days` always hold a value.
 - `notification` moves to `wire.schema.json`, as a record the API keeps and a route dismisses, and gains `passkey_counter_refused`: a sign-in refused for a passkey's signature counter, carrying the passkey's `credential` rather than a namespace and a grant.
 - `openapi.json` follows the settled route table: `DELETE /api/v1/me/credentials/{id}` replaces the query parameter form, and `DELETE /api/v1/me/notifications/{id}`, `GET` and `DELETE` on `/api/v1/namespaces/{ns}`, `/api/v1/users/{login}` and `/api/v1/groups/{group}` are described; the passkey counter rule, the audit actions of groups, members and service accounts, what owning a namespace means, and a policy on an installation addressed by an IP address are in the descriptions.
+- `user.suspended_for` says why the policy suspended an account, `no_passkey`, and only beside `suspended: true`.
+- `notification` gains `break_glass_recovery`, carrying the `login` of the administrator `agentiik-api recover` issued a recovery code, told to every administrator; `admin_access_widened` covers a grant written by the installation's power and a group joined or left.
+- `actor` accepts `installation`, which writes the owner grant of a user's personal namespace at their first sign-in.
+- `authPolicy`, `apiToken.principal` and `quotas.max_run_duration` describe what the merged API does: a password session only enrols wherever a passkey is required, no token is minted for `NS/agentiik`, and a run is held to `max_run_duration` rather than refused.
+- The root `timeout` of `workflow.schema.json` is held to `max_run_duration` rather than refused, and a workflow writing none is bounded by it.
+- `openapi.json` describes `POST /api/v1/auth/sign-out`, `GET /auth/assets/{name}`, `POST /api/v1/auth/password/enrol`, `PUT` and `DELETE /api/v1/me/password`, and `POST /api/v1/me/totp`, `POST /api/v1/me/totp/confirm` and `DELETE /api/v1/me/totp`.
+- `openapi.json` follows the merged API on every access route: the 10-minute proof as 403 with RFC 9470's `WWW-Authenticate`, 429 and 503 on the password routes, 400 for two credentials and for a body sent where none is read, the origin rule of a session, the exchange's 403 and 409, a token's 409 at 100 live ones and 422 for `NS/agentiik`, the lockout 409 on the policy, grants and memberships, and a user created from a login alone.
+- `tools/check.py` names the statistics routes of v0.6.0 in `NOT_DESCRIBED_YET`.
 
 ## v0.2.5, 2026-09-26
 

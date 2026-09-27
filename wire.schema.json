@@ -3261,19 +3261,23 @@
     },
     "actor": {
       "title": "Actor",
-      "description": "Who did something a record keeps: a principal reference, or operator. operator is the interim operator token of v0.2.5, which became the bootstrap token of v0.3.0, and the rows it wrote keep that name rather than being rewritten to a principal that did not exist when they were written. It is refused as a login for the same reason, so the one string never names two things.",
+      "description": "Who did something a record keeps: a principal reference, operator or installation. operator is the interim operator token of v0.2.5, which became the bootstrap token of v0.3.0, and the rows it wrote keep that name rather than being rewritten to a principal that did not exist when they were written. installation is the installation itself, writing what nobody asked for: the owner grant of a user's personal namespace at their first sign-in, and what the programs run with the installation's settings rather than a credential do. Both are refused as logins for the same reason, so the one string never names two things, and neither is a principal a grant or a token can name.",
       "anyOf": [
         {
           "$ref": "#/$defs/principalRef"
         },
         {
           "const": "operator"
+        },
+        {
+          "const": "installation"
         }
       ],
       "examples": [
         "alice",
         "finance/agentiik",
-        "operator"
+        "operator",
+        "installation"
       ]
     },
     "user": {
@@ -3323,10 +3327,20 @@
         "suspended": {
           "type": "boolean",
           "default": false,
-          "description": "Whether the account is suspended. An account that has not enrolled a passkey when passwords are forbidden is suspended rather than left reachable by a password the policy says no longer exists; a suspended account opens no session.",
+          "description": "Whether the account is suspended. A suspended account opens no session with a credential, and its sessions and tokens open nothing while the suspension lasts; its enrolment links and recovery codes still work, since enrolling is how an account suspended for having no passkey comes back. Forbidding passwords suspends every account it reaches that holds no passkey the policy accepts, rather than leaving it reachable by a password the policy says no longer exists.",
           "examples": [
             false,
             true
+          ]
+        },
+        "suspended_for": {
+          "type": "string",
+          "enum": [
+            "no_passkey"
+          ],
+          "description": "Why the authentication policy suspended the account, where it did: no_passkey, for holding no passkey the policy accepts when passwords came to be forbidden to it. A passkey enrolled from an enrolment link or a recovery code, or a password set from one where passwords are allowed again, lifts that suspension and no other, and signs its user in, so an administrator reading it knows that a link brings the account back. Absent on an account that is not suspended, and on one suspended for a reason the policy did not write, which no enrolment lifts. Kept beside the flag rather than read off the credentials, which change after it was written.",
+          "examples": [
+            "no_passkey"
           ]
         },
         "created_at": {
@@ -3352,8 +3366,30 @@
           "admin": false,
           "suspended": false,
           "created_at": "2026-09-27T09:00:00Z"
+        },
+        {
+          "kind": "user",
+          "login": "dave",
+          "display_name": "Dave Moreau",
+          "admin": false,
+          "suspended": true,
+          "suspended_for": "no_passkey",
+          "created_at": "2026-09-27T09:30:00Z",
+          "last_sign_in_at": "2026-09-27T11:00:00Z"
         }
-      ]
+      ],
+      "dependentSchemas": {
+        "suspended_for": {
+          "required": [
+            "suspended"
+          ],
+          "properties": {
+            "suspended": {
+              "const": true
+            }
+          }
+        }
+      }
     },
     "group": {
       "title": "Group",
@@ -3891,10 +3927,11 @@
         },
         "granted_by": {
           "$ref": "#/$defs/actor",
-          "description": "Who wrote the grant: a principal holding grant:manage at this scope, or operator for a grant the bootstrap token wrote.",
+          "description": "Who wrote the grant: a principal holding grant:manage at this scope, an administrator by the installation's power, operator for a grant the bootstrap token wrote, or installation for the owner grant a user's personal namespace is created with at their first sign-in, which nobody asked for.",
           "examples": [
             "alice",
-            "operator"
+            "operator",
+            "installation"
           ]
         },
         "granted_at": {
@@ -3965,10 +4002,10 @@
               "$ref": "#/$defs/serviceAccountRef"
             }
           ],
-          "description": "Whose rights the token carries: the user who minted it, or a service account of a namespace they own. Never a group, which holds no credential of its own: a group's token would be a way in that belongs to nobody.",
+          "description": "Whose rights the token carries: a user, for a token they minted or agk login's exchange minted for them, or a service account of a namespace its minter owns. Never a group, which holds no credential of its own: a group's token would be a way in that belongs to nobody. Never a namespace's built-in NS/agentiik either, for which the API mints none, since it is the installation's unattended identity and a token of it would outlive the access of whoever held it; and never the bootstrap token's operator, which mints none.",
           "examples": [
             "alice",
-            "finance/agentiik"
+            "finance/nightly-sync"
           ]
         },
         "device_label": {
@@ -4075,7 +4112,7 @@
     },
     "authPolicy": {
       "title": "Authentication policy",
-      "description": "How people prove who they are: set once per installation by an administrator, and tightened by a namespace, never loosened. Every key is optional and absent means its default on an installation; in a namespace's policy, absent means the installation's value. Whether a namespace's policy is tighter than the installation's needs both documents and is left to the API. Service accounts are outside it: they hold API tokens only.",
+      "description": "How people prove who they are: set once per installation by an administrator, and tightened by a namespace, never loosened. What applies to an account is the installation's policy tightened by that of each namespace it holds a grant in, the stricter of each setting, read at every request that asks, so that a change applies from the next one. Every key is optional and absent means its default on an installation, whose policy the API answers with every setting written; in a namespace's policy, absent means the installation's value. Whether a namespace's policy is tighter than the installation's needs both documents and is left to the API. Service accounts are outside it: they hold API tokens only.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -4086,7 +4123,7 @@
             "forbidden"
           ],
           "default": "allowed",
-          "description": "Whether a password may be used at all. forbidden deletes the stored hashes and the password endpoint refuses every attempt, rather than a form being hidden: hiding a form is not a policy. Allowed by default, as a fallback, and the only way in on an installation addressed by IP, where passkeys are unavailable.",
+          "description": "Whether a password may be used at all. forbidden deletes every stored password and the TOTP generator beside it, as rows, in the transaction that forbids them, and the endpoint refuses passwords outright; every account it reaches that holds no passkey the policy accepts is suspended, recorded as having none. Hiding a form is not a policy. It acts when passwords come to be forbidden: an account that comes under a namespace forbidding them later keeps its password until a sign-in offers it, which is refused and deletes it then. Allowed by default, as the fallback that gets a person to their first passkey, and always allowed on an installation addressed by an IP address, where no passkey ceremony runs: forbidding them there is refused.",
           "examples": [
             "allowed",
             "forbidden"
@@ -4099,7 +4136,7 @@
             "required"
           ],
           "default": "required",
-          "description": "Whether a passkey must be enrolled. required: nothing is reachable until one is, and a session opened another way is an enrolment-only session that cannot read a workflow, start a run or mint a token.",
+          "description": "Whether a passkey must be enrolled. required: a session a password opens enrols passkeys and sets its password, and nothing else, whatever passkeys the account holds, since the password is then the way to the passkeys and never a way round them; the passkey that brings the account to min_passkeys deletes the password, and a password is not set where the account holds that many already.",
           "examples": [
             "required",
             "optional"
@@ -4112,7 +4149,7 @@
             "preferred"
           ],
           "default": "required",
-          "description": "What the Relying Party asks of the authenticator, on registration and on every assertion. required makes a passkey two factors, the authenticator and whatever unlocks it, which is why no TOTP is ever asked on top of one.",
+          "description": "What the Relying Party asks of the authenticator, on registration and on every assertion. required makes a passkey two factors, the authenticator and whatever unlocks it, which is why no TOTP is ever asked on top of one. A sign-in's options ask it wherever any policy of the installation requires it, since whose policy applies is known only once the passkey names its account.",
           "examples": [
             "required",
             "preferred"
@@ -4121,7 +4158,7 @@
         "device_bound_only": {
           "type": "boolean",
           "default": false,
-          "description": "Refuses a credential whose Backup Eligibility flag is set, that is, a synced passkey, for a population where trusting the cloud account that syncs it is unacceptable.",
+          "description": "Refuses a credential whose Backup Eligibility flag is set, that is, a synced passkey, for a population where trusting the cloud account that syncs it is unacceptable. A synced passkey then signs nobody in, what one opened before opens nothing from the next request, and it counts for none toward min_passkeys.",
           "examples": [
             false,
             true
@@ -4131,7 +4168,7 @@
           "type": "integer",
           "minimum": 1,
           "default": 2,
-          "description": "How many passkeys a user must hold before their password may be removed, and below which removing one is refused. Two by default, so that losing a device is an inconvenience rather than an incident. At least one, since zero would let a password go from an account with nothing to replace it.",
+          "description": "How many passkeys the policy accepts a user must hold before their password goes, and below which none of them is removed; a synced passkey counts for none where device_bound_only applies. Two by default, so that losing a device is an inconvenience rather than an incident. At least one, since zero would let a password go from an account with nothing to replace it.",
           "examples": [
             2,
             3
@@ -4311,7 +4348,7 @@
         },
         "max_run_duration": {
           "$ref": "#/$defs/taskMessage/properties/timeout",
-          "description": "The upper bound on a workflow's root timeout, so no run holds capacity longer than the operator accepts. Written as a duration on the grammar a timeout is written in, by reference to it.",
+          "description": "The upper bound on a workflow's root timeout, and the bound of a run whose workflow writes none, so no run holds capacity longer than the operator accepts. A root timeout above it is held to it rather than refused, read at every pass of the controller, so a lowered quota holds a run already going from its next pass. Written as a duration on the grammar a timeout is written in, by reference to it.",
           "examples": [
             "24h",
             "90m"
@@ -4352,7 +4389,7 @@
     },
     "notification": {
       "title": "Notification",
-      "description": "Something the installation tells one principal of its own accord, listed in their GET /api/v1/me and kept 90 days from when it was written, or until they dismiss it with DELETE /api/v1/me/notifications/{id}: long enough to reach someone back from leave, and bounded so that the list does not grow for ever. Two kinds, each told to whoever can act on it. admin_access_widened is an administrator having widened their own access in a namespace, which is how an administrator reads another namespace's payloads, since they hold no run:read_data of their own; it is told to the namespace's owner, because an owner does not read the audit log and the people whose data it is should hear it from the installation itself. passkey_counter_refused is a sign-in refused because a passkey's signature counter did not move forward, which is what a cloned authenticator's does; it is told to the passkey's user, who is the one who knows whether the other copy is theirs. Each kind carries what its reader needs and nothing of the other's, so the fields one requires the other refuses.",
+      "description": "Something the installation tells one principal of its own accord, listed in their GET /api/v1/me and kept 90 days from when it was written, or until they dismiss it with DELETE /api/v1/me/notifications/{id}: long enough to reach someone back from leave, and bounded so that the list does not grow for ever. Three kinds, each told to whoever can act on it. admin_access_widened is an administrator having written a grant in a namespace by the installation's power, or widened their own access there, which is how an administrator reads another namespace's payloads, since they hold no run:read_data of their own; it is told to the namespace's owners, because an owner does not read the audit log and the people whose data it is should hear it from the installation itself. passkey_counter_refused is a sign-in refused because a passkey's signature counter did not move forward, which is what a cloned authenticator's does; it is told to the passkey's user, who is the one who knows whether the other copy is theirs. break_glass_recovery is a recovery code agentiik-api recover issued an administrator from the installation's host, the one way to a recovery code no administrator vouches for; it is told to every administrator, the one recovered and suspended ones included, so that an administrator who did not run it learns that whoever holds the host did. Each kind carries what its reader needs and nothing of the others', so the fields one requires the others refuse.",
       "type": "object",
       "required": [
         "id",
@@ -4372,31 +4409,33 @@
           "type": "string",
           "enum": [
             "admin_access_widened",
-            "passkey_counter_refused"
+            "passkey_counter_refused",
+            "break_glass_recovery"
           ],
-          "description": "What happened. admin_access_widened: an administrator wrote a grant for themselves in a namespace, and namespace and grant say where and which. passkey_counter_refused: a sign-in with one of the reader's passkeys was refused because its signature counter was at or below the one stored, one of the two not zero, and credential says which passkey. The documentation describes both and names neither; the names are this document's, in the way every other value here is written.",
+          "description": "What happened. admin_access_widened: an administrator wrote a grant in a namespace by the installation's power, or widened their own access there, a role given to it or a deny taken from it, and namespace and grant say where and which. passkey_counter_refused: a sign-in with one of the reader's passkeys was refused because its signature counter was at or below the one stored, one of the two not zero, and credential says which passkey. break_glass_recovery: agentiik-api recover issued the administrator login names a recovery code. The documentation names the three as written here.",
           "examples": [
             "admin_access_widened",
-            "passkey_counter_refused"
+            "passkey_counter_refused",
+            "break_glass_recovery"
           ]
         },
         "at": {
           "$ref": "#/$defs/timestamp",
-          "description": "When it happened: the grant written, or the sign-in refused. The 90 days it is kept are counted from here.",
+          "description": "When it happened: the grant written or the deny taken away, the sign-in refused, or the recovery code issued. The 90 days it is kept are counted from here.",
           "examples": [
             "2026-09-27T14:00:00Z"
           ]
         },
         "namespace": {
           "$ref": "#/$defs/namespace",
-          "description": "The namespace an administrator widened their own access in, on admin_access_widened alone: one whose record names the reader as its owner, or, where the record names none, as a namespace from before v0.3.0 does, one on which the reader holds the owner role.",
+          "description": "The namespace the administrator acted in, on admin_access_widened alone: one whose record names the reader as its owner, or, where the record names none, as a namespace from before v0.3.0 does, one on which the reader holds the owner role, by a grant of their own or of a group they are in.",
           "examples": [
             "finance"
           ]
         },
         "grant": {
           "$ref": "#/$defs/accessGrant",
-          "description": "The grant the administrator wrote, principal and granted_by being the same person, on admin_access_widened alone.",
+          "description": "What the reader is told of, on admin_access_widened alone, as it was written: a grant the administrator wrote for anybody by the installation's power; a role given to their own access, theirs, a group's they are in or a service account's of a namespace they own; a deny they took from it, as it was before it went; or the grant of a group they put themselves in, or the deny of one they took themselves out of or removed. Kept whole rather than referred to, since it may be revoked before its reader comes to read it.",
           "examples": [
             {
               "id": "01M2AF4T6V8X0Z2B4D6F8H0K2M",
@@ -4406,6 +4445,14 @@
               "expires_at": "2026-09-28T14:00:00Z",
               "granted_by": "carol",
               "granted_at": "2026-09-27T14:00:00Z"
+            },
+            {
+              "id": "01M2AF8X0Z2B4D6F8H0K2M4P6R",
+              "principal": "group:team-finance",
+              "scope": "finance",
+              "role": "viewer",
+              "granted_by": "alice",
+              "granted_at": "2026-09-20T09:00:00Z"
             }
           ]
         },
@@ -4414,6 +4461,13 @@
           "description": "The passkey whose assertion was refused, on passkey_counter_refused alone, by the credential ID GET /api/v1/me/credentials lists it with, so that its user can find it and remove it with DELETE /api/v1/me/credentials/{id} where the other copy is not theirs. The API does not lock it: WebAuthn calls a counter that did not move a signal rather than a proof, and a lock would let a faulty authenticator shut its owner out.",
           "examples": [
             "aVBob25lUGFzc2tleQ"
+          ]
+        },
+        "login": {
+          "$ref": "#/$defs/login",
+          "description": "The administrator agentiik-api recover issued a recovery code, on break_glass_recovery alone, named rather than referred to, so that removing the account, which is what the others may do on reading this, leaves what they were told.",
+          "examples": [
+            "alice"
           ]
         }
       },
@@ -4432,7 +4486,8 @@
               "grant"
             ],
             "properties": {
-              "credential": false
+              "credential": false,
+              "login": false
             }
           }
         },
@@ -4450,7 +4505,27 @@
             ],
             "properties": {
               "namespace": false,
-              "grant": false
+              "grant": false,
+              "login": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "break_glass_recovery"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "login"
+            ],
+            "properties": {
+              "namespace": false,
+              "grant": false,
+              "credential": false
             }
           }
         }
@@ -4476,6 +4551,12 @@
           "kind": "passkey_counter_refused",
           "at": "2026-09-27T15:10:00Z",
           "credential": "aVBob25lUGFzc2tleQ"
+        },
+        {
+          "id": "01M2AH3S5V7X9Z1B3D5F7H9K1M",
+          "kind": "break_glass_recovery",
+          "at": "2026-09-27T16:40:00Z",
+          "login": "alice"
         }
       ]
     }

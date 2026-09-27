@@ -109,7 +109,7 @@
         },
         {
           "file": "workflow/invalid/namespace-reserved.yaml",
-          "rule": "A namespace named after a word the API routes on. The API's first path segment decides the route, so auth, me, users, groups, service-accounts, namespaces, runners, runner-pools, bus, tasks, bricks, runs and artifacts cannot name a namespace.",
+          "rule": "A namespace named after a word the API routes on. The API's first path segment decides the route, so auth, me, users, groups, service-accounts, namespaces, runners, runner-pools, bus, tasks, bricks, runs, artifacts and stats cannot name a namespace.",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#scopes-and-resolution"
         },
@@ -880,6 +880,10 @@
         {
           "file": "wire/valid/principal-user-suspended-no-passkey.json",
           "covers": "a user the policy suspended for holding no passkey when passwords came to be forbidden, which an enrolment link or a recovery code lifts, as GET /api/v1/users/{login} answers it"
+        },
+        {
+          "file": "wire/valid/principal-user-login-255-characters.json",
+          "covers": "a login of 255 characters, the most a namespace's name holds, since a login is also the name of its personal namespace"
         }
       ],
       "invalid": [
@@ -918,6 +922,18 @@
           "rule": "suspended_for says why an account is suspended, so an account that is not suspended carries none",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#auth"
+        },
+        {
+          "file": "wire/invalid/principal-user-login-stats.json",
+          "rule": "stats is reserved from v0.3.0, for GET /api/v1/stats/pools which v0.6.0 serves, and a login is also the name of its personal namespace",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#scopes-and-resolution"
+        },
+        {
+          "file": "wire/invalid/principal-user-login-256-characters.json",
+          "rule": "a login is at most 255 characters, the most a directory or a bus subject token holds a name to, since it is also the name of its personal namespace",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#principals"
         }
       ]
     },
@@ -934,6 +950,14 @@
         {
           "file": "wire/valid/principal-ref-service-account.json",
           "covers": "a service account, named NS/NAME, here the namespace's built-in identity"
+        },
+        {
+          "file": "wire/valid/principal-ref-group-255-characters.json",
+          "covers": "a group whose name is 255 characters, the most a name holds"
+        },
+        {
+          "file": "wire/valid/principal-ref-service-account-255-characters.json",
+          "covers": "a service account whose namespace and name are each 255 characters, the most a name holds"
         }
       ],
       "invalid": [
@@ -958,6 +982,18 @@
         {
           "file": "wire/invalid/principal-ref-group-uppercase.json",
           "rule": "a group's name is written on the namespace grammar, lowercase words joined by hyphens",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#principals"
+        },
+        {
+          "file": "wire/invalid/principal-ref-group-name-256-characters.json",
+          "rule": "a group's name is at most 255 characters, as a namespace's is, inside its reference as anywhere",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#principals"
+        },
+        {
+          "file": "wire/invalid/principal-ref-service-account-name-256-characters.json",
+          "rule": "each half of a service account reference is at most 255 characters, as a namespace's name is",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#principals"
         }
@@ -1090,6 +1126,12 @@
           "rule": "a scope is a namespace or one workflow in it, and a reserved word can never name a namespace",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#scopes-and-resolution"
+        },
+        {
+          "file": "wire/invalid/access-grant-scope-namespace-256-characters.json",
+          "rule": "the namespace half of a workflow's scope is a namespace's name, at most 255 characters",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#scopes-and-resolution"
         }
       ]
     },
@@ -1206,6 +1248,12 @@
           "rule": "a namespace may tighten the installation's policy and never loosen it, so allowing passwords where the installation forbids them is refused; it needs the installation's policy beside this record, so the API holds it",
           "refused_by": "validator",
           "reference": "https://agentiik.github.io/docs/#auth"
+        },
+        {
+          "file": "wire/invalid/namespace-record-name-256-characters.json",
+          "rule": "a namespace's name is at most 255 characters, the most a directory or a bus subject token holds a name to",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#principals"
         }
       ]
     },

@@ -2977,11 +2977,12 @@
     },
     "namespace": {
       "title": "Namespace",
-      "description": "The namespace that owns the run. Every artifact, every quota and every grant is scoped to it, and deduplication in the object store never crosses it. The API's first path segment decides the route, so auth, me, users, groups, service-accounts, namespaces, runners, runner-pools, bus, tasks, bricks, runs, artifacts cannot name a namespace, and are refused at namespace and login creation from v0.3.0.",
+      "description": "The namespace that owns the run. Every artifact, every quota and every grant is scoped to it, and deduplication in the object store never crosses it. Lowercase words joined by hyphens, at most 255 characters, the most a directory or a bus subject token holds a name to, which is also what bounds a login, a group's name and each half of a service account's, all written on this grammar. The API's first path segment decides the route, so auth, me, users, groups, service-accounts, namespaces, runners, runner-pools, bus, tasks, bricks, runs, artifacts, stats cannot name a namespace, and are refused at namespace and login creation from v0.3.0. stats is reserved from v0.3.0 for GET /api/v1/stats/pools, which v0.6.0 serves at that path alone, so that no namespace created meanwhile takes it. Nothing renames a namespace, so one made before v0.3.0 under it keeps its name and the API still serves it, every route of it, with nothing to do; only its creation is refused: a reader validating what such an installation answers meets a refusal the API does not make.",
       "type": "string",
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 255,
       "not": {
-        "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts)$"
+        "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats)$"
       },
       "examples": [
         "finance",
@@ -3221,9 +3222,12 @@
     },
     "groupRef": {
       "title": "Group reference",
-      "description": "A group, written where a principal is expected: group: then the group's name. The prefix is what tells a group from a login in one string, since both are written on the same grammar; a login can hold neither a colon nor a slash, so the three forms of a principal reference never overlap. The name is held to the namespace grammar, the same pattern written after the prefix, and tools/check.py refuses the two drifting apart.",
+      "description": "A group, written where a principal is expected: group: then the group's name. The prefix is what tells a group from a login in one string, since both are written on the same grammar; a login can hold neither a colon nor a slash, so the three forms of a principal reference never overlap. The name is held to the namespace grammar, the same pattern written after the prefix, and to its 255 characters, which the not refuses past, and tools/check.py refuses either drifting apart from $defs/namespace.",
       "type": "string",
       "pattern": "^group:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "not": {
+        "pattern": "^group:[a-z0-9-]{256}"
+      },
       "examples": [
         "group:team-finance",
         "group:finance-leads"
@@ -3231,9 +3235,12 @@
     },
     "serviceAccountRef": {
       "title": "Service account reference",
-      "description": "A service account, written where a principal is expected: the namespace it lives in, a slash, and its name. A service account belongs to one namespace, so its name alone is not unique and the namespace is part of the reference. Every namespace has a built-in one called agentiik, to which scheduled, webhook and event runs are attributed, which is why finance/agentiik is the reference that shows up most. Both halves are held to the namespace grammar, the same pattern written on either side of the slash, and tools/check.py refuses them drifting apart. The reserved words are not repeated here: a reserved word never names a namespace, so a reference through one names a principal that does not exist, and the API refuses it for that.",
+      "description": "A service account, written where a principal is expected: the namespace it lives in, a slash, and its name. A service account belongs to one namespace, so its name alone is not unique and the namespace is part of the reference. Every namespace has a built-in one called agentiik, to which scheduled, webhook and event runs are attributed, which is why finance/agentiik is the reference that shows up most. Both halves are held to the namespace grammar, the same pattern written on either side of the slash, and to its 255 characters, which the not refuses past on either side, and tools/check.py refuses either drifting apart from $defs/namespace. The reserved words are not repeated here: a reserved word never names a namespace, so a reference through one names a principal that does not exist, and the API refuses it for that.",
       "type": "string",
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*/[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "not": {
+        "pattern": "^[a-z0-9-]{256}|/[a-z0-9-]{256}"
+      },
       "examples": [
         "finance/agentiik",
         "team-ops/deploy-bot"
@@ -3851,14 +3858,17 @@
     },
     "grantScope": {
       "title": "Grant scope",
-      "description": "Where a grant applies: a namespace by its name, inherited by every workflow inside, or one workflow as NS/NAME, the identifier the API imports a workflow by and a Terraform scope attribute holds. The workflow half is the name a workflow file's metadata.name writes, which is the identifier grammar rather than the namespace one; the namespace half is the namespace grammar, and tools/check.py holds both halves to the patterns they are copied from.",
+      "description": "Where a grant applies: a namespace by its name, inherited by every workflow inside, or one workflow as NS/NAME, the identifier the API imports a workflow by and a Terraform scope attribute holds. The workflow half is the name a workflow file's metadata.name writes, which is the identifier grammar rather than the namespace one; the namespace half is the namespace grammar, at most 255 characters, and tools/check.py holds both halves to the patterns they are copied from and the namespace half to its bound.",
       "oneOf": [
         {
           "$ref": "#/$defs/namespace"
         },
         {
           "type": "string",
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*/[A-Za-z0-9][A-Za-z0-9_-]*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*/[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "not": {
+            "pattern": "^[a-z0-9-]{256}"
+          }
         }
       ],
       "examples": [

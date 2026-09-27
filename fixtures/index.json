@@ -876,6 +876,10 @@
         {
           "file": "wire/valid/principal-service-account-built-in.json",
           "covers": "the built-in identity of a namespace, NS/agentiik, which scheduled, webhook and event runs are attributed to and which nobody created"
+        },
+        {
+          "file": "wire/valid/principal-user-suspended-no-passkey.json",
+          "covers": "a user the policy suspended for holding no passkey when passwords came to be forbidden, which an enrolment link or a recovery code lifts, as GET /api/v1/users/{login} answers it"
         }
       ],
       "invalid": [
@@ -908,6 +912,12 @@
           "rule": "a group is a named set of users, so its members are logins and a group reference is not one",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#principals"
+        },
+        {
+          "file": "wire/invalid/principal-user-suspended-for-not-suspended.json",
+          "rule": "suspended_for says why an account is suspended, so an account that is not suspended carries none",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#auth"
         }
       ]
     },
@@ -1050,6 +1060,10 @@
         {
           "file": "wire/valid/access-grant-deny.json",
           "covers": "the documentation's deny: alice, an editor of finance through team-finance, loses run:read_data on monthly-invoicing and keeps the rest of the role there, whatever any allow gives"
+        },
+        {
+          "file": "wire/valid/access-grant-owner-by-installation.json",
+          "covers": "the owner grant a user's personal namespace is created with at their first sign-in, written by the installation, since nobody asked for it"
         }
       ],
       "invalid": [
@@ -1240,6 +1254,10 @@
         {
           "file": "wire/valid/notification-passkey-counter-refused.json",
           "covers": "a sign-in refused because a passkey's signature counter did not move forward, told to its user with the passkey's credential ID and no namespace"
+        },
+        {
+          "file": "wire/valid/notification-break-glass-recovery.json",
+          "covers": "agentiik-api recover having issued the administrator alice a recovery code from the installation's host, told to every administrator with her login and nothing else"
         }
       ],
       "invalid": [
@@ -1254,6 +1272,12 @@
           "rule": "an owner told of an administrator widening their own access is told which grant they wrote, so that it can be read and revoked",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#administrators"
+        },
+        {
+          "file": "wire/invalid/notification-break-glass-without-login.json",
+          "rule": "every administrator is told which account the break-glass path issued a recovery code, since an administrator who did not run it has to know whose it was",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#auth"
         }
       ]
     }

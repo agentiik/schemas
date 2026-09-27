@@ -278,9 +278,10 @@
     },
     "namespace": {
       "title": "Namespace",
-      "description": "The name of a namespace, an identifier other than a reserved word. The API's first path segment decides the route, so auth, me, users, groups, service-accounts, namespaces, runners, runner-pools, bus, tasks, bricks, runs, artifacts cannot name a namespace, and are refused at namespace and login creation from v0.3.0.",
+      "description": "The name of a namespace, an identifier other than a reserved word, at most 255 characters, the most a directory holds a name to. The API's first path segment decides the route, so auth, me, users, groups, service-accounts, namespaces, runners, runner-pools, bus, tasks, bricks, runs, artifacts, stats cannot name a namespace, and are refused at namespace and login creation from v0.3.0. stats is reserved from v0.3.0 for GET /api/v1/stats/pools, which v0.6.0 serves, so that no namespace created meanwhile takes it. Nothing renames a namespace, so one an installation of v0.2 created under it keeps its name and is served as before, and only its creation is refused, which is why the engine still reads a workflow naming it.",
       "$ref": "#/$defs/identifier",
-      "not": { "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts)$" },
+      "maxLength": 255,
+      "not": { "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats)$" },
       "examples": ["finance", "platform"]
     },
     "duration": {
@@ -480,7 +481,7 @@
       "description": "A workflow addressed as <namespace>/<name>, the same identity a grant and a git remote use. The namespace is never a reserved word, as $defs/namespace lists them.",
       "type": "string",
       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*/[A-Za-z0-9][A-Za-z0-9_-]*$",
-      "not": { "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts)/" },
+      "not": { "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats)/" },
       "examples": ["finance/common", "finance/monthly-invoicing"]
     },
     "scheduleTrigger": {
@@ -1098,7 +1099,7 @@
               "description": "The workflow to call, as <namespace>/<name>, optionally at a ref after an @.",
               "type": "string",
               "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*/[A-Za-z0-9][A-Za-z0-9_-]*(@\\S+)?$",
-              "not": { "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts)/" }
+              "not": { "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats)/" }
             },
             {
               "description": "The workflow to call and the ref it is read at, written apart.",

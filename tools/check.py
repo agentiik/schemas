@@ -742,6 +742,16 @@ ONE_GRAMMAR = (
             ("workflow.schema.json", "#/$defs/step/properties/workflow/oneOf/0/not/pattern"),
         ),
     ),
+    # A bound rather than a pattern, held the same way: a namespace's name is at most what a
+    # directory and a bus subject token hold, and a login, a group's name and a service
+    # account's reach it by $ref.
+    (
+        "the longest a namespace's name is",
+        (
+            ("wire.schema.json", "#/$defs/namespace/maxLength"),
+            ("workflow.schema.json", "#/$defs/namespace/maxLength"),
+        ),
+    ),
 )
 
 
@@ -777,6 +787,19 @@ COMPOSED_GRAMMAR = (
 )
 
 
+# The bound on a namespace's name, written inside a reference. A maxLength bounds the whole
+# string, and a reference holds a name beside a prefix or another name, so the bound on the
+# name is a not beside the pattern refusing one character past it. Each entry names what the
+# reference is, where its not is written, and the template it is: {0} stands for one past the
+# namespace's maxLength, so that a bound that moves takes every reference along, or the build
+# fails.
+BOUNDED_NAME = (
+    ("a group's name inside its reference", ("wire.schema.json", "#/$defs/groupRef/not/pattern"), "^group:[a-z0-9-]{{{0}}}"),
+    ("each half of a service account reference", ("wire.schema.json", "#/$defs/serviceAccountRef/not/pattern"), "^[a-z0-9-]{{{0}}}|/[a-z0-9-]{{{0}}}"),
+    ("the namespace half of a workflow's scope", ("wire.schema.json", "#/$defs/grantScope/oneOf/1/not/pattern"), "^[a-z0-9-]{{{0}}}"),
+)
+
+
 def unanchored(pattern):
     """A pattern without the ^ and $ that anchor it, ready to be written inside another."""
     if pattern.startswith("^"):
@@ -800,7 +823,7 @@ def check_every_copy_agrees(documents, report):
                 # A document that did not load has been reported already.
                 continue
             pattern = resolve_pointer(documents[filename], pointer)
-            if not isinstance(pattern, str):
+            if not isinstance(pattern, (str, int)) or isinstance(pattern, bool):
                 report.fail(filename, "%s is where the grammar of %s is written, and holds no pattern" % (pointer, what))
                 continue
             written.append((filename, pointer, pattern))
@@ -838,6 +861,22 @@ def check_every_copy_agrees(documents, report):
                     % (pointer, composed, what, ", ".join(p for _, p in parts), expected),
                 )
     report.heading("%d composed grammars, each written as the grammars it is made of" % len(COMPOSED_GRAMMAR))
+
+    if "wire.schema.json" in documents:
+        bound = resolve_pointer(documents["wire.schema.json"], "#/$defs/namespace/maxLength")
+        if not isinstance(bound, int) or isinstance(bound, bool):
+            report.fail("wire.schema.json", "#/$defs/namespace/maxLength is the bound on a namespace's name, and holds no number")
+        else:
+            for what, (filename, pointer), template in BOUNDED_NAME:
+                written = resolve_pointer(documents[filename], pointer)
+                expected = template.format(bound + 1)
+                if written != expected:
+                    report.fail(
+                        filename,
+                        "%s reads %s, and the bound of %s at #/$defs/namespace/maxLength, %d, reads %s"
+                        % (pointer, written, what, bound, expected),
+                    )
+    report.heading("%d names inside a reference, each bounded as a namespace's name is" % len(BOUNDED_NAME))
 
 
 # --------------------------------------------------------------------------------------

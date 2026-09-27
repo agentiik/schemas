@@ -3789,7 +3789,7 @@
     },
     "role": {
       "title": "Role",
-      "description": "A named set of permissions a grant binds, by the documentation's table: viewer reads, operator runs and follows the runs it starts, editor reads, runs, writes, reads data and uses and writes secrets, and owner adds workflow:delete and grant:manage. operator deliberately lacks workflow:read, so a colleague can launch a job without seeing the queries, endpoints and business rules inside it, and run:read_data, so the payloads stay out of its reach; someone who needs both holds both roles. Four and no more, since a role invented per installation is one the clients cannot explain.",
+      "description": "A named set of permissions a grant binds, by the documentation's table: viewer reads, operator runs and follows runs, editor reads, runs, writes, reads data and uses and writes secrets, and owner adds workflow:delete and grant:manage. operator deliberately lacks workflow:read, so a colleague can launch a job without seeing the queries, endpoints and business rules inside it, and run:read_data, so the payloads stay out of its reach; someone who needs both holds both roles. Four and no more, since a role invented per installation is one the clients cannot explain.",
       "type": "string",
       "enum": [
         "viewer",

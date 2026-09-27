@@ -1313,7 +1313,7 @@
           },
           "403": {
             "$ref": "#/components/responses/signInAgain",
-            "description": "A bearer token, the bootstrap token's included; a request from another origin than the public URL's; a session an enrolment link opened; passwords forbidden by the policy that applies to the account, the error naming password; a current password that does not match; or a first password from a session signed in to longer ago than 10 minutes, answered with RFC 9470's challenge in WWW-Authenticate."
+            "description": "A bearer token, the bootstrap token's included; a request from another origin than the public URL's; passwords forbidden by the policy that applies to the account, the error naming password; a current password that does not match; or a first password from a session signed in to longer ago than 10 minutes, answered with RFC 9470's challenge in WWW-Authenticate."
           },
           "409": {
             "$ref": "#/components/responses/conflict",

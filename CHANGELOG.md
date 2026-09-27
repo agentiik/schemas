@@ -14,6 +14,7 @@ Every repository of the project carries the same version and is tagged at the sa
 - `role`, `permission` and `accessGrant` follow the settled roles: `operator` follows runs with `run:read`, `owner` alone holds `workflow:delete`, `secret:use` is checked at the push, and the documentation's deny takes `run:read_data` from an `editor`; `openapi.json`'s grant and `/me` examples tell the same story.
 - The identity records follow what the tables settled: `installation` is refused as a login beside `operator`, a namespace from before v0.3.0 has no `owner`, a user answers `last_sign_in_at`, an API token is never a group's, a passkey's kind is derived from Backup Eligibility alone, and `max_concurrent_tasks` and `max_retention_days` always hold a value.
 - `notification` moves to `wire.schema.json`, as a record the API keeps and a route dismisses, and gains `passkey_counter_refused`: a sign-in refused for a passkey's signature counter, carrying the passkey's `credential` rather than a namespace and a grant.
+- `openapi.json` follows the settled route table: `DELETE /api/v1/me/credentials/{id}` replaces the query parameter form, and `DELETE /api/v1/me/notifications/{id}`, `GET` and `DELETE` on `/api/v1/namespaces/{ns}`, `/api/v1/users/{login}` and `/api/v1/groups/{group}` are described; the passkey counter rule, the audit actions of groups, members and service accounts, what owning a namespace means, and a policy on an installation addressed by an IP address are in the descriptions.
 
 ## v0.2.5, 2026-09-26
 

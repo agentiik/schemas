@@ -4349,6 +4349,135 @@
           ]
         }
       ]
+    },
+    "notification": {
+      "title": "Notification",
+      "description": "Something the installation tells one principal of its own accord, listed in their GET /api/v1/me and kept 90 days from when it was written, or until they dismiss it with DELETE /api/v1/me/notifications/{id}: long enough to reach someone back from leave, and bounded so that the list does not grow for ever. Two kinds, each told to whoever can act on it. admin_access_widened is an administrator having widened their own access in a namespace, which is how an administrator reads another namespace's payloads, since they hold no run:read_data of their own; it is told to the namespace's owner, because an owner does not read the audit log and the people whose data it is should hear it from the installation itself. passkey_counter_refused is a sign-in refused because a passkey's signature counter did not move forward, which is what a cloned authenticator's does; it is told to the passkey's user, who is the one who knows whether the other copy is theirs. Each kind carries what its reader needs and nothing of the other's, so the fields one requires the other refuses.",
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ulid",
+          "description": "The notification's identifier, what dismissing it names.",
+          "examples": [
+            "01M2AF6V8X0Z2B4D6F8H0K2M4P"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "admin_access_widened",
+            "passkey_counter_refused"
+          ],
+          "description": "What happened. admin_access_widened: an administrator wrote a grant for themselves in a namespace, and namespace and grant say where and which. passkey_counter_refused: a sign-in with one of the reader's passkeys was refused because its signature counter was at or below the one stored, one of the two not zero, and credential says which passkey. The documentation describes both and names neither; the names are this document's, in the way every other value here is written.",
+          "examples": [
+            "admin_access_widened",
+            "passkey_counter_refused"
+          ]
+        },
+        "at": {
+          "$ref": "#/$defs/timestamp",
+          "description": "When it happened: the grant written, or the sign-in refused. The 90 days it is kept are counted from here.",
+          "examples": [
+            "2026-09-27T14:00:00Z"
+          ]
+        },
+        "namespace": {
+          "$ref": "#/$defs/namespace",
+          "description": "The namespace an administrator widened their own access in, on admin_access_widened alone: one whose record names the reader as its owner, or, where the record names none, as a namespace from before v0.3.0 does, one on which the reader holds the owner role.",
+          "examples": [
+            "finance"
+          ]
+        },
+        "grant": {
+          "$ref": "#/$defs/accessGrant",
+          "description": "The grant the administrator wrote, principal and granted_by being the same person, on admin_access_widened alone.",
+          "examples": [
+            {
+              "id": "01M2AF4T6V8X0Z2B4D6F8H0K2M",
+              "principal": "carol",
+              "scope": "finance",
+              "role": "editor",
+              "expires_at": "2026-09-28T14:00:00Z",
+              "granted_by": "carol",
+              "granted_at": "2026-09-27T14:00:00Z"
+            }
+          ]
+        },
+        "credential": {
+          "$ref": "#/$defs/passkey/properties/id",
+          "description": "The passkey whose assertion was refused, on passkey_counter_refused alone, by the credential ID GET /api/v1/me/credentials lists it with, so that its user can find it and remove it with DELETE /api/v1/me/credentials/{id} where the other copy is not theirs. The API does not lock it: WebAuthn calls a counter that did not move a signal rather than a proof, and a lock would let a faulty authenticator shut its owner out.",
+          "examples": [
+            "aVBob25lUGFzc2tleQ"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "admin_access_widened"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "namespace",
+              "grant"
+            ],
+            "properties": {
+              "credential": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "passkey_counter_refused"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "credential"
+            ],
+            "properties": {
+              "namespace": false,
+              "grant": false
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "id": "01M2AF6V8X0Z2B4D6F8H0K2M4P",
+          "kind": "admin_access_widened",
+          "at": "2026-09-27T14:00:00Z",
+          "namespace": "finance",
+          "grant": {
+            "id": "01M2AF4T6V8X0Z2B4D6F8H0K2M",
+            "principal": "carol",
+            "scope": "finance",
+            "role": "editor",
+            "expires_at": "2026-09-28T14:00:00Z",
+            "granted_by": "carol",
+            "granted_at": "2026-09-27T14:00:00Z"
+          }
+        },
+        {
+          "id": "01M2AG2R4T6W8Y0A2C4E6G8J0M",
+          "kind": "passkey_counter_refused",
+          "at": "2026-09-27T15:10:00Z",
+          "credential": "aVBob25lUGFzc2tleQ"
+        }
+      ]
     }
   }
 }

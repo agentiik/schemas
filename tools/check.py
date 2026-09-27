@@ -100,6 +100,7 @@ SCHEMAS = {
     "permission": {"file": "wire.schema.json", "pointer": "#/$defs/permission"},
     "namespace-record": {"file": "wire.schema.json", "pointer": "#/$defs/namespaceRecord"},
     "auth-policy": {"file": "wire.schema.json", "pointer": "#/$defs/authPolicy"},
+    "notification": {"file": "wire.schema.json", "pointer": "#/$defs/notification"},
 }
 
 

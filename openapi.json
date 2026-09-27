@@ -4356,84 +4356,6 @@
           }
         ]
       },
-      "notification": {
-        "title": "Notification",
-        "type": "object",
-        "required": [
-          "id",
-          "kind",
-          "at",
-          "namespace",
-          "grant"
-        ],
-        "additionalProperties": false,
-        "description": "Something the installation tells the caller of its own accord. One kind so far: an administrator widened their own access in a namespace the caller owns, which is how an administrator reads another namespace's payloads, since they hold no run:read_data of their own. Owners do not read the audit log, and the people whose data it is should hear it from the installation itself.",
-        "properties": {
-          "id": {
-            "$ref": "wire.schema.json#/$defs/ulid",
-            "description": "The notification's identifier.",
-            "examples": [
-              "01M2AF6V8X0Z2B4D6F8H0K2M4P"
-            ]
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "admin_access_widened"
-            ],
-            "description": "What happened. admin_access_widened: an administrator wrote a grant for themselves, and grant says which.",
-            "examples": [
-              "admin_access_widened"
-            ]
-          },
-          "at": {
-            "$ref": "wire.schema.json#/$defs/timestamp",
-            "description": "When it happened.",
-            "examples": [
-              "2026-09-27T14:00:00Z"
-            ]
-          },
-          "namespace": {
-            "$ref": "wire.schema.json#/$defs/namespace",
-            "description": "The namespace concerned, one the caller owns.",
-            "examples": [
-              "finance"
-            ]
-          },
-          "grant": {
-            "$ref": "wire.schema.json#/$defs/accessGrant",
-            "description": "The grant the administrator wrote, principal and granted_by being the same person.",
-            "examples": [
-              {
-                "id": "01M2AF4T6V8X0Z2B4D6F8H0K2M",
-                "principal": "carol",
-                "scope": "finance",
-                "role": "editor",
-                "expires_at": "2026-09-28T14:00:00Z",
-                "granted_by": "carol",
-                "granted_at": "2026-09-27T14:00:00Z"
-              }
-            ]
-          }
-        },
-        "examples": [
-          {
-            "id": "01M2AF6V8X0Z2B4D6F8H0K2M4P",
-            "kind": "admin_access_widened",
-            "at": "2026-09-27T14:00:00Z",
-            "namespace": "finance",
-            "grant": {
-              "id": "01M2AF4T6V8X0Z2B4D6F8H0K2M",
-              "principal": "carol",
-              "scope": "finance",
-              "role": "editor",
-              "expires_at": "2026-09-28T14:00:00Z",
-              "granted_by": "carol",
-              "granted_at": "2026-09-27T14:00:00Z"
-            }
-          }
-        ]
-      },
       "me": {
         "title": "Me",
         "type": "object",
@@ -4555,12 +4477,18 @@
           "notifications": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/notification"
+              "$ref": "wire.schema.json#/$defs/notification"
             },
-            "description": "What the installation has to tell the caller, newest first. No route marks one read yet, so the list is what happened.",
+            "description": "What the installation has to tell the caller, newest first: an administrator having widened their own access in a namespace the caller owns, and a sign-in refused for a passkey's signature counter. Each is kept 90 days from when it was written, or until the caller dismisses it with DELETE /api/v1/me/notifications/{id}.",
             "examples": [
               [],
               [
+                {
+                  "id": "01M2AG2R4T6W8Y0A2C4E6G8J0M",
+                  "kind": "passkey_counter_refused",
+                  "at": "2026-09-27T15:10:00Z",
+                  "credential": "aVBob25lUGFzc2tleQ"
+                },
                 {
                   "id": "01M2AF6V8X0Z2B4D6F8H0K2M4P",
                   "kind": "admin_access_widened",

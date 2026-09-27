@@ -1616,7 +1616,11 @@
                         {
                           "name": "alice",
                           "kind": "personal",
-                          "owner": "alice"
+                          "owner": "alice",
+                          "quotas": {
+                            "max_concurrent_tasks": 20,
+                            "max_retention_days": 90
+                          }
                         },
                         {
                           "name": "finance",
@@ -1663,7 +1667,7 @@
           "namespaces"
         ],
         "summary": "Read a namespace's quotas",
-        "description": "The namespace's quotas, allowed_runner_pools among them, as an administrator last set them. A quota absent sets no bound of the namespace's own. Readable by an administrator and by every principal holding a grant in the namespace.",
+        "description": "The namespace's quotas, allowed_runner_pools among them. max_concurrent_tasks and max_retention_days always hold a value, 20 and 90 until an administrator sets another; the other four appear where they are set, and absent bound nothing of the namespace's own. Readable by an administrator and by every principal holding a grant in the namespace.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#quotas-per-namespace"
@@ -1691,9 +1695,12 @@
                       ]
                     }
                   },
-                  "none": {
-                    "summary": "no bound of its own",
-                    "value": {}
+                  "defaults": {
+                    "summary": "the two that always hold a value, at their defaults",
+                    "value": {
+                      "max_concurrent_tasks": 20,
+                      "max_retention_days": 90
+                    }
                   }
                 }
               }
@@ -1718,13 +1725,13 @@
           "namespaces"
         ],
         "summary": "Set a namespace's quotas",
-        "description": "Replaces the namespace's quotas: a quota the body leaves out sets no bound any more, so that the body is the whole of what applies and an apply reads back what it wrote. Administrator only, and audited as namespace.update. allowed_runner_pools names at least one pool, since a pool's own empty list of namespaces means every one and the same spelling here would be read as its opposite.",
+        "description": "Sets the namespace's quotas. max_concurrent_tasks and max_retention_days always hold a value, so each keeps the one it has where the body leaves it out; each of the other four the body leaves out bounds nothing any more, so that the body is the whole of what they bound. Administrator only, and audited as namespace.update. allowed_runner_pools names at least one pool, since a pool's own empty list of namespaces means every one and the same spelling here would be read as its opposite.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#quotas-per-namespace"
         },
         "requestBody": {
-          "description": "The whole of the namespace's quotas.",
+          "description": "The namespace's quotas: the four optional bounds as a whole, and the two that always hold a value where they change.",
           "required": true,
           "content": {
             "application/json": {
@@ -1747,7 +1754,7 @@
                   }
                 },
                 "two": {
-                  "summary": "two bounds, the rest lifted",
+                  "summary": "two bounds, max_retention_days kept and the other three lifted",
                   "value": {
                     "max_concurrent_tasks": 20,
                     "max_runs_per_hour": 500
@@ -1871,7 +1878,7 @@
           "users"
         ],
         "summary": "Create a user",
-        "description": "Creates a user from a login, a display name and admin where it is an administrator, answered with an enrolment link shown once, single use and good for an hour. Administrator only, save the first administrator, whom the bootstrap token creates as agk user create LOGIN --admin does. Asked again for a user who has not enrolled yet, with the same login, display name and admin, it answers a fresh link and revokes the one before, so that a link that lapsed unused locks nobody out; the bootstrap token relies on this until the first administrator has enrolled, and ends then. The login is refused where a namespace or another user holds it, and operator and the reserved words are refused by its grammar. Audited as user.create, and the link as enrolment.issue.",
+        "description": "Creates a user from a login, a display name and admin where it is an administrator, answered with an enrolment link shown once, single use and good for an hour. Administrator only, save the first administrator, whom the bootstrap token creates as agk user create LOGIN --admin does. Asked again for a user who has not enrolled yet, with the same login, display name and admin, it answers a fresh link and revokes the one before, so that a link that lapsed unused locks nobody out; the bootstrap token relies on this until the first administrator has enrolled, and ends then. The login is refused where a namespace or another user holds it, and operator, installation and the reserved words are refused by its grammar. Audited as user.create, and the link as enrolment.issue.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#first-run"
@@ -4922,7 +4929,7 @@
           },
           "quotas": {
             "$ref": "wire.schema.json#/$defs/namespaceRecord/properties/quotas",
-            "description": "What it may consume. Absent sets no bound of its own; PUT /api/v1/namespaces/{ns}/quotas changes them later.",
+            "description": "What it may consume. max_concurrent_tasks and max_retention_days start at 20 and 90 where left out, and the other four bound nothing until set; PUT /api/v1/namespaces/{ns}/quotas changes them later.",
             "examples": [
               {
                 "max_concurrent_tasks": 20,
@@ -4981,7 +4988,11 @@
                 {
                   "name": "alice",
                   "kind": "personal",
-                  "owner": "alice"
+                  "owner": "alice",
+                  "quotas": {
+                    "max_concurrent_tasks": 20,
+                    "max_retention_days": 90
+                  }
                 },
                 {
                   "name": "finance",
@@ -5009,7 +5020,11 @@
               {
                 "name": "alice",
                 "kind": "personal",
-                "owner": "alice"
+                "owner": "alice",
+                "quotas": {
+                  "max_concurrent_tasks": 20,
+                  "max_retention_days": 90
+                }
               },
               {
                 "name": "finance",

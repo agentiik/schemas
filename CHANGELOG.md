@@ -12,6 +12,7 @@ Every repository of the project carries the same version and is tagged at the sa
 - `openapi.json` describes the access routes of v0.3.0: passkey and password sign-in, `agk login`'s exchange, the authentication policy, `/me` and its credentials, users, groups, service accounts, namespaces and quotas, grants and API tokens, referring to `wire.schema.json` for every record.
 - `tools/check.py` validates `openapi.json` and fails where its routes and the documentation's route table disagree.
 - `role`, `permission` and `accessGrant` follow the settled roles: `operator` follows runs with `run:read`, `owner` alone holds `workflow:delete`, `secret:use` is checked at the push, and the documentation's deny takes `run:read_data` from an `editor`; `openapi.json`'s grant and `/me` examples tell the same story.
+- The identity records follow what the tables settled: `installation` is refused as a login beside `operator`, a namespace from before v0.3.0 has no `owner`, a user answers `last_sign_in_at`, an API token is never a group's, a passkey's kind is derived from Backup Eligibility alone, and `max_concurrent_tasks` and `max_retention_days` always hold a value.
 
 ## v0.2.5, 2026-09-26
 

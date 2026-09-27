@@ -23,7 +23,7 @@ Every repository of the project carries the same version and is tagged at the sa
 - `openapi.json` describes `POST /api/v1/auth/sign-out`, `GET /auth/assets/{name}`, `POST /api/v1/auth/password/enrol`, `PUT` and `DELETE /api/v1/me/password`, and `POST /api/v1/me/totp`, `POST /api/v1/me/totp/confirm` and `DELETE /api/v1/me/totp`.
 - `openapi.json` follows the merged API on every access route: the 10-minute proof as 403 with RFC 9470's `WWW-Authenticate`, 429 and 503 on the password routes, 400 for two credentials and for a body sent where none is read, the origin rule of a session, the exchange's 403 and 409, a token's 409 at 100 live ones and 422 for `NS/agentiik`, the lockout 409 on the policy, grants and memberships, and a user created from a login alone.
 - `tools/check.py` names the statistics routes of v0.6.0 in `NOT_DESCRIBED_YET`.
-- `stats` joins the words a namespace and a login may not be, for v0.6.0's `GET /api/v1/stats/pools`; a namespace of that name made before v0.3.0 keeps being served.
+- `stats` joins the words a namespace and a login may not be, for v0.6.0's `GET /api/v1/stats/pools`; the API still serves a namespace of that name made before v0.3.0, with nothing to do.
 - `createUser` says an administrator the bootstrap token creates is given the owner role on every namespace no record names an owner of.
 - A namespace's name, a login, a group's name and each half of a service account's are at most 255 characters, inside the wire's references too, and `tools/check.py` holds every copy of the bound together.
 

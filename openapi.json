@@ -1436,12 +1436,20 @@
                         ],
                         "finance": [
                           "workflow:read",
-                          "run:read"
+                          "workflow:run",
+                          "workflow:write",
+                          "run:read",
+                          "run:read_data",
+                          "secret:use",
+                          "secret:write"
                         ],
                         "finance/monthly-invoicing": [
                           "workflow:read",
+                          "workflow:run",
+                          "workflow:write",
                           "run:read",
-                          "workflow:run"
+                          "secret:use",
+                          "secret:write"
                         ]
                       },
                       "notifications": []
@@ -2443,7 +2451,7 @@
                           "id": "01M2AC5K0N2Q4S6T8W0Y2A4C6E",
                           "principal": "group:team-finance",
                           "scope": "finance",
-                          "role": "viewer",
+                          "role": "editor",
                           "granted_by": "alice",
                           "granted_at": "2026-09-27T09:00:00Z"
                         }
@@ -2487,11 +2495,11 @@
                 "$ref": "#/components/schemas/grantCreate"
               },
               "examples": {
-                "viewer": {
-                  "summary": "a group reads the namespace",
+                "editor": {
+                  "summary": "a group edits the namespace",
                   "value": {
                     "principal": "group:team-finance",
-                    "role": "viewer"
+                    "role": "editor"
                   }
                 },
                 "unattended": {
@@ -2520,7 +2528,7 @@
                       "id": "01M2AC5K0N2Q4S6T8W0Y2A4C6E",
                       "principal": "group:team-finance",
                       "scope": "finance",
-                      "role": "viewer",
+                      "role": "editor",
                       "granted_by": "alice",
                       "granted_at": "2026-09-27T09:00:00Z"
                     }
@@ -2629,7 +2637,7 @@
                           "id": "01M2AC5K0N2Q4S6T8W0Y2A4C6E",
                           "principal": "group:team-finance",
                           "scope": "finance",
-                          "role": "viewer",
+                          "role": "editor",
                           "granted_by": "alice",
                           "granted_at": "2026-09-27T09:00:00Z"
                         },
@@ -4518,12 +4526,20 @@
                 ],
                 "finance": [
                   "workflow:read",
-                  "run:read"
+                  "workflow:run",
+                  "workflow:write",
+                  "run:read",
+                  "run:read_data",
+                  "secret:use",
+                  "secret:write"
                 ],
                 "finance/monthly-invoicing": [
                   "workflow:read",
+                  "workflow:run",
+                  "workflow:write",
                   "run:read",
-                  "workflow:run"
+                  "secret:use",
+                  "secret:write"
                 ]
               },
               {}
@@ -4586,12 +4602,20 @@
               ],
               "finance": [
                 "workflow:read",
-                "run:read"
+                "workflow:run",
+                "workflow:write",
+                "run:read",
+                "run:read_data",
+                "secret:use",
+                "secret:write"
               ],
               "finance/monthly-invoicing": [
                 "workflow:read",
+                "workflow:run",
+                "workflow:write",
                 "run:read",
-                "workflow:run"
+                "secret:use",
+                "secret:write"
               ]
             },
             "notifications": []
@@ -5507,7 +5531,7 @@
                   "id": "01M2AC5K0N2Q4S6T8W0Y2A4C6E",
                   "principal": "group:team-finance",
                   "scope": "finance",
-                  "role": "viewer",
+                  "role": "editor",
                   "granted_by": "alice",
                   "granted_at": "2026-09-27T09:00:00Z"
                 },
@@ -5539,7 +5563,7 @@
                 "id": "01M2AC5K0N2Q4S6T8W0Y2A4C6E",
                 "principal": "group:team-finance",
                 "scope": "finance",
-                "role": "viewer",
+                "role": "editor",
                 "granted_by": "alice",
                 "granted_at": "2026-09-27T09:00:00Z"
               },

@@ -3768,7 +3768,7 @@
     },
     "permission": {
       "title": "Permission",
-      "description": "One of the nine atoms every authorisation decision is made of, and the only strings a role expands to or a deny names. They are closed rather than open because the API decides deny by default: a permission the API does not know is one it can never grant, and a typo in a deny would otherwise silently deny nothing. secret:use and secret:write count at namespace scope only, since a declaration serves every workflow of the namespace; grant:manage at installation scope is what drains and revokes a runner.",
+      "description": "One of the nine atoms every authorisation decision is made of, and the only strings a role expands to or a deny names. They are closed rather than open because the API decides deny by default: a permission the API does not know is one it can never grant, and a typo in a deny would otherwise silently deny nothing. secret:use and secret:write count at namespace scope only, since a declaration serves every workflow of the namespace, and secret:use is checked when a version naming a secret is pushed, against the principal pushing it, never when it runs; grant:manage at installation scope is what drains and revokes a runner.",
       "type": "string",
       "enum": [
         "workflow:read",
@@ -3789,7 +3789,7 @@
     },
     "role": {
       "title": "Role",
-      "description": "A named set of permissions a grant binds, by the documentation's table: viewer reads, operator runs, editor reads, runs, writes, reads data and writes secrets, and owner adds grant:manage. operator deliberately lacks workflow:read, so a colleague can launch a job without seeing the queries, endpoints and business rules inside it; someone who needs both holds both roles. Four and no more, since a role invented per installation is one the clients cannot explain.",
+      "description": "A named set of permissions a grant binds, by the documentation's table: viewer reads, operator runs and follows runs, editor reads, runs, writes, reads data and uses and writes secrets, and owner adds workflow:delete and grant:manage. operator deliberately lacks workflow:read, so a colleague can launch a job without seeing the queries, endpoints and business rules inside it, and run:read_data, so the payloads stay out of its reach; someone who needs both holds both roles. Four and no more, since a role invented per installation is one the clients cannot explain.",
       "type": "string",
       "enum": [
         "viewer",
@@ -3822,7 +3822,7 @@
     },
     "accessGrant": {
       "title": "Access grant",
-      "description": "One principal, one scope and one role, or one principal, one scope and one denied permission. Grants add up across the principal's own and its groups', at both scopes, and a deny is the only thing that subtracts: it wins over any allow at any scope. That is why a deny names a permission and not a role, since the documentation's own deny takes run:read_data away from an operator and no role is that one permission. Named access grant because $defs/grant is the bearer token issued with one task, a different thing that happens to share the word. Grants live in the platform database and never in the workflow file, where workflow:write would equal grant:manage.",
+      "description": "One principal, one scope and one role, or one principal, one scope and one denied permission. Grants add up across the principal's own and its groups', at both scopes, and a deny is the only thing that subtracts: it wins over any allow at any scope. That is why a deny names a permission and not a role, since the documentation's own deny takes run:read_data away from an editor, which holds it, and no role is that one permission. Named access grant because $defs/grant is the bearer token issued with one task, a different thing that happens to share the word. Grants live in the platform database and never in the workflow file, where workflow:write would equal grant:manage.",
       "type": "object",
       "required": [
         "id",

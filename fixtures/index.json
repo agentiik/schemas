@@ -23,7 +23,8 @@
     "role": "../wire.schema.json",
     "permission": "../wire.schema.json",
     "namespace-record": "../wire.schema.json",
-    "auth-policy": "../wire.schema.json"
+    "auth-policy": "../wire.schema.json",
+    "notification": "../wire.schema.json"
   },
   "notes": [
     "Read the fixtures with a YAML 1.2 parser. The trigger block is spelled on:, as the documentation spells it, and a YAML 1.1 parser reads that bare key as the boolean true. A loader that does so will fail every fixture carrying a trigger, and will do the same to the workflows people write.",
@@ -865,6 +866,10 @@
           "covers": "a user: a login, a display name, and whether the account is an administrator's or suspended"
         },
         {
+          "file": "wire/valid/principal-user-signed-in.json",
+          "covers": "a user who has signed in, with when they last did, as GET /api/v1/users/{login} answers it"
+        },
+        {
           "file": "wire/valid/principal-group.json",
           "covers": "a group of users, by login, as the documentation's team-finance is"
         },
@@ -877,6 +882,12 @@
         {
           "file": "wire/invalid/principal-user-login-operator.json",
           "rule": "operator is refused as a login: it is the principal the v0.2.5 operator token wrote on the rows it touched, and those rows keep it",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#principals"
+        },
+        {
+          "file": "wire/invalid/principal-user-login-installation.json",
+          "rule": "installation is refused as a login: it names the installation itself as the author of the pool default, and a user of that name would read as that author",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#principals"
         },
@@ -919,6 +930,12 @@
         {
           "file": "wire/invalid/principal-ref-operator.json",
           "rule": "operator names the v0.2.5 operator token on the rows it wrote and is no principal a grant or a token can name",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#principals"
+        },
+        {
+          "file": "wire/invalid/principal-ref-installation.json",
+          "rule": "installation names the installation itself as the author of the pool default, and is no principal a grant or a token can name",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#principals"
         },
@@ -1014,9 +1031,9 @@
         },
         {
           "file": "wire/invalid/api-token-for-a-group.json",
-          "rule": "a token belongs to the caller or to a service account it owns; a group is a set of users and holds no credential, which the API refuses at minting",
-          "refused_by": "validator",
-          "reference": "https://agentiik.github.io/docs/#principals"
+          "rule": "a token is held by a user or a service account, never a group, which holds no credential of its own: a group's token would be a way in that belongs to nobody",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#sessions-and-tokens"
         }
       ]
     },
@@ -1116,7 +1133,11 @@
         },
         {
           "file": "wire/valid/namespace-record-personal.json",
-          "covers": "a personal namespace, named after its owner's login and bound by no quota of its own"
+          "covers": "a personal namespace, named after its owner's login, with the two quotas every namespace holds at their defaults"
+        },
+        {
+          "file": "wire/valid/namespace-record-upgraded.json",
+          "covers": "a namespace from before v0.3.0, shared and owned by nobody, since v0.2 had nobody to name, with the two quotas it held then"
         },
         {
           "file": "wire/valid/namespace-record-tightened.json",
@@ -1135,6 +1156,12 @@
           "rule": "a personal namespace belongs to one user, named after their login",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#scopes-and-resolution"
+        },
+        {
+          "file": "wire/invalid/namespace-record-personal-without-owner.json",
+          "rule": "a personal namespace is its user's, so it always names its owner; only a shared namespace from before v0.3.0 names none",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#storage"
         },
         {
           "file": "wire/invalid/namespace-record-personal-not-named-after-its-owner.json",
@@ -1201,6 +1228,32 @@
           "rule": "user_verification is required or preferred; Web Authentication's discouraged would make a passkey one factor",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#auth"
+        }
+      ]
+    },
+    "notification": {
+      "valid": [
+        {
+          "file": "wire/valid/notification-admin-access-widened.json",
+          "covers": "an administrator having granted themselves editor in finance for a day, told to the namespace's owner with the grant they wrote"
+        },
+        {
+          "file": "wire/valid/notification-passkey-counter-refused.json",
+          "covers": "a sign-in refused because a passkey's signature counter did not move forward, told to its user with the passkey's credential ID and no namespace"
+        }
+      ],
+      "invalid": [
+        {
+          "file": "wire/invalid/notification-counter-refused-naming-a-namespace.json",
+          "rule": "a sign-in names no namespace, so a refused sign-in's notification carries none; each kind carries what its reader needs and nothing of the other's",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#auth"
+        },
+        {
+          "file": "wire/invalid/notification-access-widened-without-grant.json",
+          "rule": "an owner told of an administrator widening their own access is told which grant they wrote, so that it can be read and revoked",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#administrators"
         }
       ]
     }

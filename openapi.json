@@ -34,7 +34,7 @@
     },
     {
       "name": "me",
-      "description": "The caller: who it is, what it may do, and its own credentials."
+      "description": "The caller: who it is, what it may do, its own credentials, and what the installation tells it."
     },
     {
       "name": "tokens",
@@ -54,7 +54,7 @@
     },
     {
       "name": "namespaces",
-      "description": "Namespaces and their quotas, an administrator's to create and bound."
+      "description": "Namespaces and their quotas, an administrator's to create, bound and remove."
     },
     {
       "name": "grants",
@@ -220,7 +220,7 @@
           "sign-in"
         ],
         "summary": "Finish a passkey ceremony",
-        "description": "Verifies the browser's answer to the options, an attestation for a registration and an assertion for a sign-in, with the Go standard library alone and no attestation asked for or checked. It records the Backup Eligibility and Backup State flags, refuses a synced passkey where device_bound_only is set, and requires user verification where the policy does. A registration records the passkey, audited as credential.enrol, and consumes the enrolment code where one opened the ceremony, audited as enrolment.use; where the policy requires passkeys, a user reaching min_passkeys has their password hash deleted rather than disabled. An assertion opens a full session, set in the cookie of the answer, audited as signin.succeed or signin.fail, and, for a sign-in agk login started, answers the loopback address to send the browser to, carrying a one-time code for POST /api/v1/auth/exchange.",
+        "description": "Verifies the browser's answer to the options, an attestation for a registration and an assertion for a sign-in, with the Go standard library alone and no attestation asked for or checked. It records the Backup Eligibility and Backup State flags, refuses a synced passkey where device_bound_only is set, and requires user verification where the policy does. A registration records the passkey, audited as credential.enrol, and consumes the enrolment code where one opened the ceremony, audited as enrolment.use; where the policy requires passkeys, a user reaching min_passkeys has their password hash deleted rather than disabled. An assertion opens a full session, set in the cookie of the answer, audited as signin.succeed or signin.fail, and, for a sign-in agk login started, answers the loopback address to send the browser to, carrying a one-time code for POST /api/v1/auth/exchange. An assertion reporting another Backup Eligibility than the passkey registered with is refused, since the passkey device_bound_only judged would no longer be the one signing in. So is one whose signature counter did not move forward, at or below the one stored with one of the two not zero, which is what a cloned authenticator's does: the API stores nothing from it, records signin.fail with the reason, and tells the passkey's user with a passkey_counter_refused notification in GET /api/v1/me. It does not lock the passkey, since a lock would let a faulty authenticator shut its owner out. Two zeros are accepted, as the synced passkeys most people hold count nothing.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#auth"
@@ -369,7 +369,7 @@
           },
           "401": {
             "$ref": "#/components/responses/unauthorised",
-            "description": "An attestation or an assertion that does not verify: a challenge not issued or already used, an origin or a Relying Party that is not this one, an unknown credential, a signature that does not check, user verification missing where it is required, or an account that opens no session. One sentence for every one of them, so that a failure teaches nothing about which part was wrong."
+            "description": "An attestation or an assertion that does not verify: a challenge not issued or already used, an origin or a Relying Party that is not this one, an unknown credential, a signature that does not check, user verification missing where it is required, a Backup Eligibility other than the one registered, a signature counter that did not move forward, or an account that opens no session. One sentence for every one of them, so that a failure teaches nothing about which part was wrong; a counter that did not move is told to the passkey's user in GET /api/v1/me instead."
           },
           "403": {
             "$ref": "#/components/responses/forbidden",
@@ -609,7 +609,7 @@
           "policy"
         ],
         "summary": "Set the installation's authentication policy",
-        "description": "Replaces the installation's policy, as agk auth policy does with settings given: a setting the body leaves out returns to its default, so that the body is the whole of the policy. Administrator only, and audited as policy.change. Forbidding passwords deletes every stored password hash and suspends the accounts that hold no passkey yet, rather than leaving them reachable by a password the policy says no longer exists. A namespace that asked for more keeps it, since what applies is the stricter of the two, setting by setting.",
+        "description": "Replaces the installation's policy, as agk auth policy does with settings given: a setting the body leaves out returns to its default, so that the body is the whole of the policy. Administrator only, and audited as policy.change. Forbidding passwords deletes every stored password hash and suspends the accounts that hold no passkey yet, rather than leaving them reachable by a password the policy says no longer exists. A namespace that asked for more keeps it, since what applies is the stricter of the two, setting by setting. On an installation addressed by an IP address, where a browser runs no passkey ceremony, the API applies the policy with passwords allowed and no passkey, and keeps the stored policy as it was written, so that its settings apply again once the installation is addressed by a name; a policy forbidding passwords is refused there, since nobody could sign in.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#auth"
@@ -688,7 +688,7 @@
           },
           "409": {
             "$ref": "#/components/responses/conflict",
-            "description": "The installation is addressed by an IP address, where a browser runs no passkey ceremony, and the policy requires a passkey or forbids passwords; the error names the setting."
+            "description": "The installation is addressed by an IP address and the policy forbids passwords, so that nobody could sign in; the error names the setting."
           },
           "413": {
             "$ref": "#/components/responses/tooLarge"
@@ -1007,30 +1007,28 @@
             "description": "An enrolment-only session, which enrols passkeys and nothing else."
           }
         }
-      },
+      }
+    },
+    "/api/v1/me/credentials/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/credential"
+        }
+      ],
       "delete": {
         "operationId": "removeCredential",
         "tags": [
           "me"
         ],
         "summary": "Remove one of the caller's credentials",
-        "description": "Removes one of the caller's credentials, audited as credential.remove. A removal that would leave the account below the policy's min_passkeys is refused: a passkey where fewer would remain, and the password where the account holds fewer passkeys than that, so that losing a device is an inconvenience rather than an incident.",
+        "description": "Removes one of the caller's credentials, named by the identifier the listing shows, as a token is revoked by its own, and ends the sessions it opened. Audited as credential.remove. A removal that would leave the account below the policy's min_passkeys is refused: a passkey where fewer would remain, and the password where the account holds fewer passkeys than that, so that losing a device is an inconvenience rather than an incident.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#auth"
         },
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/credential"
-          }
-        ],
         "responses": {
           "204": {
-            "description": "Removed."
-          },
-          "400": {
-            "$ref": "#/components/responses/badRequest",
-            "description": "No id, or one outside its grammar."
+            "description": "Removed, and the sessions it opened ended."
           },
           "401": {
             "$ref": "#/components/responses/unauthorised"
@@ -1041,7 +1039,7 @@
           },
           "404": {
             "$ref": "#/components/responses/notFound",
-            "description": "The caller holds no credential by that id."
+            "description": "The caller holds no credential by that identifier."
           },
           "409": {
             "$ref": "#/components/responses/conflict",
@@ -1174,7 +1172,7 @@
           "tokens"
         ],
         "summary": "Mint an API token",
-        "description": "Mints an API token for the caller, or for a service account of a namespace the caller owns: 256 bits of entropy, stored hashed, its value shown in this answer and never again. It expires after 90 days unless the request asks for another expiry, and after a year at most, so that a token forgotten in a script stops on its own and none is a credential for good. An optional scope narrows it and can only narrow: on every request its rights are its principal's intersected with the scope. Audited as api_token.create. An enrolment-only session cannot mint one, and neither can a token narrowed by a scope, whose narrowing a token it minted would otherwise escape.",
+        "description": "Mints an API token for the caller, or for a service account of a namespace the caller owns: 256 bits of entropy, stored hashed, its value shown in this answer and never again. It expires after 90 days unless the request asks for another expiry, and after a year at most, so that a token forgotten in a script stops on its own and none is a credential for good. An optional scope narrows it and can only narrow: on every request its rights are its principal's intersected with the scope. Audited as api_token.create. An enrolment-only session cannot mint one, and neither can a token narrowed by a scope, whose narrowing a token it minted would otherwise escape. A namespace the caller owns is one on which it holds the owner role, by a grant of its own or of one of its groups, on the namespace rather than on one of its workflows. An administrator's powers pass through a token only where its scope does not narrow them away: a token with no scope carries them, and within or permissions takes them away, so a token an administrator mints to run one workflow never creates a user.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#sessions-and-tokens"
@@ -1392,7 +1390,7 @@
           "me"
         ],
         "summary": "Who the caller is",
-        "description": "The caller's identity, group memberships, effective permissions per namespace, and notifications, such as an administrator having widened their own access in a namespace the caller owns. What agk whoami prints, and what the console reads to hide what the caller does not hold rather than disable it.",
+        "description": "The caller's identity, group memberships, effective permissions per namespace, and notifications: an administrator having widened their own access in a namespace, told to its owner, and a sign-in refused for a passkey's signature counter, told to its user. What agk whoami prints, and what the console reads to hide what the caller does not hold rather than disable it.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#administrators"
@@ -1486,6 +1484,41 @@
           "403": {
             "$ref": "#/components/responses/forbidden",
             "description": "An enrolment-only session, which enrols passkeys and nothing else."
+          }
+        }
+      }
+    },
+    "/api/v1/me/notifications/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/notification"
+        }
+      ],
+      "delete": {
+        "operationId": "dismissNotification",
+        "tags": [
+          "me"
+        ],
+        "summary": "Dismiss one of the caller's notifications",
+        "description": "Dismisses one of the notifications GET /api/v1/me lists, which lists it no more. One not dismissed is kept 90 days from when it was written: long enough to reach someone back from leave, and bounded so that GET /api/v1/me does not grow for ever. Dismissing changes nothing of what happened: the grant.create or the signin.fail the audit log recorded stays.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#administrators"
+        },
+        "responses": {
+          "204": {
+            "description": "Dismissed."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "An enrolment-only session, which enrols passkeys and nothing else."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No notification of the caller's by that identifier: dismissed already, past its 90 days, or never the caller's."
           }
         }
       }
@@ -1616,7 +1649,11 @@
                         {
                           "name": "alice",
                           "kind": "personal",
-                          "owner": "alice"
+                          "owner": "alice",
+                          "quotas": {
+                            "max_concurrent_tasks": 20,
+                            "max_retention_days": 90
+                          }
                         },
                         {
                           "name": "finance",
@@ -1651,6 +1688,112 @@
         }
       }
     },
+    "/api/v1/namespaces/{ns}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        }
+      ],
+      "get": {
+        "operationId": "getNamespace",
+        "tags": [
+          "namespaces"
+        ],
+        "summary": "Read a namespace",
+        "description": "One namespace as GET /api/v1/namespaces lists it: its kind, its owner where it has one, and its quotas. A namespace from before v0.3.0 names no owner, since v0.2 had nobody to name. Readable by an administrator and by every principal holding a grant in it, directly or through a group; anyone else is answered the 404 of a namespace that does not exist, so that no name can be learnt by asking. What the Terraform provider refreshes and imports a namespace with.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#scopes-and-resolution"
+        },
+        "responses": {
+          "200": {
+            "description": "The namespace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "wire.schema.json#/$defs/namespaceRecord"
+                },
+                "examples": {
+                  "finance": {
+                    "summary": "a shared namespace",
+                    "value": {
+                      "name": "finance",
+                      "kind": "shared",
+                      "owner": "group:finance-leads",
+                      "quotas": {
+                        "max_concurrent_tasks": 20,
+                        "max_runs_per_hour": 500,
+                        "max_artifact_bytes": 536870912000,
+                        "max_retention_days": 180,
+                        "max_run_duration": "24h",
+                        "allowed_runner_pools": [
+                          "default",
+                          "dmz"
+                        ]
+                      }
+                    }
+                  },
+                  "upgraded": {
+                    "summary": "a namespace from before v0.3.0, owned by nobody",
+                    "value": {
+                      "name": "demo",
+                      "kind": "shared",
+                      "quotas": {
+                        "max_concurrent_tasks": 20,
+                        "max_retention_days": 90
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for an enrolment-only session, which enrols passkeys and nothing else. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such namespace, or one the caller holds nothing in and does not administer."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteNamespace",
+        "tags": [
+          "namespaces"
+        ],
+        "summary": "Remove a namespace",
+        "description": "Removes a namespace that holds no workflow, run, secret, stored object or service account but its built-in NS/agentiik, which goes first; one that holds any is refused, saying what it holds, since what a namespace holds is somebody's work. Its grants go with it, so that a namespace created again under the same name starts with none of the old one's, and so does its authentication policy; who granted what, and when, stays in the audit log. Administrator only, and audited as namespace.delete.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#scopes-and-resolution"
+        },
+        "responses": {
+          "204": {
+            "description": "Removed, with its grants, its authentication policy and its built-in identity."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, which is answered before the namespace is looked up; or it holds an enrolment-only session."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such namespace."
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict",
+            "description": "The namespace holds a workflow, a run, a secret, a stored object or a service account other than NS/agentiik; the error says what."
+          }
+        }
+      }
+    },
     "/api/v1/namespaces/{ns}/quotas": {
       "parameters": [
         {
@@ -1663,7 +1806,7 @@
           "namespaces"
         ],
         "summary": "Read a namespace's quotas",
-        "description": "The namespace's quotas, allowed_runner_pools among them, as an administrator last set them. A quota absent sets no bound of the namespace's own. Readable by an administrator and by every principal holding a grant in the namespace.",
+        "description": "The namespace's quotas, allowed_runner_pools among them. max_concurrent_tasks and max_retention_days always hold a value, 20 and 90 until an administrator sets another; the other four appear where they are set, and absent bound nothing of the namespace's own. Readable by an administrator and by every principal holding a grant in the namespace.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#quotas-per-namespace"
@@ -1691,9 +1834,12 @@
                       ]
                     }
                   },
-                  "none": {
-                    "summary": "no bound of its own",
-                    "value": {}
+                  "defaults": {
+                    "summary": "the two that always hold a value, at their defaults",
+                    "value": {
+                      "max_concurrent_tasks": 20,
+                      "max_retention_days": 90
+                    }
                   }
                 }
               }
@@ -1718,13 +1864,13 @@
           "namespaces"
         ],
         "summary": "Set a namespace's quotas",
-        "description": "Replaces the namespace's quotas: a quota the body leaves out sets no bound any more, so that the body is the whole of what applies and an apply reads back what it wrote. Administrator only, and audited as namespace.update. allowed_runner_pools names at least one pool, since a pool's own empty list of namespaces means every one and the same spelling here would be read as its opposite.",
+        "description": "Sets the namespace's quotas. max_concurrent_tasks and max_retention_days always hold a value, so each keeps the one it has where the body leaves it out; each of the other four the body leaves out bounds nothing any more, so that the body is the whole of what they bound. Administrator only, and audited as namespace.update. allowed_runner_pools names at least one pool, since a pool's own empty list of namespaces means every one and the same spelling here would be read as its opposite.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#quotas-per-namespace"
         },
         "requestBody": {
-          "description": "The whole of the namespace's quotas.",
+          "description": "The namespace's quotas: the four optional bounds as a whole, and the two that always hold a value where they change.",
           "required": true,
           "content": {
             "application/json": {
@@ -1747,7 +1893,7 @@
                   }
                 },
                 "two": {
-                  "summary": "two bounds, the rest lifted",
+                  "summary": "two bounds, max_retention_days kept and the other three lifted",
                   "value": {
                     "max_concurrent_tasks": 20,
                     "max_runs_per_hour": 500
@@ -1871,7 +2017,7 @@
           "users"
         ],
         "summary": "Create a user",
-        "description": "Creates a user from a login, a display name and admin where it is an administrator, answered with an enrolment link shown once, single use and good for an hour. Administrator only, save the first administrator, whom the bootstrap token creates as agk user create LOGIN --admin does. Asked again for a user who has not enrolled yet, with the same login, display name and admin, it answers a fresh link and revokes the one before, so that a link that lapsed unused locks nobody out; the bootstrap token relies on this until the first administrator has enrolled, and ends then. The login is refused where a namespace or another user holds it, and operator and the reserved words are refused by its grammar. Audited as user.create, and the link as enrolment.issue.",
+        "description": "Creates a user from a login, a display name and admin where it is an administrator, answered with an enrolment link shown once, single use and good for an hour. Administrator only, save the first administrator, whom the bootstrap token creates as agk user create LOGIN --admin does. Asked again for a user who has not enrolled yet, with the same login, display name and admin, it answers a fresh link and revokes the one before, so that a link that lapsed unused locks nobody out; the bootstrap token relies on this until the first administrator has enrolled, and ends then. The login is refused where a namespace or another user holds it, and operator, installation and the reserved words are refused by its grammar. Audited as user.create, and the link as enrolment.issue.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#first-run"
@@ -1993,6 +2139,94 @@
         }
       }
     },
+    "/api/v1/users/{login}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/login"
+        }
+      ],
+      "get": {
+        "operationId": "getUser",
+        "tags": [
+          "users"
+        ],
+        "summary": "Read a user",
+        "description": "One user: login, display name, whether an administrator, whether suspended, when created and when last signed in; never a credential. Administrator only. What the Terraform provider refreshes and imports a user with.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#principals"
+        },
+        "responses": {
+          "200": {
+            "description": "The user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "wire.schema.json#/$defs/user"
+                },
+                "examples": {
+                  "user": {
+                    "summary": "a user who has signed in",
+                    "value": {
+                      "kind": "user",
+                      "login": "bob-martin",
+                      "display_name": "Bob Martin",
+                      "admin": false,
+                      "suspended": false,
+                      "created_at": "2026-09-27T09:20:00Z",
+                      "last_sign_in_at": "2026-09-27T12:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds an enrolment-only session."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No user by that login."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteUser",
+        "tags": [
+          "users"
+        ],
+        "summary": "Remove a user",
+        "description": "Removes a user with everything they hold: their credentials, tokens, sessions, enrolment links, memberships and grants. Refused while a namespace's record names them as owner, their personal namespace's included, so that no namespace is left owned by somebody who is gone. Administrator only, and audited as user.delete.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#principals"
+        },
+        "responses": {
+          "204": {
+            "description": "Removed, with everything they held."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds an enrolment-only session."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No user by that login."
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict",
+            "description": "A namespace's record names the user as owner, their personal namespace included; the error names it."
+          }
+        }
+      }
+    },
     "/api/v1/groups": {
       "get": {
         "operationId": "listGroups",
@@ -2055,7 +2289,7 @@
           "groups"
         ],
         "summary": "Create a group",
-        "description": "Creates a group, empty or with its first members. Administrator only. A group's members are logins and never a group, because a group inside a group would turn effective permissions into a graph walk. Grants target groups so that membership changes without touching a grant.",
+        "description": "Creates a group, empty or with its first members. Administrator only, and audited as group.create. A group's members are logins and never a group, because a group inside a group would turn effective permissions into a graph walk. Grants target groups so that membership changes without touching a grant.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#principals"
@@ -2137,6 +2371,93 @@
         }
       }
     },
+    "/api/v1/groups/{group}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/group"
+        }
+      ],
+      "get": {
+        "operationId": "getGroup",
+        "tags": [
+          "groups"
+        ],
+        "summary": "Read a group",
+        "description": "One group and its members. Administrator only. What the Terraform provider refreshes and imports a group with.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#principals"
+        },
+        "responses": {
+          "200": {
+            "description": "The group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "wire.schema.json#/$defs/group"
+                },
+                "examples": {
+                  "group": {
+                    "summary": "a group",
+                    "value": {
+                      "kind": "group",
+                      "name": "team-finance",
+                      "members": [
+                        "alice",
+                        "bob-martin"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds an enrolment-only session."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such group."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteGroup",
+        "tags": [
+          "groups"
+        ],
+        "summary": "Remove a group",
+        "description": "Removes a group with its memberships and grants: what the group's grants gave its members ends from their next request, and the users themselves stay. Refused while a namespace's record names the group as owner, so that no namespace is left owned by nobody. Administrator only, and audited as group.delete.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#principals"
+        },
+        "responses": {
+          "204": {
+            "description": "Removed, with its memberships and grants."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds an enrolment-only session."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such group."
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict",
+            "description": "A namespace's record names the group as owner; the error names it."
+          }
+        }
+      }
+    },
     "/api/v1/groups/{group}/members/{login}": {
       "parameters": [
         {
@@ -2152,7 +2473,7 @@
           "groups"
         ],
         "summary": "Add a member to a group",
-        "description": "Adds one user to the group, touching no grant: every grant written against the group reaches them from their next request. Adding someone already a member changes nothing and answers the same. Administrator only. No body.",
+        "description": "Adds one user to the group, touching no grant: every grant written against the group reaches them from their next request. Adding someone already a member changes nothing and answers the same. Administrator only, and audited as group_member.add, since a member gains what the group's grants give. No body.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#principals"
@@ -2200,7 +2521,7 @@
           "groups"
         ],
         "summary": "Remove a member from a group",
-        "description": "Removes one user from the group, touching no grant: what the group's grants gave them ends from their next request. Removing someone who is not a member changes nothing and answers the same. Administrator only.",
+        "description": "Removes one user from the group, touching no grant: what the group's grants gave them ends from their next request. Removing someone who is not a member changes nothing and answers the same. Administrator only, and audited as group_member.remove, since a member loses what the group's grants gave.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#principals"
@@ -2249,7 +2570,7 @@
           "service-accounts"
         ],
         "summary": "List service accounts",
-        "description": "The service accounts of the namespaces the caller owns, the built-in NS/agentiik of each among them. Their tokens are listed at GET /api/v1/auth/tokens.",
+        "description": "The service accounts of the namespaces the caller owns, the built-in NS/agentiik of each among them. Their tokens are listed at GET /api/v1/auth/tokens. A namespace the caller owns is one on which it holds the owner role, by a grant of its own or of one of its groups, on the namespace rather than on one of its workflows.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#principals"
@@ -2302,7 +2623,7 @@
           "service-accounts"
         ],
         "summary": "Create a service account",
-        "description": "Creates a service account in a namespace the caller owns, written NS/NAME wherever a principal is written: a non-human principal that holds API tokens, minted at POST /api/v1/auth/tokens, and cannot sign in to a client. The authentication policy does not apply to it, and it holds no grant until one is written for it.",
+        "description": "Creates a service account in a namespace the caller owns, written NS/NAME wherever a principal is written: a non-human principal that holds API tokens, minted at POST /api/v1/auth/tokens, and cannot sign in to a client. The authentication policy does not apply to it, and it holds no grant until one is written for it. A namespace the caller owns is one on which it holds the owner role, by a grant of its own or of one of its groups, on the namespace rather than on one of its workflows. Audited as service_account.create.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#principals"
@@ -2390,7 +2711,7 @@
           "service-accounts"
         ],
         "summary": "Remove a service account",
-        "description": "Removes a service account of a namespace the caller owns, and revokes its tokens with it. The built-in NS/agentiik is refused: the namespace's scheduled, webhook and event runs are attributed to it, and removing it would leave them attributed to nobody.",
+        "description": "Removes a service account of a namespace the caller owns, and revokes its tokens with it, audited as service_account.delete. The built-in NS/agentiik is refused: the namespace's scheduled, webhook and event runs are attributed to it, and removing it would leave them attributed to nobody.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#principals"
@@ -2481,7 +2802,7 @@
           "grants"
         ],
         "summary": "Share a namespace",
-        "description": "Writes a grant or a deny on the namespace: a principal as it is written, a role or a deny naming one permission, and an optional expiry that ends it without anyone remembering to revoke it. Requires grant:manage at namespace scope, and is audited as grant.create. An administrator granting themselves access notifies every owner of the namespace in their GET /api/v1/me: that is how an administrator reads another namespace's payloads, since they hold no run:read_data of their own.",
+        "description": "Writes a grant or a deny on the namespace: a principal as it is written, a role or a deny naming one permission, and an optional expiry that ends it without anyone remembering to revoke it. Requires grant:manage at namespace scope, and is audited as grant.create. An administrator granting themselves access notifies the namespace's owner with an admin_access_widened notification in their GET /api/v1/me, or, where the namespace's record names none, as one from before v0.3.0 does, every principal holding the owner role on it: that is how an administrator reads another namespace's payloads, since they hold no run:read_data of their own.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#scopes-and-resolution"
@@ -2832,7 +3153,7 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "__Host-agentiik_session",
-        "description": "The browser's session: an opaque identifier in a cookie set HttpOnly, Secure and SameSite=Lax by the answer that opened it, revocable server-side and ending after a time idle. SameSite=Lax keeps a page of another site from carrying it on a POST, a PUT or a DELETE. The __Host- prefix makes a browser refuse the cookie unless it is Secure, set for the whole origin and bound to no Domain, so no other host under the same domain can set it. The session records the credential that opened it, so an enrolment-only session is known to the server rather than by convention, and reaches the registration ceremony and nothing else."
+        "description": "The browser's session: an opaque identifier in a cookie set HttpOnly, Secure and SameSite=Lax by the answer that opened it, revocable server-side and ending after a time idle. SameSite=Lax keeps a page of another site from carrying it on a POST, a PUT or a DELETE. The __Host- prefix makes a browser refuse the cookie unless it is Secure, set for the whole origin and bound to no Domain, so no other host under the same domain can set it. The session records the credential or the enrolment link that opened it, so an enrolment-only session is known to the server rather than by convention, and reaches the registration ceremony and nothing else; removing the credential ends the sessions it opened."
       }
     },
     "schemas": {
@@ -4349,84 +4670,6 @@
           }
         ]
       },
-      "notification": {
-        "title": "Notification",
-        "type": "object",
-        "required": [
-          "id",
-          "kind",
-          "at",
-          "namespace",
-          "grant"
-        ],
-        "additionalProperties": false,
-        "description": "Something the installation tells the caller of its own accord. One kind so far: an administrator widened their own access in a namespace the caller owns, which is how an administrator reads another namespace's payloads, since they hold no run:read_data of their own. Owners do not read the audit log, and the people whose data it is should hear it from the installation itself.",
-        "properties": {
-          "id": {
-            "$ref": "wire.schema.json#/$defs/ulid",
-            "description": "The notification's identifier.",
-            "examples": [
-              "01M2AF6V8X0Z2B4D6F8H0K2M4P"
-            ]
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "admin_access_widened"
-            ],
-            "description": "What happened. admin_access_widened: an administrator wrote a grant for themselves, and grant says which.",
-            "examples": [
-              "admin_access_widened"
-            ]
-          },
-          "at": {
-            "$ref": "wire.schema.json#/$defs/timestamp",
-            "description": "When it happened.",
-            "examples": [
-              "2026-09-27T14:00:00Z"
-            ]
-          },
-          "namespace": {
-            "$ref": "wire.schema.json#/$defs/namespace",
-            "description": "The namespace concerned, one the caller owns.",
-            "examples": [
-              "finance"
-            ]
-          },
-          "grant": {
-            "$ref": "wire.schema.json#/$defs/accessGrant",
-            "description": "The grant the administrator wrote, principal and granted_by being the same person.",
-            "examples": [
-              {
-                "id": "01M2AF4T6V8X0Z2B4D6F8H0K2M",
-                "principal": "carol",
-                "scope": "finance",
-                "role": "editor",
-                "expires_at": "2026-09-28T14:00:00Z",
-                "granted_by": "carol",
-                "granted_at": "2026-09-27T14:00:00Z"
-              }
-            ]
-          }
-        },
-        "examples": [
-          {
-            "id": "01M2AF6V8X0Z2B4D6F8H0K2M4P",
-            "kind": "admin_access_widened",
-            "at": "2026-09-27T14:00:00Z",
-            "namespace": "finance",
-            "grant": {
-              "id": "01M2AF4T6V8X0Z2B4D6F8H0K2M",
-              "principal": "carol",
-              "scope": "finance",
-              "role": "editor",
-              "expires_at": "2026-09-28T14:00:00Z",
-              "granted_by": "carol",
-              "granted_at": "2026-09-27T14:00:00Z"
-            }
-          }
-        ]
-      },
       "me": {
         "title": "Me",
         "type": "object",
@@ -4451,7 +4694,7 @@
           },
           "admin": {
             "type": "boolean",
-            "description": "Whether the caller is a platform administrator: a user created with admin, or the bootstrap token, which is one until the first administrator has enrolled. It grants no run:read_data anywhere.",
+            "description": "Whether the caller is a platform administrator: a user created with admin, or the bootstrap token, which is one until the first administrator has enrolled. It grants no run:read_data anywhere. An administrator's powers pass through a token only where its scope does not narrow them away, so this is false for a token carrying within, which names namespaces and workflows while administering is the installation's, or permissions, which keeps only what it names while administering is none of the nine.",
             "examples": [
               false,
               true
@@ -4548,12 +4791,18 @@
           "notifications": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/notification"
+              "$ref": "wire.schema.json#/$defs/notification"
             },
-            "description": "What the installation has to tell the caller, newest first. No route marks one read yet, so the list is what happened.",
+            "description": "What the installation has to tell the caller, newest first: an administrator having widened their own access in a namespace the caller owns, and a sign-in refused for a passkey's signature counter. Each is kept 90 days from when it was written, or until the caller dismisses it with DELETE /api/v1/me/notifications/{id}.",
             "examples": [
               [],
               [
+                {
+                  "id": "01M2AG2R4T6W8Y0A2C4E6G8J0M",
+                  "kind": "passkey_counter_refused",
+                  "at": "2026-09-27T15:10:00Z",
+                  "credential": "aVBob25lUGFzc2tleQ"
+                },
                 {
                   "id": "01M2AF6V8X0Z2B4D6F8H0K2M4P",
                   "kind": "admin_access_widened",
@@ -4922,7 +5171,7 @@
           },
           "quotas": {
             "$ref": "wire.schema.json#/$defs/namespaceRecord/properties/quotas",
-            "description": "What it may consume. Absent sets no bound of its own; PUT /api/v1/namespaces/{ns}/quotas changes them later.",
+            "description": "What it may consume. max_concurrent_tasks and max_retention_days start at 20 and 90 where left out, and the other four bound nothing until set; PUT /api/v1/namespaces/{ns}/quotas changes them later.",
             "examples": [
               {
                 "max_concurrent_tasks": 20,
@@ -4981,7 +5230,11 @@
                 {
                   "name": "alice",
                   "kind": "personal",
-                  "owner": "alice"
+                  "owner": "alice",
+                  "quotas": {
+                    "max_concurrent_tasks": 20,
+                    "max_retention_days": 90
+                  }
                 },
                 {
                   "name": "finance",
@@ -5009,7 +5262,11 @@
               {
                 "name": "alice",
                 "kind": "personal",
-                "owner": "alice"
+                "owner": "alice",
+                "quotas": {
+                  "max_concurrent_tasks": 20,
+                  "max_retention_days": 90
+                }
               },
               {
                 "name": "finance",
@@ -5716,9 +5973,9 @@
       },
       "credential": {
         "name": "id",
-        "in": "query",
+        "in": "path",
         "required": true,
-        "description": "The credential to remove, by the id the list gives it: a passkey's credential ID, or the identifier the engine minted for a password or a TOTP generator. A query parameter because the route names the collection and no path segment below it.",
+        "description": "The credential, by the identifier GET /api/v1/me/credentials lists it with: a passkey's credential ID, or the identifier the engine minted for a password or a TOTP generator.",
         "schema": {
           "$ref": "wire.schema.json#/$defs/passkey/properties/id"
         },
@@ -5760,6 +6017,21 @@
           "agk login": {
             "summary": "agk login's challenge",
             "value": "Ibi4l3hyoxxry38-L3XZ59u9IdHegygM4WK38DG2YKk"
+          }
+        }
+      },
+      "notification": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "The notification's identifier, as GET /api/v1/me lists it.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/ulid"
+        },
+        "examples": {
+          "notification": {
+            "summary": "a notification",
+            "value": "01M2AF6V8X0Z2B4D6F8H0K2M4P"
           }
         }
       }

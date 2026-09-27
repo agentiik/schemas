@@ -1415,6 +1415,16 @@ NOT_DESCRIBED_YET = (
         ),
     ),
     (
+        "the statistics the web console's charts read, which the roadmap serves with the console in v0.6.0; no release serves them yet",
+        (
+            "GET /api/v1/{ns}/stats/runs",
+            "GET /api/v1/{ns}/stats/steps",
+            "GET /api/v1/{ns}/stats/ports",
+            "GET /api/v1/{ns}/stats/quotas",
+            "GET /api/v1/stats/pools",
+        ),
+    ),
+    (
         "the routes outside /api/v1 that carry no JSON: the object store, which a presigned URL or a signed policy authorises, git over smart HTTP, and webhooks",
         (
             "GET /objects/{key...}",

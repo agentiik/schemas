@@ -109,7 +109,7 @@
         },
         {
           "file": "workflow/invalid/namespace-reserved.yaml",
-          "rule": "A namespace named after a word the API routes on. The API's first path segment decides the route, so auth, me, users, groups, service-accounts, namespaces, runners, runner-pools, bus, tasks, bricks, runs and artifacts cannot name a namespace.",
+          "rule": "A namespace named after a word the API routes on. The API's first path segment decides the route, so auth, me, users, groups, service-accounts, namespaces, runners, runner-pools, bus, tasks, bricks, runs, artifacts and stats cannot name a namespace.",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#scopes-and-resolution"
         },

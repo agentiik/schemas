@@ -4154,7 +4154,7 @@
           "workflows"
         ],
         "summary": "Create a workflow repository",
-        "description": "Creates an empty workflow repository in the namespace: no commit, its default branch unborn, so that git clone gives an empty repository and the first git push fills it. The body names it, and may name its default branch, main where it does not, and say whether that branch is protected, which it is unless the body says protected: false. Requires owning the namespace, the owner role on it, one's own or a group's, as the platform tool workflow.create, which mirrors this route, requires; a token narrowed by a scope owns none. Audited as workflow.create in the namespace.",
+        "description": "Creates an empty workflow repository in the namespace: no commit, its default branch unborn, so that git clone gives an empty repository and the first git push fills it. The body names it, and may name its default branch, main where it does not, and say whether that branch is protected, which it is unless the body says protected: false. Requires workflow:write at namespace scope, as registering a version does: an editor creates the repository its first push needs, as a first agk push did before v0.4.0, and the platform tool workflow.create, which mirrors this route, requires the same. Audited as workflow.create in the namespace.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#the-workflow-repository"
@@ -4175,7 +4175,7 @@
                   }
                 },
                 "unprotected": {
-                  "summary": "unprotected, on master",
+                  "summary": "an editor's own, unprotected, on master",
                   "value": {
                     "name": "vat-reconciliation",
                     "default_branch": "master",
@@ -4225,7 +4225,7 @@
           },
           "404": {
             "$ref": "#/components/responses/notFound",
-            "description": "No such namespace, or one the caller does not own: the same answer."
+            "description": "No such namespace, or one where the caller does not hold workflow:write: the same answer."
           },
           "409": {
             "$ref": "#/components/responses/conflict",
@@ -4528,7 +4528,7 @@
           "workflows"
         ],
         "summary": "Rename, move or protect a workflow",
-        "description": "Changes what the body names and nothing it leaves out, each field under its own permission, every one of them held or nothing changed. name renames the workflow within its namespace, under workflow:write on it. namespace moves it to another namespace, under workflow:write on it and ownership of both namespaces, the one it leaves and the one it goes to. default_branch and protected name the branch HEAD names and say whether it is protected, under grant:manage on the workflow, since protection decides who may move the branch production runs. A rename carries everything at once: versions, refs, runs, grants and triggers answer at the new name from the answer on, the old name is free, and a push is held to the new name in metadata.name from then, the versions recorded before keeping the name they were written with. A move carries everything too, the repository, the versions, the runs and their artifacts, re-keyed and re-counted under the target namespace and its quotas, and takes a while: the workflow is frozen from the answer, pushes, runs and replays refused with 409 naming the move, while the leading controller copies its objects, swaps every row in one transaction, then deletes the source's objects; it is read at its old address until the swap and at the new one after. A body naming namespace answers 202 whatever else it names, every field it names applied with the move, and Location names where the workflow will be read, under its new name where the body gives one. A move is refused while a run of the workflow is queued or running, where the target's quotas, max_artifact_bytes above all, cannot hold what moves, and where the workflow names a secret the target does not declare. Audited as workflow.update, a move in both namespaces, and a change of protection as ref.protect.",
+        "description": "Changes what the body names and nothing it leaves out, each field under its own permission, every one of them held or nothing changed. name renames the workflow within its namespace, under workflow:write on it. namespace moves it to another namespace, under workflow:write on it and ownership of both namespaces, the one it leaves and the one it goes to. default_branch and protected name the branch HEAD names and say whether it is protected, under grant:manage on the workflow, since protection decides who may move the branch production runs. A rename carries everything at once: versions, refs, runs, grants and triggers answer at the new name from the answer on, the old name is free, and a push is held to the new name in metadata.name from then, the versions recorded before keeping the name they were written with. A move carries everything too, the repository, the versions, the grants written on the workflow, the runs and their artifacts, re-keyed and re-counted under the target namespace and its quotas, and takes a while: the workflow is frozen from the answer, pushes, runs and replays refused with 409 naming the move, while the leading controller copies its objects, swaps every row in one transaction, then deletes the source's objects; it is read at its old address until the swap and at the new one after. A body naming namespace answers 202 whatever else it names, every field it names applied with the move, and Location names where the workflow will be read, under its new name where the body gives one. A move is refused while a run of the workflow is queued or running, where the target's quotas, max_artifact_bytes above all, cannot hold what moves, and where the workflow names a secret the target does not declare. Audited as workflow.update, a move in both namespaces, and a change of protection as ref.protect.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#the-workflow-repository"

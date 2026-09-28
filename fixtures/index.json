@@ -3,6 +3,7 @@
   "description": "What each fixture pins. A fixture under valid/ must be accepted by the schema named beside it. A fixture under invalid/ must be refused; refused_by says by what. schema means the JSON Schema document alone refuses it, and a consumer can assert that with a validator and nothing else. validator means the documentation states the rule but JSON Schema cannot express it, because it needs the graph, the brick manifest, the included file or the expression language; those fixtures are schema valid on purpose and are refused by the workflow validator instead.",
   "schemas": {
     "workflow": "../workflow.schema.json",
+    "fragment": "../workflow.schema.json",
     "brick": "../brick.schema.json",
     "envelope": "../envelope.schema.json",
     "task-message": "../wire.schema.json",
@@ -30,7 +31,7 @@
     "Read the fixtures with a YAML 1.2 parser. The trigger block is spelled on:, as the documentation spells it, and a YAML 1.1 parser reads that bare key as the boolean true. A loader that does so will fail every fixture carrying a trigger, and will do the same to the workflows people write.",
     "Digests are written out in full. The documentation elides them in the middle, as 9f2c1d...b7e0, which is a typographic elision and not a value; the fixtures keep the first and last characters and fill the rest so that each one is a well formed sha256.",
     "A fixture carrying a manifest key is checked against a brick manifest that lives elsewhere in this corpus. The rule it pins is about the two documents together, so neither file alone shows it.",
-    "A fixture carrying a role key is not an entry point. mcp-in-included-file.yaml is the included file itself, which is where the rule it pins can be seen at all.",
+    "An included file is a fragment and never an entry point, so the fragment group holds its fixtures to workflow.schema.json#/$defs/fragment rather than to the document's root, which is for the entry point and would refuse every one of them for lacking apiVersion. mcp-in-included-file.yaml is among them: the definition refuses mcp, as it refuses every key that makes a document an entry point.",
     "The wire is one document holding several messages, because they share a vocabulary and a $ref may not leave a document here. A group therefore names the document and the member inside it that its fixtures pin, so a fixture still pins one message rather than something the wire allows somewhere.",
     "A valid fixture is taken from the documentation's own printed message wherever the documentation prints one. The wire's first version was built from its own examples instead and refused the page's task message in four places, which is the failure this fixture exists to make impossible."
   ],
@@ -50,6 +51,11 @@
           "file": "workflow/valid/script-steps.yaml",
           "covers": "script, before_script, after_script, shell, files",
           "source": "https://agentiik.github.io/docs/#running-a-script-instead-of-a-brick"
+        },
+        {
+          "file": "workflow/valid/files-globs.yaml",
+          "covers": "files: a directory, ** and * in a glob, a glob relocated into a directory with a mode, a file relocated to a path of its own",
+          "source": "https://agentiik.github.io/docs/#step-keywords"
         },
         {
           "file": "workflow/valid/mcp-server.yaml",
@@ -420,13 +426,6 @@
           "reference": "https://agentiik.github.io/docs/#publishing-tools"
         },
         {
-          "file": "workflow/invalid/mcp-in-included-file.yaml",
-          "rule": "An mcp block in an included file. Reuse applies to steps and defaults; the published surface is declared by the workflow that publishes it, so that reading one file tells you everything that workflow exposes. This fixture is the included file itself, named by an entry point as include: [{ path: ./common-bricks.yaml }].",
-          "refused_by": "validator",
-          "reference": "https://agentiik.github.io/docs/#publishing-tools",
-          "role": "include target, not an entry point"
-        },
-        {
           "file": "workflow/invalid/expression-unknown-root.yaml",
           "rule": "An expression reading a context root that is not exposed. The roots are workflow, run, trigger, event, vars, inputs, steps, item, matrix and secrets.",
           "refused_by": "validator",
@@ -443,6 +442,87 @@
           "rule": "A condition reading a secret. secrets is exposed to params and to secrets and nowhere else, and a secret is never reachable from a condition.",
           "refused_by": "validator",
           "reference": "https://agentiik.github.io/docs/#exposed-context"
+        },
+        {
+          "file": "workflow/invalid/files-to-relative.yaml",
+          "rule": "A file relocated to a relative path. Inside a container there is no directory a relative path could be relative to, the runner refuses one, and the task message holds that field to the same absolute grammar.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#step-keywords"
+        }
+      ]
+    },
+    "fragment": {
+      "valid": [
+        {
+          "file": "fragment/valid/common-bricks.yaml",
+          "covers": "hidden blocks at the root of an included file, a matrix in a block",
+          "source": "https://agentiik.github.io/docs/#includes-and-inheritance"
+        },
+        {
+          "file": "fragment/valid/every-key.yaml",
+          "covers": "include, vars, secrets, defaults, steps with a hidden block and a step among them, a hidden block at the root; the root agentiik.yaml of a library repository a workflow include reads"
+        }
+      ],
+      "invalid": [
+        {
+          "file": "fragment/invalid/api-version-in-included-file.yaml",
+          "rule": "apiVersion in an included file. An included file is a fragment, not an entry point: it has no apiVersion, no kind and no metadata.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#includes-and-inheritance"
+        },
+        {
+          "file": "fragment/invalid/kind-in-included-file.yaml",
+          "rule": "kind in an included file. An included file is a fragment, not an entry point: it has no apiVersion, no kind and no metadata.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#includes-and-inheritance"
+        },
+        {
+          "file": "fragment/invalid/metadata-in-included-file.yaml",
+          "rule": "metadata in an included file. An included file is a fragment, not an entry point: the name and the namespace are the including workflow's, and a fragment has no metadata.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#includes-and-inheritance"
+        },
+        {
+          "file": "fragment/invalid/inputs-in-included-file.yaml",
+          "rule": "inputs in an included file. What a workflow is given is its boundary, declared by the workflow itself, so that reading one file tells you what that workflow is.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#includes-and-inheritance"
+        },
+        {
+          "file": "fragment/invalid/outputs-in-included-file.yaml",
+          "rule": "outputs in an included file. What a workflow returns is its boundary, declared by the workflow itself, so that reading one file tells you what that workflow is.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#includes-and-inheritance"
+        },
+        {
+          "file": "fragment/invalid/on-in-included-file.yaml",
+          "rule": "on in an included file. What starts a workflow is its boundary, declared by the workflow itself, so that reading one file tells you what that workflow is.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#includes-and-inheritance"
+        },
+        {
+          "file": "fragment/invalid/mcp-in-included-file.yaml",
+          "rule": "An mcp block in an included file. Reuse applies to steps and defaults; the published surface is declared by the workflow that publishes it, so that reading one file tells you everything that workflow exposes. This fixture is the included file itself, named by an entry point as include: [{ path: ./common-bricks.yaml }].",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#publishing-tools"
+        },
+        {
+          "file": "fragment/invalid/concurrency-in-included-file.yaml",
+          "rule": "concurrency in an included file. How runs of a workflow queue behind one another is the workflow's own, declared where the workflow is, so that reading one file tells you what that workflow is.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#includes-and-inheritance"
+        },
+        {
+          "file": "fragment/invalid/timeout-in-included-file.yaml",
+          "rule": "timeout at the root of an included file. The bound on a whole run is the workflow's own, declared where the workflow is; a step's timeout belongs in defaults or on the step.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#includes-and-inheritance"
+        },
+        {
+          "file": "fragment/invalid/unknown-key-in-included-file.yaml",
+          "rule": "A key an included file does not define. An included file is closed like every block the language owns, so a misspelling is refused rather than quietly doing nothing.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#includes-and-inheritance"
         }
       ]
     },

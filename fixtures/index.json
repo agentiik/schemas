@@ -83,7 +83,7 @@
         },
         {
           "file": "workflow/valid/names-at-their-bounds.yaml",
-          "covers": "a step name of 255 characters, and a port, the edge naming it and a workflow output of 250, each the longest it may be"
+          "covers": "a step name of 255 characters, a sub-workflow called with each half of its reference at 255, and a port, the edge naming it and a workflow output of 250, each the longest it may be"
         }
       ],
       "invalid": [
@@ -132,6 +132,18 @@
         {
           "file": "workflow/invalid/port-name-251-characters.yaml",
           "rule": "An output port of 251 characters. A port becomes the file <name>.json, which a filesystem holds to 255 characters with its suffix.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#yaml"
+        },
+        {
+          "file": "workflow/invalid/sub-workflow-name-256-characters.yaml",
+          "rule": "A sub-workflow called by a name of 256 characters. Each half of <namespace>/<name> is a name, at most 255 characters, and a maxLength would bound the whole reference, so the pattern counts each half.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#yaml"
+        },
+        {
+          "file": "workflow/invalid/include-namespace-256-characters.yaml",
+          "rule": "A workflow included from a namespace of 256 characters. Each half of <namespace>/<name> is a name, at most 255 characters.",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#yaml"
         },
@@ -1355,7 +1367,7 @@
         },
         {
           "file": "wire/valid/notification-admin-access-widened-by-operator.json",
-          "covers": "the bootstrap token having written a grant in finance by the installation's power, told as by operator"
+          "covers": "the bootstrap token having put dave in a group holding editor in finance, told as by operator, the one act of the token's that is told, since a grant it writes is told to nobody, the token owning every namespace"
         },
         {
           "file": "wire/valid/notification-passkey-counter-refused.json",

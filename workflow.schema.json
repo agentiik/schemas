@@ -489,9 +489,9 @@
     },
     "workflowPath": {
       "title": "Workflow path",
-      "description": "A workflow addressed as <namespace>/<name>, the same identity a grant and a git remote use. The namespace is never a reserved word, as $defs/namespace lists them.",
+      "description": "A workflow addressed as <namespace>/<name>, the same identity a grant and a git remote use. The namespace is never a reserved word, as $defs/namespace lists them, and each half is at most 255 characters, as $defs/identifier is: a maxLength would bound the whole string, so the pattern counts each half.",
       "type": "string",
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*/[A-Za-z0-9][A-Za-z0-9_-]*$",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,254}/[A-Za-z0-9][A-Za-z0-9_-]{0,254}$",
       "not": { "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats)/" },
       "examples": ["finance/common", "finance/monthly-invoicing"]
     },
@@ -1107,9 +1107,9 @@
           "description": "Calls a sub-workflow instead of running an image. It is the only way to loop, since cycles in the graph are refused at validation, and it is bounded by a configurable maximum depth. A call into another namespace requires workflow:run on the workflow being called.",
           "oneOf": [
             {
-              "description": "The workflow to call, as <namespace>/<name>, optionally at a ref after an @.",
+              "description": "The workflow to call, as <namespace>/<name>, optionally at a ref after an @, each half at most 255 characters, as $defs/workflowPath counts them.",
               "type": "string",
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*/[A-Za-z0-9][A-Za-z0-9_-]*(@\\S+)?$",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,254}/[A-Za-z0-9][A-Za-z0-9_-]{0,254}(@\\S+)?$",
               "not": { "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats)/" }
             },
             {

@@ -45,7 +45,7 @@ Ten things fail the build:
    `$id` it is published under, or that holds a `$ref` leading nowhere;
 2. a keyword without a `description` or without `examples`;
 3. an example that does not validate against the keyword it illustrates;
-4. a fixture that does not behave as `fixtures/index.json` says it does;
+4. a fixture that does not behave as `fixtures/index.json` says it does, a repository case among them;
 5. a `pattern` no RE2 engine can compile, which is a lookahead, a lookbehind, a
    backreference or a unicode escape written the ECMA-262 way. JSON Schema says `pattern`
    is ECMA-262 and all four are legal there; Go, Rust and everything else built on RE2
@@ -220,6 +220,8 @@ documentation states the rule but JSON Schema cannot express it, because it need
 graph, a brick manifest, an included file or the expression language. Those fixtures are
 schema valid on purpose, and the build asserts that too: the day one of them starts being
 refused here, either the schema reached past what it can know or the index is wrong.
+
+Under `fixtures/repository/`, a case is a directory rather than a document: one push of a workflow repository as the pre-receive hook judges it, holding the commit's tree, stand-ins for what the hook reads from the installation (the namespace's image pins, brick manifests and secret declarations, and the repositories a workflow include reads), and either `expected.json`, the resolved graph, or `refusal.json`, the rule and where. The index's `repositories` entry says what each file of a case is and gives `case.json`, `tree.json` and `refusal.json` as JSON Schemas, held to the first three checks as the schemas are. A symbolic link, a submodule and a name that is not UTF-8 are listed in `tree.json` with their mode rather than committed, since none of them survives being committed here as what it is.
 
 ## Licence
 

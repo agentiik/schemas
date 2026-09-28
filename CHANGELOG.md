@@ -28,6 +28,7 @@ Every repository of the project carries the same version and is tagged at the sa
 - A namespace's name, a login, a group's name and each half of a service account's are at most 255 characters, inside the wire's references too, and `tools/check.py` holds every copy of the bound together.
 - `notification` gains `act`, which of `granted`, `deny_lifted`, `joined_group`, `left_group` and `group_removed` widened access, and `by`, a login or `operator`; `login` names the user put in on `joined_group` alone; `openapi.json` says anybody put in a group is told of, the other administrators where nobody owns, and that `GET /api/v1/me` leaves out a workflow its caller holds nothing in.
 - `POST /api/v1/auth/passkey/options` answers 503 with `Retry-After` while 10,000 challenges are open across the installation.
+- A deny of `grant:manage` on a workflow is refused with 422.
 
 ## v0.2.5, 2026-09-26
 

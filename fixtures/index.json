@@ -25,7 +25,11 @@
     "permission": "../wire.schema.json",
     "namespace-record": "../wire.schema.json",
     "auth-policy": "../wire.schema.json",
-    "notification": "../wire.schema.json"
+    "notification": "../wire.schema.json",
+    "repository": "../wire.schema.json",
+    "ref": "../wire.schema.json",
+    "version": "../wire.schema.json",
+    "resolved-graph": "../wire.schema.json"
   },
   "notes": [
     "Read the fixtures with a YAML 1.2 parser. The trigger block is spelled on:, as the documentation spells it, and a YAML 1.1 parser reads that bare key as the boolean true. A loader that does so will fail every fixture carrying a trigger, and will do the same to the workflows people write.",
@@ -1506,6 +1510,146 @@
           "rule": "every administrator is told which account the break-glass path issued a recovery code, since an administrator who did not run it has to know whose it was",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#auth"
+        }
+      ]
+    },
+    "repository": {
+      "valid": [
+        {
+          "file": "wire/valid/repository-created.json",
+          "covers": "a repository created from v0.4.0: protected, its default branch pushed to, labels read from its entry point"
+        },
+        {
+          "file": "wire/valid/repository-from-v0-3.json",
+          "covers": "a workflow from before v0.4.0: unprotected, its default branch unborn until a git push fills it"
+        }
+      ],
+      "invalid": [
+        {
+          "file": "wire/invalid/repository-head-abbreviated.json",
+          "rule": "A head written as an abbreviation. A commit is written whole, since an abbreviation is a name another commit can come to share.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#api"
+        },
+        {
+          "file": "wire/invalid/repository-default-branch-with-a-space.json",
+          "rule": "A default branch git would refuse as a ref name.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#the-workflow-repository"
+        },
+        {
+          "file": "wire/invalid/repository-without-protection.json",
+          "rule": "A repository that does not say whether its default branch is protected, which decides who may move it.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#the-workflow-repository"
+        }
+      ]
+    },
+    "ref": {
+      "valid": [
+        {
+          "file": "wire/valid/ref-default-branch.json",
+          "covers": "a protected default branch and who last moved it"
+        },
+        {
+          "file": "wire/valid/ref-tag.json",
+          "covers": "a tag, peeled to its commit, moved by a service account"
+        },
+        {
+          "file": "wire/valid/ref-unborn.json",
+          "covers": "the unborn default branch of a repository nothing was pushed to"
+        }
+      ],
+      "invalid": [
+        {
+          "file": "wire/invalid/ref-unborn-moved.json",
+          "rule": "An unborn branch naming who moved it. Nobody has moved a branch that points at no commit.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#storage"
+        },
+        {
+          "file": "wire/invalid/ref-short-name.json",
+          "rule": "A ref named without refs/heads/ or refs/tags/, which leaves a branch and a tag of one name indistinguishable.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#storage"
+        },
+        {
+          "file": "wire/invalid/ref-remote-tracking.json",
+          "rule": "A remote-tracking ref. A workflow repository holds branches and tags alone.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#storage"
+        }
+      ]
+    },
+    "version": {
+      "valid": [
+        {
+          "file": "wire/valid/version-git.json",
+          "covers": "a commit a git push carried, with its parent and its pusher"
+        },
+        {
+          "file": "wire/valid/version-tree.json",
+          "covers": "a version agk push sent as a tree before v0.4.0, by the bootstrap token, with no parent named"
+        }
+      ],
+      "invalid": [
+        {
+          "file": "wire/invalid/version-source-unknown.json",
+          "rule": "A version arriving by neither git nor a tree push.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#storage"
+        },
+        {
+          "file": "wire/invalid/version-without-author.json",
+          "rule": "A version naming nobody who pushed it. The pusher answers for what it names, secrets included.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#storage"
+        }
+      ]
+    },
+    "resolved-graph": {
+      "valid": [
+        {
+          "file": "wire/valid/resolved-graph-monthly-invoicing.json",
+          "covers": "the documentation's local run as its version resolves it: a path and a workflow include, a fan-out, two edges on one port, a script step, an extended block, outputs with retention, a schedule"
+        }
+      ],
+      "invalid": [
+        {
+          "file": "wire/invalid/resolved-graph-image-by-tag.json",
+          "rule": "An image by tag. A version names every image by the digest its tag was resolved to at the push, so that a tag moved since changes nothing a run runs.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#storage"
+        },
+        {
+          "file": "wire/invalid/resolved-graph-image-and-call.json",
+          "rule": "A step running an image and calling a sub-workflow. A step carries an image or a call and never both.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#storage"
+        },
+        {
+          "file": "wire/invalid/resolved-graph-brick-without-manifest.json",
+          "rule": "A brick step naming no brick. A brick step is held to its manifest at the push, and the graph says which release that was.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#storage"
+        },
+        {
+          "file": "wire/invalid/resolved-graph-include-without-commit.json",
+          "rule": "A workflow include without the commit its ref resolved to. A run records it, so that another repository moving a tag changes nothing the version does.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#storage"
+        },
+        {
+          "file": "wire/invalid/resolved-graph-relocation-relative.json",
+          "rule": "A file relocated to a relative path, which the runner refuses.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#storage"
+        },
+        {
+          "file": "wire/invalid/resolved-graph-script-keywords-on-a-brick.json",
+          "rule": "A brick step carrying before_script and shell. A brick runs its own entry point, so the script keywords a defaults block writes reach a script step alone.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#storage"
         }
       ]
     }

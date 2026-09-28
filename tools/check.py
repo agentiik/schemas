@@ -105,6 +105,10 @@ SCHEMAS = {
     "namespace-record": {"file": "wire.schema.json", "pointer": "#/$defs/namespaceRecord"},
     "auth-policy": {"file": "wire.schema.json", "pointer": "#/$defs/authPolicy"},
     "notification": {"file": "wire.schema.json", "pointer": "#/$defs/notification"},
+    "repository": {"file": "wire.schema.json", "pointer": "#/$defs/repository"},
+    "ref": {"file": "wire.schema.json", "pointer": "#/$defs/ref"},
+    "version": {"file": "wire.schema.json", "pointer": "#/$defs/version"},
+    "resolved-graph": {"file": "wire.schema.json", "pointer": "#/$defs/resolvedGraph"},
 }
 
 
@@ -737,6 +741,7 @@ ONE_GRAMMAR = (
         (
             ("workflow.schema.json", "#/$defs/files/items/oneOf/1/properties/to/pattern"),
             ("wire.schema.json", "#/$defs/taskMessage/properties/files/items/properties/to/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/files/items/properties/to/pattern"),
         ),
     ),
     (
@@ -745,6 +750,84 @@ ONE_GRAMMAR = (
             ("workflow.schema.json", "#/$defs/paramName/pattern"),
             ("brick.schema.json", "#/$defs/paramName/pattern"),
             ("wire.schema.json", "#/$defs/taskMessage/properties/params/propertyNames/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/params/propertyNames/pattern"),
+        ),
+    ),
+    # The resolved graph repeats what the workflow file wrote, so each grammar it carries is
+    # the file's own: a graph the engine writes and this document refuses would be a version
+    # the hook accepted and nobody could read back.
+    (
+        "a duration the workflow file writes",
+        (
+            ("workflow.schema.json", "#/$defs/duration/pattern"),
+            ("wire.schema.json", "#/$defs/duration/pattern"),
+        ),
+    ),
+    (
+        "a file's mode",
+        (
+            ("workflow.schema.json", "#/$defs/files/items/oneOf/1/properties/mode/pattern"),
+            ("wire.schema.json", "#/$defs/taskMessage/properties/files/items/properties/mode/pattern"),
+            ("wire.schema.json", "#/$defs/grantRedemption/properties/response/properties/tree/items/properties/mode/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/files/items/properties/mode/pattern"),
+        ),
+    ),
+    (
+        "a runner label selector a step writes",
+        (
+            ("workflow.schema.json", "#/$defs/runsOn/items/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/runs_on/items/pattern"),
+        ),
+    ),
+    (
+        "a destination an egress allow list names",
+        (
+            ("workflow.schema.json", "#/$defs/egress/properties/allow/items/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/egress/properties/allow/items/pattern"),
+        ),
+    ),
+    (
+        "a batch a step fans out by",
+        (
+            ("workflow.schema.json", "#/$defs/step/properties/strategy/properties/fan_out/anyOf/1/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/strategy/properties/fan_out/anyOf/1/pattern"),
+        ),
+    ),
+    (
+        "a hidden block's name",
+        (
+            ("workflow.schema.json", "#/$defs/step/properties/extends/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/extends/items/pattern"),
+        ),
+    ),
+    (
+        "a workflow another one includes or calls",
+        (
+            ("workflow.schema.json", "#/$defs/workflowPath/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/includes/items/properties/workflow/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/workflow/properties/workflow/pattern"),
+        ),
+    ),
+    (
+        "a brick's name",
+        (
+            ("brick.schema.json", "#/properties/metadata/properties/name/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/brick/properties/name/pattern"),
+        ),
+    ),
+    (
+        "a brick's version",
+        (
+            ("brick.schema.json", "#/properties/metadata/properties/version/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/brick/properties/version/pattern"),
+        ),
+    ),
+    # Git's rules for a ref name, refused beside a branch and beside a ref written in full.
+    (
+        "what git refuses in a ref name",
+        (
+            ("wire.schema.json", "#/$defs/branch/not/pattern"),
+            ("wire.schema.json", "#/$defs/refName/not/pattern"),
         ),
     ),
     (
@@ -759,6 +842,8 @@ ONE_GRAMMAR = (
         (
             ("workflow.schema.json", "#/$defs/workflowPath/not/pattern"),
             ("workflow.schema.json", "#/$defs/step/properties/workflow/oneOf/0/not/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/includes/items/properties/workflow/not/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/workflow/properties/workflow/not/pattern"),
         ),
     ),
     # A bound rather than a pattern, held the same way: a namespace's name is at most what a
@@ -782,6 +867,12 @@ ONE_GRAMMAR = (
 # second. The composed pattern has to be exactly the template filled in, so a name
 # grammar that moves takes every reference written on it along, or the build fails.
 COMPOSED_GRAMMAR = (
+    (
+        "a ref written in full",
+        ("wire.schema.json", "#/$defs/refName/pattern"),
+        "^refs/(heads|tags)/{0}$",
+        (("wire.schema.json", "#/$defs/branch/pattern"),),
+    ),
     (
         "a group reference",
         ("wire.schema.json", "#/$defs/groupRef/pattern"),
@@ -1476,19 +1567,19 @@ NOT_DESCRIBED_YET = (
         ),
     ),
     (
-        "secrets, workflows, their versions and the catalog; no roadmap task adds them to this document yet",
+        "secrets and the catalog; no roadmap task adds them to this document yet",
         (
             "GET /api/v1/{ns}/secrets",
             "GET /api/v1/{ns}/secrets/{name}",
             "PUT /api/v1/{ns}/secrets/{name}",
             "DELETE /api/v1/{ns}/secrets/{name}",
-            "POST /api/v1/{ns}/workflows",
-            "GET /api/v1/{ns}/workflows/{name}",
-            "GET /api/v1/{ns}/workflows/{name}/tree/{ref}",
-            "PUT /api/v1/{ns}/workflows/{name}/versions/{commit}",
             "GET /api/v1/bricks",
             "GET /api/v1/bricks/{name}",
         ),
+    ),
+    (
+        "a version pushed as a tree, what agk push sends until it pushes over git, which v0.4.0 answers only for a repository no git push has filled yet; no roadmap task adds it to this document",
+        ("PUT /api/v1/{ns}/workflows/{name}/versions/{commit}",),
     ),
     (
         "runs and their data; no roadmap task adds them to this document yet",
@@ -1518,7 +1609,7 @@ NOT_DESCRIBED_YET = (
         ),
     ),
     (
-        "the routes outside /api/v1 that carry no JSON: the object store, which a presigned URL or a signed policy authorises, git over smart HTTP, and webhooks",
+        "the routes outside /api/v1 that carry no JSON: the object store, which a presigned URL or a signed policy authorises, git over smart HTTP, which is git's own protocol and which git itself is the client of, and webhooks",
         (
             "GET /objects/{key...}",
             "PUT /objects/{key...}",

@@ -4154,7 +4154,7 @@
           "workflows"
         ],
         "summary": "Create a workflow repository",
-        "description": "Creates an empty workflow repository in the namespace: no commit, its default branch unborn, so that git clone gives an empty repository and the first git push fills it. The body names it, and may name its default branch, main where it does not, and say whether that branch is protected, which it is unless the body says protected: false. Requires workflow:write at namespace scope, as registering a version does: an editor creates the repository its first push needs, as a first agk push did before v0.4.0, and the platform tool workflow.create, which mirrors this route, requires the same. Audited as workflow.create in the namespace.",
+        "description": "Creates an empty workflow repository in the namespace: no commit, its default branch unborn, so that git clone gives an empty repository and the first git push fills it. The body names it, and may name its default branch, main where it does not, and say whether that branch is protected, which it is not unless the body says protected: true. Requires workflow:write at namespace scope, as registering a version does: an editor creates the repository its first push needs, as a first agk push did before v0.4.0, and the platform tool workflow.create, which mirrors this route, requires the same. Audited as workflow.create in the namespace.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#the-workflow-repository"
@@ -7705,7 +7705,7 @@
           },
           "protected": {
             "type": "boolean",
-            "description": "Whether the default branch is protected, true where it is left out: pushing to it then takes grant:manage, where false lets whoever holds workflow:write, an editor, push to it. A force-push and a deletion take grant:manage either way.",
+            "description": "Whether the default branch is protected, false where it is left out: true makes pushing to it take grant:manage, where false lets whoever holds workflow:write, an editor, push to it, as before v0.4.0. A force-push and a deletion take grant:manage either way.",
             "examples": [
               true,
               false

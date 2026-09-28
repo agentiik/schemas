@@ -4737,7 +4737,7 @@
         },
         "protected": {
           "type": "boolean",
-          "description": "Whether the default branch is protected: pushing to it then takes grant:manage, the permission that governs sharing, so that branch protection needs no second mechanism, where pushing to any other branch, or to the default branch of an unprotected repository, takes workflow:write. A force-push and the deletion of a ref take grant:manage whatever this says. true for a repository created from v0.4.0 unless it was created with protected: false, and false for a workflow from before v0.4.0, so that an editor's agk push keeps landing after the upgrade; whoever holds grant:manage on the workflow changes it.",
+          "description": "Whether the default branch is protected: pushing to it then takes grant:manage, the permission that governs sharing, so that branch protection needs no second mechanism, where pushing to any other branch, or to the default branch of an unprotected repository, takes workflow:write. A force-push and the deletion of a ref take grant:manage whatever this says. false for every repository until it is protected, created with protected: true or changed since, a workflow from before v0.4.0 included, so that whoever holds workflow:write, an editor, pushes to it as before; whoever holds grant:manage on the workflow changes it.",
           "examples": [
             true,
             false

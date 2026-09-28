@@ -4,8 +4,8 @@
   "info": {
     "title": "Agentiik API",
     "version": "0.3.0",
-    "summary": "The identity and access routes of /api/v1: signing in and out, a password and a TOTP generator beside it, the authentication policy, the caller, users, groups, service accounts, namespaces and their quotas, grants and API tokens.",
-    "description": "One description of the access routes of /api/v1 for the three clients that speak them, agk, the console and the Terraform provider, so that none of them learns the API from another's code. It describes the routes of v0.3.0 and no other yet; tools/check.py holds its routes to the table at https://agentiik.github.io/docs#api and names every route of the table this document does not describe. Every record the API shares with the rest of the contract, a user, a grant, a token, a namespace, the policy, is a reference into wire.schema.json beside it rather than a copy, so that the two cannot drift; a consumer resolves the references relative to this document. What is defined here is what only a route carries: a request body, a list, a token shown once, Web Authentication's own JSON forms. Every body is JSON of at most 64 KiB, closed to fields the route does not read, save Web Authentication's own objects, which are the browser's to extend, and a route that reads no body refuses one sent. Every refusal is {\"error\"}, with the setting of the authentication policy beside it where one is the reason, and a namespace or a workflow the caller cannot see is refused as one that does not exist, so that no name can be learnt by asking."
+    "summary": "The identity and access routes of /api/v1: signing in and out, a password and a TOTP generator beside it, the authentication policy, the caller, users, groups, service accounts, namespaces and their quotas, grants and API tokens; and the workflow repositories.",
+    "description": "One description of the access routes of /api/v1 for the three clients that speak them, agk, the console and the Terraform provider, so that none of them learns the API from another's code. It describes the access routes of v0.3.0 and the workflow repository routes of v0.4.0, and no other yet; tools/check.py holds its routes to the table at https://agentiik.github.io/docs#api and names every route of the table this document does not describe. Every record the API shares with the rest of the contract, a user, a grant, a token, a namespace, the policy, a repository, a version, a resolved graph, is a reference into wire.schema.json beside it rather than a copy, so that the two cannot drift; a consumer resolves the references relative to this document. What is defined here is what only a route carries: a request body, a list, a token shown once, Web Authentication's own JSON forms. Every body is JSON of at most 64 KiB, closed to fields the route does not read, save Web Authentication's own objects, which are the browser's to extend, and a route that reads no body refuses one sent. Every refusal is {\"error\"}, with the setting of the authentication policy beside it where one is the reason, and a namespace or a workflow the caller cannot see is refused as one that does not exist, so that no name can be learnt by asking."
   },
   "externalDocs": {
     "description": "The documentation, which decides what the API does: this document follows it.",
@@ -59,6 +59,10 @@
     {
       "name": "grants",
       "description": "Sharing: grants and denies at namespace and workflow scope."
+    },
+    {
+      "name": "workflows",
+      "description": "Workflow repositories, created, read, renamed, moved, protected and deleted, and the tree at a ref. Git itself is spoken at /{ns}/{name}.git, with an API token as the password, and is git's own protocol rather than this document's."
     }
   ],
   "security": [
@@ -4137,6 +4141,621 @@
           }
         }
       }
+    },
+    "/api/v1/{ns}/workflows": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        }
+      ],
+      "post": {
+        "operationId": "createWorkflow",
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Create a workflow repository",
+        "description": "Creates an empty workflow repository in the namespace: no commit, its default branch unborn, so that git clone gives an empty repository and the first git push fills it. The body names it, and may name its default branch, main where it does not, and say whether that branch is protected, which it is unless the body says protected: false. Requires workflow:write in the namespace, which is what registering a version takes. Audited as workflow.create in the namespace.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#the-workflow-repository"
+        },
+        "requestBody": {
+          "description": "The repository.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/workflowCreate"
+              },
+              "examples": {
+                "default": {
+                  "summary": "protected, on main",
+                  "value": {
+                    "name": "monthly-invoicing"
+                  }
+                },
+                "unprotected": {
+                  "summary": "an editor's own, on master",
+                  "value": {
+                    "name": "vat-reconciliation",
+                    "default_branch": "master",
+                    "protected": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The repository created, empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "wire.schema.json#/$defs/repository"
+                },
+                "examples": {
+                  "created": {
+                    "summary": "empty and protected",
+                    "value": {
+                      "namespace": "finance",
+                      "name": "monthly-invoicing",
+                      "default_branch": "main",
+                      "protected": true,
+                      "labels": {},
+                      "created_at": "2026-09-28T09:00:00Z",
+                      "head": null,
+                      "clone_url": "https://agentiik.example.com/finance/monthly-invoicing.git"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The body is refused: a name outside the identifier grammar or past 255 characters, a default branch git would refuse, a field the route does not read. Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. A request carrying a session from another origin than the public URL's is refused as well, before the session is looked up. Every other refusal of the caller is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such namespace, or one where the caller does not hold workflow:write: the same answer."
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict",
+            "description": "A workflow of that name is in the namespace, or one deleted under it is still being purged."
+          },
+          "413": {
+            "$ref": "#/components/responses/tooLarge"
+          }
+        }
+      }
+    },
+    "/api/v1/{ns}/workflows/{name}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        },
+        {
+          "$ref": "#/components/parameters/workflow"
+        }
+      ],
+      "get": {
+        "operationId": "getWorkflow",
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Read a workflow",
+        "description": "The workflow's repository; the version a run naming no ref runs, the default branch's head, and the graph it resolves to, as its push recorded it, includes resolved, inheritance applied, images by digest; and a page of the default branch's first-parent history, newest first, each commit that is a version carrying it. A workflow from before v0.4.0 that no git push has filled lists its versions instead, and a run naming no ref runs the latest of them. Pages follow next, through from. Requires workflow:read.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#the-workflow-repository"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/historyFrom"
+          },
+          {
+            "$ref": "#/components/parameters/historyLimit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The workflow.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/workflowDetail"
+                },
+                "examples": {
+                  "pushed": {
+                    "summary": "a repository with history",
+                    "value": {
+                      "repository": {
+                        "namespace": "finance",
+                        "name": "monthly-invoicing",
+                        "default_branch": "main",
+                        "protected": true,
+                        "labels": {
+                          "domain": "billing"
+                        },
+                        "created_at": "2026-09-28T09:00:00Z",
+                        "head": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                        "clone_url": "https://agentiik.example.com/finance/monthly-invoicing.git"
+                      },
+                      "version": {
+                        "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                        "parent": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                        "author": "alice",
+                        "created_at": "2026-09-28T10:12:00Z",
+                        "source": "git"
+                      },
+                      "graph": {
+                        "namespace": "finance",
+                        "workflow": "monthly-invoicing",
+                        "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                        "includes": [
+                          {
+                            "path": "common-bricks.yaml"
+                          },
+                          {
+                            "workflow": "finance/common",
+                            "ref": "v2.1.0",
+                            "commit": "c41d9e2a7b3f5e8d1c0a9b6e4f2d8c7a5b3e1f09"
+                          }
+                        ],
+                        "inputs": {
+                          "orders": {
+                            "schema": {
+                              "type": "array",
+                              "items": {
+                                "type": "object"
+                              }
+                            },
+                            "required": true
+                          }
+                        },
+                        "outputs": {
+                          "archived": {
+                            "from": {
+                              "step": "archive",
+                              "port": "out"
+                            },
+                            "retain": {
+                              "for": "90d"
+                            }
+                          }
+                        },
+                        "on": {
+                          "schedule": [
+                            {
+                              "cron": "0 6 1 * *",
+                              "timezone": "Europe/Paris"
+                            }
+                          ]
+                        },
+                        "vars": {
+                          "currency": "EUR"
+                        },
+                        "secrets": [
+                          "billing"
+                        ],
+                        "concurrency": {
+                          "group": "monthly-invoicing",
+                          "cancel_in_progress": false
+                        },
+                        "timeout": "6h",
+                        "retain": "7d",
+                        "order": [
+                          "normalize",
+                          "archive",
+                          "check-vat"
+                        ],
+                        "steps": {
+                          "normalize": {
+                            "kind": "brick",
+                            "image": "ghcr.io/acme/agk-normalize@sha256:9f2c1d4a77b0c3e51d8a6f2b4c9e0a13d5f7b82c6e04a9d31b7f5c28e6a0b7e0",
+                            "brick": {
+                              "name": "normalize-orders",
+                              "version": "1.4.0"
+                            },
+                            "inputs": {
+                              "orders": "${{ workflow.inputs.orders }}"
+                            },
+                            "outputs": [
+                              "ok",
+                              "rejected"
+                            ],
+                            "params": {
+                              "currency": "${{ vars.currency }}"
+                            },
+                            "timeout": "2m",
+                            "retry": {
+                              "max": 3,
+                              "on": [
+                                "transient"
+                              ]
+                            },
+                            "network": "egress",
+                            "egress": {
+                              "allow": [
+                                "api.billing.example.com:443"
+                              ]
+                            },
+                            "resources": {
+                              "cpu": "0.5",
+                              "memory": "256Mi"
+                            },
+                            "idempotent": true,
+                            "extends": [
+                              ".api-brick"
+                            ]
+                          },
+                          "archive": {
+                            "kind": "script",
+                            "image": "alpine:3.21@sha256:5f8b1e1ad4503f1abb00387333cc6ebac7c77193d6adf4c3917794e7102dc704",
+                            "needs": [
+                              {
+                                "step": "normalize",
+                                "port": "ok",
+                                "as": "in"
+                              }
+                            ],
+                            "outputs": [
+                              "out"
+                            ],
+                            "retain": "7d",
+                            "files": [
+                              {
+                                "from": "./sql/**"
+                              },
+                              {
+                                "from": "./certs/internal-ca.pem",
+                                "to": "/etc/ssl/certs/internal-ca.pem",
+                                "mode": "0444"
+                              }
+                            ],
+                            "before_script": [
+                              "apk add --no-cache jq"
+                            ],
+                            "script": [
+                              "agk items | jq -c '.data' > /tmp/rows",
+                              "agk emit out --from /tmp/rows"
+                            ],
+                            "shell": [
+                              "/bin/sh",
+                              "-e"
+                            ],
+                            "idempotent": true
+                          },
+                          "check-vat": {
+                            "kind": "workflow",
+                            "workflow": {
+                              "workflow": "finance/vat-check",
+                              "ref": "v1.2.0"
+                            },
+                            "needs": [
+                              {
+                                "step": "normalize",
+                                "port": "ok",
+                                "as": "in"
+                              }
+                            ],
+                            "outputs": [
+                              "out"
+                            ],
+                            "idempotent": true
+                          }
+                        }
+                      },
+                      "history": [
+                        {
+                          "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                          "parent": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                          "author": {
+                            "name": "Alice Martin",
+                            "email": "alice@example.com"
+                          },
+                          "authored_at": "2026-09-28T10:05:00+02:00",
+                          "subject": "Round VAT per line rather than per invoice",
+                          "version": {
+                            "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                            "parent": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                            "author": "alice",
+                            "created_at": "2026-09-28T10:12:00Z",
+                            "source": "git"
+                          }
+                        },
+                        {
+                          "commit": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                          "parent": "9b1f3d5e7a0c2e4f6b8d0a1c3e5f7b9d2a4c6e8f",
+                          "author": {
+                            "name": "Alice Martin",
+                            "email": "alice@example.com"
+                          },
+                          "authored_at": "2026-09-28T09:40:00+02:00",
+                          "subject": "Split the rounding out of the charge step"
+                        }
+                      ],
+                      "next": "9b1f3d5e7a0c2e4f6b8d0a1c3e5f7b9d2a4c6e8f"
+                    }
+                  },
+                  "empty": {
+                    "summary": "a repository nothing was pushed to",
+                    "value": {
+                      "repository": {
+                        "namespace": "finance",
+                        "name": "monthly-invoicing",
+                        "default_branch": "main",
+                        "protected": true,
+                        "labels": {},
+                        "created_at": "2026-09-28T09:00:00Z",
+                        "head": null,
+                        "clone_url": "https://agentiik.example.com/finance/monthly-invoicing.git"
+                      },
+                      "history": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "from is not a whole commit, or limit is not a number from 1 to 500. Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such workflow, or one the caller cannot read: the same answer; or a from naming no commit of the history listed."
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateWorkflow",
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Rename, move or protect a workflow",
+        "description": "Changes what the body names and nothing it leaves out, each field under its own permission, every one of them held or nothing changed. name renames the workflow within its namespace, under workflow:write on it. namespace moves it to another namespace, under workflow:write on it and ownership of both namespaces, the one it leaves and the one it goes to. default_branch and protected name the branch HEAD names and say whether it is protected, under grant:manage on the workflow, since protection decides who may move the branch production runs. A rename carries everything at once: versions, refs, runs, grants and triggers answer at the new name from the answer on, the old name is free, and a push is held to the new name in metadata.name from then, the versions recorded before keeping the name they were written with. A move carries everything too, the repository, the versions, the runs and their artifacts, re-keyed and re-counted under the target namespace and its quotas, and takes a while: the workflow is frozen from the answer, pushes, runs and replays refused with 409 naming the move, while the leading controller copies its objects, swaps every row in one transaction, then deletes the source's objects; it is read at its old address until the swap and at the new one after. A move is refused while a run of the workflow is queued or running, where the target's quotas, max_artifact_bytes above all, cannot hold what moves, and where the workflow names a secret the target does not declare. Audited as workflow.update, a move in both namespaces, and a change of protection as ref.protect.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#the-workflow-repository"
+        },
+        "requestBody": {
+          "description": "What changes.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/workflowUpdate"
+              },
+              "examples": {
+                "rename": {
+                  "summary": "a new name",
+                  "value": {
+                    "name": "invoicing"
+                  }
+                },
+                "move": {
+                  "summary": "to another namespace",
+                  "value": {
+                    "namespace": "ops"
+                  }
+                },
+                "protect": {
+                  "summary": "protect the default branch",
+                  "value": {
+                    "protected": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Renamed, or its default branch or protection changed: the repository as it now stands.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "wire.schema.json#/$defs/repository"
+                },
+                "examples": {
+                  "renamed": {
+                    "summary": "renamed",
+                    "value": {
+                      "namespace": "finance",
+                      "name": "invoicing",
+                      "default_branch": "main",
+                      "protected": true,
+                      "labels": {
+                        "domain": "billing"
+                      },
+                      "created_at": "2026-09-28T09:00:00Z",
+                      "head": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                      "clone_url": "https://agentiik.example.com/finance/invoicing.git"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The move is under way, and the workflow frozen until the leading controller has carried it out. No body: where it will be read is in Location.",
+            "headers": {
+              "Location": {
+                "$ref": "#/components/headers/location"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The body is refused: empty, a field the route does not read, a name or a namespace outside its grammar, a branch git would refuse. Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. A request carrying a session from another origin than the public URL's is refused as well, before the session is looked up. Every other refusal of the caller is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such workflow, or one where the caller does not hold what a field of the body needs, workflow:write, ownership of the namespace it is in, or grant:manage: the same answer."
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict",
+            "description": "The new name is taken in the namespace it would have; a run of the workflow is queued or running, the target's quotas cannot hold what moves, or the workflow names a secret the target does not declare, for a move; a move is already under way; or the default branch named is no branch of a repository that holds commits."
+          },
+          "413": {
+            "$ref": "#/components/responses/tooLarge"
+          },
+          "422": {
+            "$ref": "#/components/responses/unprocessable",
+            "description": "The target namespace does not exist, or the caller does not own it: the same answer."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteWorkflow",
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Delete a workflow",
+        "description": "Deletes the workflow with everything it holds, its runs among them. From the answer the workflow is answered as one that does not exist, on every route and to git; its runs still going are cancelled, and the envelopes, logs and artifacts of every run expire at once; the leading controller then purges the runs and removes the versions, the refs and the packs, and the name is free once that is done, a creation under it answered 409 until then. Answered 202 rather than 204, since what the answer promises is a purge the controller carries out afterwards, and rather than 200, since a workflow answered as absent has nothing left to describe. Requires workflow:delete, which the owner role alone holds. Audited as workflow.delete.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#the-workflow-repository"
+        },
+        "responses": {
+          "202": {
+            "description": "Deleted from the answer on, its purge under way. No body."
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "A body sent, which the route does not read. Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. A request carrying a session from another origin than the public URL's is refused as well, before the session is looked up. Every other refusal of the caller is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such workflow, or one where the caller does not hold workflow:delete: the same answer."
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict",
+            "description": "A move of the workflow is under way."
+          }
+        }
+      }
+    },
+    "/api/v1/{ns}/workflows/{name}/tree/{ref}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        },
+        {
+          "$ref": "#/components/parameters/workflow"
+        },
+        {
+          "$ref": "#/components/parameters/ref"
+        }
+      ],
+      "get": {
+        "operationId": "getWorkflowTree",
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Read the tree at a ref",
+        "description": "The files of the commit a ref names, for the console and for review: every file with its path, mode, size and SHA-256, or, given path, that one file's bytes. A commit that is a version is read from its manifest, which is how a version agk push sent as a tree before v0.4.0 is read too; any other commit of the repository from its objects. Requires workflow:read, which reads the whole tree: narrowing a step's files is never a permission boundary.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#the-workflow-repository"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/treePath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The listing, or with path the file's bytes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/tree"
+                },
+                "examples": {
+                  "tree": {
+                    "summary": "the tree at main",
+                    "value": {
+                      "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                      "entries": [
+                        {
+                          "path": "agentiik.yaml",
+                          "mode": "0644",
+                          "size": 2210,
+                          "sha256": "4c1e7a09b3d5f2e8c6a0b4d2f1e3c5a7b9d0f8e6c4a2b1d3f5e7c9a0b2d4f6e8"
+                        },
+                        {
+                          "path": "scripts/normalize.py",
+                          "mode": "0755",
+                          "size": 1532,
+                          "sha256": "a7e1875aa928e8a32bed8728639b06e8f8e2e297df096da697c85caffd34075a"
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "contentMediaType": "application/octet-stream"
+                },
+                "examples": {
+                  "file": {
+                    "summary": "a script, with path",
+                    "value": "import json\n"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "A name a branch and a tag both hold, or a path outside the grammar of one. Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such workflow, or one the caller cannot read: the same answer; or a ref naming nothing the repository holds, or a path naming no file of the tree, a directory included."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7060,6 +7679,981 @@
             "totp": "492039"
           }
         ]
+      },
+      "workflowCreate": {
+        "title": "Workflow creation",
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "description": "A new, empty workflow repository: its name, and optionally its default branch and whether that branch is protected.",
+        "properties": {
+          "name": {
+            "$ref": "wire.schema.json#/$defs/identifier",
+            "description": "The workflow's name in the namespace, which its entry point's metadata.name will have to write.",
+            "examples": [
+              "monthly-invoicing"
+            ]
+          },
+          "default_branch": {
+            "$ref": "wire.schema.json#/$defs/branch",
+            "description": "The branch HEAD names, which the first push to it creates; main where it is left out.",
+            "examples": [
+              "main",
+              "master"
+            ]
+          },
+          "protected": {
+            "type": "boolean",
+            "description": "Whether the default branch is protected, true where it is left out: moving it then takes grant:manage. false where an editor, who holds workflow:write and not grant:manage, is to push the first commit to it.",
+            "examples": [
+              true,
+              false
+            ]
+          }
+        },
+        "examples": [
+          {
+            "name": "monthly-invoicing"
+          },
+          {
+            "name": "vat-reconciliation",
+            "default_branch": "master",
+            "protected": false
+          }
+        ]
+      },
+      "workflowUpdate": {
+        "title": "Workflow change",
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "description": "What changes, and nothing else: a field left out keeps what is recorded.",
+        "properties": {
+          "name": {
+            "$ref": "wire.schema.json#/$defs/identifier",
+            "description": "A new name within the namespace, under workflow:write on the workflow.",
+            "examples": [
+              "invoicing"
+            ]
+          },
+          "namespace": {
+            "$ref": "wire.schema.json#/$defs/namespace",
+            "description": "The namespace to move the workflow to, under workflow:write on it and ownership of both namespaces, the one it leaves and the one it goes to.",
+            "examples": [
+              "ops"
+            ]
+          },
+          "default_branch": {
+            "$ref": "wire.schema.json#/$defs/branch",
+            "description": "The branch HEAD names from now on, under grant:manage on the workflow: a branch the repository holds, or, while it holds no commit at all, the branch its first push will create.",
+            "examples": [
+              "main"
+            ]
+          },
+          "protected": {
+            "type": "boolean",
+            "description": "Whether the default branch is protected, under grant:manage on the workflow, since protection decides who may move the branch production runs.",
+            "examples": [
+              true
+            ]
+          }
+        },
+        "examples": [
+          {
+            "name": "invoicing"
+          },
+          {
+            "namespace": "ops"
+          },
+          {
+            "default_branch": "main",
+            "protected": true
+          }
+        ]
+      },
+      "historyEntry": {
+        "title": "History entry",
+        "type": "object",
+        "required": [
+          "commit"
+        ],
+        "additionalProperties": false,
+        "description": "One commit of the default branch's first-parent history, and the version it is where it is one.",
+        "properties": {
+          "commit": {
+            "$ref": "wire.schema.json#/$defs/commit",
+            "description": "The commit.",
+            "examples": [
+              "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f"
+            ]
+          },
+          "parent": {
+            "$ref": "wire.schema.json#/$defs/commit",
+            "description": "Its first parent, which the history follows; absent for a root commit.",
+            "examples": [
+              "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d"
+            ]
+          },
+          "author": {
+            "type": "object",
+            "required": [
+              "name",
+              "email"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The git author's name, as the commit records it.",
+                "examples": [
+                  "Alice Martin"
+                ]
+              },
+              "email": {
+                "type": "string",
+                "description": "The git author's address, as the commit records it, never checked against anything.",
+                "examples": [
+                  "alice@example.com"
+                ]
+              }
+            },
+            "description": "The commit's git author, whoever the git configuration of whoever wrote it named, as distinct from the version's author, the principal who pushed it. Absent for a version sent as a tree, whose commit the repository does not hold.",
+            "examples": [
+              {
+                "name": "Alice Martin",
+                "email": "alice@example.com"
+              }
+            ]
+          },
+          "authored_at": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The author date the commit records, as git log shows it; absent where author is.",
+            "examples": [
+              "2026-09-28T10:05:00+02:00"
+            ]
+          },
+          "subject": {
+            "type": "string",
+            "description": "The first line of the commit's message; absent where author is.",
+            "examples": [
+              "Round VAT per line rather than per invoice"
+            ]
+          },
+          "version": {
+            "$ref": "wire.schema.json#/$defs/version",
+            "description": "The version the commit is, where it is one: a commit a push left a branch or a tag pointing at, accepted by the hook. Absent for a commit a push only carried on the way, which no run can name.",
+            "examples": [
+              {
+                "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                "parent": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                "author": "alice",
+                "created_at": "2026-09-28T10:12:00Z",
+                "source": "git"
+              }
+            ]
+          }
+        },
+        "examples": [
+          {
+            "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+            "parent": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+            "author": {
+              "name": "Alice Martin",
+              "email": "alice@example.com"
+            },
+            "authored_at": "2026-09-28T10:05:00+02:00",
+            "subject": "Round VAT per line rather than per invoice",
+            "version": {
+              "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+              "parent": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+              "author": "alice",
+              "created_at": "2026-09-28T10:12:00Z",
+              "source": "git"
+            }
+          },
+          {
+            "commit": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+            "parent": "9b1f3d5e7a0c2e4f6b8d0a1c3e5f7b9d2a4c6e8f",
+            "author": {
+              "name": "Alice Martin",
+              "email": "alice@example.com"
+            },
+            "authored_at": "2026-09-28T09:40:00+02:00",
+            "subject": "Split the rounding out of the charge step"
+          }
+        ]
+      },
+      "workflowDetail": {
+        "title": "Workflow",
+        "type": "object",
+        "required": [
+          "repository",
+          "history"
+        ],
+        "additionalProperties": false,
+        "description": "A workflow: its repository, the version a run naming no ref runs with the graph it resolves to, and a page of the default branch's history.",
+        "properties": {
+          "repository": {
+            "$ref": "wire.schema.json#/$defs/repository",
+            "description": "The repository.",
+            "examples": [
+              {
+                "namespace": "finance",
+                "name": "monthly-invoicing",
+                "default_branch": "main",
+                "protected": true,
+                "labels": {
+                  "domain": "billing"
+                },
+                "created_at": "2026-09-28T09:00:00Z",
+                "head": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                "clone_url": "https://agentiik.example.com/finance/monthly-invoicing.git"
+              }
+            ]
+          },
+          "version": {
+            "$ref": "wire.schema.json#/$defs/version",
+            "description": "The version a run naming no ref runs: the default branch's head, or, while that branch is unborn, the latest version agk push sent as a tree before v0.4.0. Absent where there is neither.",
+            "examples": [
+              {
+                "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                "parent": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                "author": "alice",
+                "created_at": "2026-09-28T10:12:00Z",
+                "source": "git"
+              }
+            ]
+          },
+          "graph": {
+            "$ref": "wire.schema.json#/$defs/resolvedGraph",
+            "description": "The graph that version resolves to, as its push recorded it; absent where version is.",
+            "examples": [
+              {
+                "namespace": "finance",
+                "workflow": "monthly-invoicing",
+                "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                "includes": [
+                  {
+                    "path": "common-bricks.yaml"
+                  },
+                  {
+                    "workflow": "finance/common",
+                    "ref": "v2.1.0",
+                    "commit": "c41d9e2a7b3f5e8d1c0a9b6e4f2d8c7a5b3e1f09"
+                  }
+                ],
+                "inputs": {
+                  "orders": {
+                    "schema": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "required": true
+                  }
+                },
+                "outputs": {
+                  "archived": {
+                    "from": {
+                      "step": "archive",
+                      "port": "out"
+                    },
+                    "retain": {
+                      "for": "90d"
+                    }
+                  }
+                },
+                "on": {
+                  "schedule": [
+                    {
+                      "cron": "0 6 1 * *",
+                      "timezone": "Europe/Paris"
+                    }
+                  ]
+                },
+                "vars": {
+                  "currency": "EUR"
+                },
+                "secrets": [
+                  "billing"
+                ],
+                "concurrency": {
+                  "group": "monthly-invoicing",
+                  "cancel_in_progress": false
+                },
+                "timeout": "6h",
+                "retain": "7d",
+                "order": [
+                  "normalize",
+                  "archive",
+                  "check-vat"
+                ],
+                "steps": {
+                  "normalize": {
+                    "kind": "brick",
+                    "image": "ghcr.io/acme/agk-normalize@sha256:9f2c1d4a77b0c3e51d8a6f2b4c9e0a13d5f7b82c6e04a9d31b7f5c28e6a0b7e0",
+                    "brick": {
+                      "name": "normalize-orders",
+                      "version": "1.4.0"
+                    },
+                    "inputs": {
+                      "orders": "${{ workflow.inputs.orders }}"
+                    },
+                    "outputs": [
+                      "ok",
+                      "rejected"
+                    ],
+                    "params": {
+                      "currency": "${{ vars.currency }}"
+                    },
+                    "timeout": "2m",
+                    "retry": {
+                      "max": 3,
+                      "on": [
+                        "transient"
+                      ]
+                    },
+                    "network": "egress",
+                    "egress": {
+                      "allow": [
+                        "api.billing.example.com:443"
+                      ]
+                    },
+                    "resources": {
+                      "cpu": "0.5",
+                      "memory": "256Mi"
+                    },
+                    "idempotent": true,
+                    "extends": [
+                      ".api-brick"
+                    ]
+                  },
+                  "archive": {
+                    "kind": "script",
+                    "image": "alpine:3.21@sha256:5f8b1e1ad4503f1abb00387333cc6ebac7c77193d6adf4c3917794e7102dc704",
+                    "needs": [
+                      {
+                        "step": "normalize",
+                        "port": "ok",
+                        "as": "in"
+                      }
+                    ],
+                    "outputs": [
+                      "out"
+                    ],
+                    "retain": "7d",
+                    "files": [
+                      {
+                        "from": "./sql/**"
+                      },
+                      {
+                        "from": "./certs/internal-ca.pem",
+                        "to": "/etc/ssl/certs/internal-ca.pem",
+                        "mode": "0444"
+                      }
+                    ],
+                    "before_script": [
+                      "apk add --no-cache jq"
+                    ],
+                    "script": [
+                      "agk items | jq -c '.data' > /tmp/rows",
+                      "agk emit out --from /tmp/rows"
+                    ],
+                    "shell": [
+                      "/bin/sh",
+                      "-e"
+                    ],
+                    "idempotent": true
+                  },
+                  "check-vat": {
+                    "kind": "workflow",
+                    "workflow": {
+                      "workflow": "finance/vat-check",
+                      "ref": "v1.2.0"
+                    },
+                    "needs": [
+                      {
+                        "step": "normalize",
+                        "port": "ok",
+                        "as": "in"
+                      }
+                    ],
+                    "outputs": [
+                      "out"
+                    ],
+                    "idempotent": true
+                  }
+                }
+              }
+            ]
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/historyEntry"
+            },
+            "description": "A page of the default branch's first-parent history, newest first, from its head or from the commit from names; each commit a version carries it. While the default branch is unborn, the versions agk push sent as trees instead, newest first. Empty for a repository holding nothing.",
+            "examples": [
+              [
+                {
+                  "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                  "parent": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                  "author": {
+                    "name": "Alice Martin",
+                    "email": "alice@example.com"
+                  },
+                  "authored_at": "2026-09-28T10:05:00+02:00",
+                  "subject": "Round VAT per line rather than per invoice",
+                  "version": {
+                    "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                    "parent": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                    "author": "alice",
+                    "created_at": "2026-09-28T10:12:00Z",
+                    "source": "git"
+                  }
+                },
+                {
+                  "commit": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                  "parent": "9b1f3d5e7a0c2e4f6b8d0a1c3e5f7b9d2a4c6e8f",
+                  "author": {
+                    "name": "Alice Martin",
+                    "email": "alice@example.com"
+                  },
+                  "authored_at": "2026-09-28T09:40:00+02:00",
+                  "subject": "Split the rounding out of the charge step"
+                }
+              ],
+              []
+            ]
+          },
+          "next": {
+            "$ref": "wire.schema.json#/$defs/commit",
+            "description": "The commit the following page starts from, for from; absent on the last page.",
+            "examples": [
+              "9b1f3d5e7a0c2e4f6b8d0a1c3e5f7b9d2a4c6e8f"
+            ]
+          }
+        },
+        "dependentRequired": {
+          "version": [
+            "graph"
+          ],
+          "graph": [
+            "version"
+          ]
+        },
+        "examples": [
+          {
+            "repository": {
+              "namespace": "finance",
+              "name": "monthly-invoicing",
+              "default_branch": "main",
+              "protected": true,
+              "labels": {
+                "domain": "billing"
+              },
+              "created_at": "2026-09-28T09:00:00Z",
+              "head": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+              "clone_url": "https://agentiik.example.com/finance/monthly-invoicing.git"
+            },
+            "version": {
+              "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+              "parent": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+              "author": "alice",
+              "created_at": "2026-09-28T10:12:00Z",
+              "source": "git"
+            },
+            "graph": {
+              "namespace": "finance",
+              "workflow": "monthly-invoicing",
+              "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+              "includes": [
+                {
+                  "path": "common-bricks.yaml"
+                },
+                {
+                  "workflow": "finance/common",
+                  "ref": "v2.1.0",
+                  "commit": "c41d9e2a7b3f5e8d1c0a9b6e4f2d8c7a5b3e1f09"
+                }
+              ],
+              "inputs": {
+                "orders": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "required": true
+                }
+              },
+              "outputs": {
+                "archived": {
+                  "from": {
+                    "step": "archive",
+                    "port": "out"
+                  },
+                  "retain": {
+                    "for": "90d"
+                  }
+                }
+              },
+              "on": {
+                "schedule": [
+                  {
+                    "cron": "0 6 1 * *",
+                    "timezone": "Europe/Paris"
+                  }
+                ]
+              },
+              "vars": {
+                "currency": "EUR"
+              },
+              "secrets": [
+                "billing"
+              ],
+              "concurrency": {
+                "group": "monthly-invoicing",
+                "cancel_in_progress": false
+              },
+              "timeout": "6h",
+              "retain": "7d",
+              "order": [
+                "normalize",
+                "archive",
+                "check-vat"
+              ],
+              "steps": {
+                "normalize": {
+                  "kind": "brick",
+                  "image": "ghcr.io/acme/agk-normalize@sha256:9f2c1d4a77b0c3e51d8a6f2b4c9e0a13d5f7b82c6e04a9d31b7f5c28e6a0b7e0",
+                  "brick": {
+                    "name": "normalize-orders",
+                    "version": "1.4.0"
+                  },
+                  "inputs": {
+                    "orders": "${{ workflow.inputs.orders }}"
+                  },
+                  "outputs": [
+                    "ok",
+                    "rejected"
+                  ],
+                  "params": {
+                    "currency": "${{ vars.currency }}"
+                  },
+                  "timeout": "2m",
+                  "retry": {
+                    "max": 3,
+                    "on": [
+                      "transient"
+                    ]
+                  },
+                  "network": "egress",
+                  "egress": {
+                    "allow": [
+                      "api.billing.example.com:443"
+                    ]
+                  },
+                  "resources": {
+                    "cpu": "0.5",
+                    "memory": "256Mi"
+                  },
+                  "idempotent": true,
+                  "extends": [
+                    ".api-brick"
+                  ]
+                },
+                "archive": {
+                  "kind": "script",
+                  "image": "alpine:3.21@sha256:5f8b1e1ad4503f1abb00387333cc6ebac7c77193d6adf4c3917794e7102dc704",
+                  "needs": [
+                    {
+                      "step": "normalize",
+                      "port": "ok",
+                      "as": "in"
+                    }
+                  ],
+                  "outputs": [
+                    "out"
+                  ],
+                  "retain": "7d",
+                  "files": [
+                    {
+                      "from": "./sql/**"
+                    },
+                    {
+                      "from": "./certs/internal-ca.pem",
+                      "to": "/etc/ssl/certs/internal-ca.pem",
+                      "mode": "0444"
+                    }
+                  ],
+                  "before_script": [
+                    "apk add --no-cache jq"
+                  ],
+                  "script": [
+                    "agk items | jq -c '.data' > /tmp/rows",
+                    "agk emit out --from /tmp/rows"
+                  ],
+                  "shell": [
+                    "/bin/sh",
+                    "-e"
+                  ],
+                  "idempotent": true
+                },
+                "check-vat": {
+                  "kind": "workflow",
+                  "workflow": {
+                    "workflow": "finance/vat-check",
+                    "ref": "v1.2.0"
+                  },
+                  "needs": [
+                    {
+                      "step": "normalize",
+                      "port": "ok",
+                      "as": "in"
+                    }
+                  ],
+                  "outputs": [
+                    "out"
+                  ],
+                  "idempotent": true
+                }
+              }
+            },
+            "history": [
+              {
+                "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                "parent": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                "author": {
+                  "name": "Alice Martin",
+                  "email": "alice@example.com"
+                },
+                "authored_at": "2026-09-28T10:05:00+02:00",
+                "subject": "Round VAT per line rather than per invoice",
+                "version": {
+                  "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                  "parent": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                  "author": "alice",
+                  "created_at": "2026-09-28T10:12:00Z",
+                  "source": "git"
+                }
+              },
+              {
+                "commit": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                "parent": "9b1f3d5e7a0c2e4f6b8d0a1c3e5f7b9d2a4c6e8f",
+                "author": {
+                  "name": "Alice Martin",
+                  "email": "alice@example.com"
+                },
+                "authored_at": "2026-09-28T09:40:00+02:00",
+                "subject": "Split the rounding out of the charge step"
+              }
+            ],
+            "next": "9b1f3d5e7a0c2e4f6b8d0a1c3e5f7b9d2a4c6e8f"
+          },
+          {
+            "repository": {
+              "namespace": "finance",
+              "name": "vat-reconciliation",
+              "default_branch": "master",
+              "protected": false,
+              "labels": {},
+              "created_at": "2026-06-02T14:30:00Z",
+              "head": null,
+              "clone_url": "https://agentiik.example.com/finance/vat-reconciliation.git"
+            },
+            "version": {
+              "commit": "7e4c1a9b3d5f2e8c0a6b4d2f1e3c5a7b9d0f8e6c",
+              "author": "operator",
+              "created_at": "2026-06-02T14:31:00Z",
+              "source": "tree"
+            },
+            "graph": {
+              "namespace": "finance",
+              "workflow": "vat-reconciliation",
+              "commit": "7e4c1a9b3d5f2e8c0a6b4d2f1e3c5a7b9d0f8e6c",
+              "includes": [],
+              "inputs": {
+                "orders": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "required": true
+                }
+              },
+              "outputs": {
+                "archived": {
+                  "from": {
+                    "step": "archive",
+                    "port": "out"
+                  },
+                  "retain": {
+                    "for": "90d"
+                  }
+                }
+              },
+              "on": {
+                "schedule": [
+                  {
+                    "cron": "0 6 1 * *",
+                    "timezone": "Europe/Paris"
+                  }
+                ]
+              },
+              "vars": {
+                "currency": "EUR"
+              },
+              "secrets": [
+                "billing"
+              ],
+              "concurrency": {
+                "group": "monthly-invoicing",
+                "cancel_in_progress": false
+              },
+              "timeout": "6h",
+              "retain": "7d",
+              "order": [
+                "normalize",
+                "archive",
+                "check-vat"
+              ],
+              "steps": {
+                "normalize": {
+                  "kind": "brick",
+                  "image": "ghcr.io/acme/agk-normalize@sha256:9f2c1d4a77b0c3e51d8a6f2b4c9e0a13d5f7b82c6e04a9d31b7f5c28e6a0b7e0",
+                  "brick": {
+                    "name": "normalize-orders",
+                    "version": "1.4.0"
+                  },
+                  "inputs": {
+                    "orders": "${{ workflow.inputs.orders }}"
+                  },
+                  "outputs": [
+                    "ok",
+                    "rejected"
+                  ],
+                  "params": {
+                    "currency": "${{ vars.currency }}"
+                  },
+                  "timeout": "2m",
+                  "retry": {
+                    "max": 3,
+                    "on": [
+                      "transient"
+                    ]
+                  },
+                  "network": "egress",
+                  "egress": {
+                    "allow": [
+                      "api.billing.example.com:443"
+                    ]
+                  },
+                  "resources": {
+                    "cpu": "0.5",
+                    "memory": "256Mi"
+                  },
+                  "idempotent": true,
+                  "extends": [
+                    ".api-brick"
+                  ]
+                },
+                "archive": {
+                  "kind": "script",
+                  "image": "alpine:3.21@sha256:5f8b1e1ad4503f1abb00387333cc6ebac7c77193d6adf4c3917794e7102dc704",
+                  "needs": [
+                    {
+                      "step": "normalize",
+                      "port": "ok",
+                      "as": "in"
+                    }
+                  ],
+                  "outputs": [
+                    "out"
+                  ],
+                  "retain": "7d",
+                  "files": [
+                    {
+                      "from": "./sql/**"
+                    },
+                    {
+                      "from": "./certs/internal-ca.pem",
+                      "to": "/etc/ssl/certs/internal-ca.pem",
+                      "mode": "0444"
+                    }
+                  ],
+                  "before_script": [
+                    "apk add --no-cache jq"
+                  ],
+                  "script": [
+                    "agk items | jq -c '.data' > /tmp/rows",
+                    "agk emit out --from /tmp/rows"
+                  ],
+                  "shell": [
+                    "/bin/sh",
+                    "-e"
+                  ],
+                  "idempotent": true
+                },
+                "check-vat": {
+                  "kind": "workflow",
+                  "workflow": {
+                    "workflow": "finance/vat-check",
+                    "ref": "v1.2.0"
+                  },
+                  "needs": [
+                    {
+                      "step": "normalize",
+                      "port": "ok",
+                      "as": "in"
+                    }
+                  ],
+                  "outputs": [
+                    "out"
+                  ],
+                  "idempotent": true
+                }
+              }
+            },
+            "history": [
+              {
+                "commit": "7e4c1a9b3d5f2e8c0a6b4d2f1e3c5a7b9d0f8e6c",
+                "version": {
+                  "commit": "7e4c1a9b3d5f2e8c0a6b4d2f1e3c5a7b9d0f8e6c",
+                  "author": "operator",
+                  "created_at": "2026-06-02T14:31:00Z",
+                  "source": "tree"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "treeEntry": {
+        "title": "Tree entry",
+        "type": "object",
+        "required": [
+          "path",
+          "mode",
+          "size",
+          "sha256"
+        ],
+        "additionalProperties": false,
+        "description": "One file of a tree, as a version's manifest records it.",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Its path from the root of the tree, which is also where a step finds it under /agk/repo/.",
+            "examples": [
+              "scripts/normalize.py",
+              "agentiik.yaml"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "0644",
+              "0755"
+            ],
+            "description": "Its mode, one of the two git gives a file.",
+            "examples": [
+              "0644",
+              "0755"
+            ]
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Its size in bytes.",
+            "examples": [
+              1532
+            ]
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "The SHA-256 of its bytes, which the object holding it is stored under and a runner fetches it by.",
+            "examples": [
+              "a7e1875aa928e8a32bed8728639b06e8f8e2e297df096da697c85caffd34075a"
+            ]
+          }
+        },
+        "examples": [
+          {
+            "path": "scripts/normalize.py",
+            "mode": "0755",
+            "size": 1532,
+            "sha256": "a7e1875aa928e8a32bed8728639b06e8f8e2e297df096da697c85caffd34075a"
+          }
+        ]
+      },
+      "tree": {
+        "title": "Tree",
+        "type": "object",
+        "required": [
+          "commit",
+          "entries"
+        ],
+        "additionalProperties": false,
+        "description": "The files of the commit a ref names.",
+        "properties": {
+          "commit": {
+            "$ref": "wire.schema.json#/$defs/commit",
+            "description": "The commit the ref resolved to, which the listing is of.",
+            "examples": [
+              "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f"
+            ]
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/treeEntry"
+            },
+            "description": "Every file of the tree, by path, whole: a tree holds 65,536 files at the most.",
+            "examples": [
+              [
+                {
+                  "path": "agentiik.yaml",
+                  "mode": "0644",
+                  "size": 2210,
+                  "sha256": "4c1e7a09b3d5f2e8c6a0b4d2f1e3c5a7b9d0f8e6c4a2b1d3f5e7c9a0b2d4f6e8"
+                },
+                {
+                  "path": "scripts/normalize.py",
+                  "mode": "0755",
+                  "size": 1532,
+                  "sha256": "a7e1875aa928e8a32bed8728639b06e8f8e2e297df096da697c85caffd34075a"
+                }
+              ]
+            ]
+          }
+        },
+        "examples": [
+          {
+            "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+            "entries": [
+              {
+                "path": "agentiik.yaml",
+                "mode": "0644",
+                "size": 2210,
+                "sha256": "4c1e7a09b3d5f2e8c6a0b4d2f1e3c5a7b9d0f8e6c4a2b1d3f5e7c9a0b2d4f6e8"
+              },
+              {
+                "path": "scripts/normalize.py",
+                "mode": "0755",
+                "size": 1532,
+                "sha256": "a7e1875aa928e8a32bed8728639b06e8f8e2e297df096da697c85caffd34075a"
+              }
+            ]
+          }
+        ]
       }
     },
     "parameters": {
@@ -7270,6 +8864,83 @@
             "value": "page.css"
           }
         }
+      },
+      "ref": {
+        "name": "ref",
+        "in": "path",
+        "required": true,
+        "description": "A branch or a tag, by its short name or written in full, or a commit written whole. A name a branch and a tag both hold is refused with 400 rather than guessed at. A ref holding a slash is written with it, the rest of the path being the ref, or with each slash percent-encoded, as a generated client writes it.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "examples": {
+          "branch": {
+            "summary": "the default branch",
+            "value": "main"
+          },
+          "slashed": {
+            "summary": "a branch holding a slash",
+            "value": "feature/vat-rounding"
+          },
+          "tag": {
+            "summary": "a tag",
+            "value": "v2.1.0"
+          },
+          "commit": {
+            "summary": "a commit, whole",
+            "value": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f"
+          }
+        }
+      },
+      "treePath": {
+        "name": "path",
+        "in": "query",
+        "required": false,
+        "description": "One file of the tree, by its path from the root, as the listing writes it: its bytes are answered rather than the listing.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "examples": {
+          "script": {
+            "summary": "a script of the tree",
+            "value": "scripts/normalize.py"
+          }
+        }
+      },
+      "historyFrom": {
+        "name": "from",
+        "in": "query",
+        "required": false,
+        "description": "The commit the history is listed from, itself included: the next of the page before. The default branch's head where it is left out.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/commit"
+        },
+        "examples": {
+          "next page": {
+            "summary": "where the last page stopped",
+            "value": "9b1f3d5e7a0c2e4f6b8d0a1c3e5f7b9d2a4c6e8f"
+          }
+        }
+      },
+      "historyLimit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "How many commits a page lists, 50 where it is left out and 500 at the most, as GET /api/v1/runs lists runs.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500,
+          "default": 50
+        },
+        "examples": {
+          "small page": {
+            "summary": "ten commits",
+            "value": 10
+          }
+        }
       }
     },
     "headers": {
@@ -7383,6 +9054,19 @@
           "minutes": {
             "summary": "nine minutes",
             "value": 540
+          }
+        }
+      },
+      "location": {
+        "description": "Where the workflow is read once the move is done: /api/v1/{target}/workflows/{name}.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "examples": {
+          "moved": {
+            "summary": "moved to ops",
+            "value": "/api/v1/ops/workflows/monthly-invoicing"
           }
         }
       }

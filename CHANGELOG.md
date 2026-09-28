@@ -13,6 +13,10 @@ Every repository of the project carries the same version and is tagged at the sa
 - `$defs/defaults` and the fragment's `steps` say what the include layer brings, hidden blocks and defaults, and that a step written in an included file carries its own values above the defaults, the entry point overriding it keyword by keyword, as the engine resolves it.
 - `files` says what a glob matches, `**` included, and where the long form places a directory or a glob; `to` is an absolute path, as the task message holds it.
 - `tools/check.py` validates the new `fragment` fixture group against `$defs/fragment`, `mcp-in-included-file.yaml` moved into it, and holds the two copies of `to`'s grammar together.
+- `wire.schema.json` describes the workflow repository's records, `repository`, `ref` and `version`, on `commit`, `branch` and `refName`, with fixtures for each.
+- `wire.schema.json` describes `resolvedGraph`, the graph a version resolves to, as the one shape the hook records, the API answers and the console draws, with fixtures.
+- `openapi.json` describes `POST /api/v1/{ns}/workflows`, `GET`, `PATCH` and `DELETE /api/v1/{ns}/workflows/{name}`, and `GET /api/v1/{ns}/workflows/{name}/tree/{ref}`.
+- `tools/check.py` holds every grammar the resolved graph repeats from the workflow and brick schemas to its original, and a ref written in full to a branch's grammar.
 
 ## v0.3.0, 2026-09-28
 

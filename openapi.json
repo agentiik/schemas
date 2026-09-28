@@ -4154,7 +4154,7 @@
           "workflows"
         ],
         "summary": "Create a workflow repository",
-        "description": "Creates an empty workflow repository in the namespace: no commit, its default branch unborn, so that git clone gives an empty repository and the first git push fills it. The body names it, and may name its default branch, main where it does not, and say whether that branch is protected, which it is unless the body says protected: false. Requires workflow:write in the namespace, which is what registering a version takes. Audited as workflow.create in the namespace.",
+        "description": "Creates an empty workflow repository in the namespace: no commit, its default branch unborn, so that git clone gives an empty repository and the first git push fills it. The body names it, and may name its default branch, main where it does not, and say whether that branch is protected, which it is unless the body says protected: false. Requires owning the namespace, the owner role on it, one's own or a group's, as the platform tool workflow.create, which mirrors this route, requires; a token narrowed by a scope owns none. Audited as workflow.create in the namespace.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#the-workflow-repository"
@@ -4175,7 +4175,7 @@
                   }
                 },
                 "unprotected": {
-                  "summary": "an editor's own, on master",
+                  "summary": "unprotected, on master",
                   "value": {
                     "name": "vat-reconciliation",
                     "default_branch": "master",
@@ -4225,7 +4225,7 @@
           },
           "404": {
             "$ref": "#/components/responses/notFound",
-            "description": "No such namespace, or one where the caller does not hold workflow:write: the same answer."
+            "description": "No such namespace, or one the caller does not own: the same answer."
           },
           "409": {
             "$ref": "#/components/responses/conflict",
@@ -4252,7 +4252,7 @@
           "workflows"
         ],
         "summary": "Read a workflow",
-        "description": "The workflow's repository; the version a run naming no ref runs, the default branch's head, and the graph it resolves to, as its push recorded it, includes resolved, inheritance applied, images by digest; and a page of the default branch's first-parent history, newest first, each commit that is a version carrying it. A workflow from before v0.4.0 that no git push has filled lists its versions instead, and a run naming no ref runs the latest of them. Pages follow next, through from. Requires workflow:read.",
+        "description": "The workflow's repository; the version a run naming no ref runs, the default branch's head, and the graph it resolves to, includes resolved, inheritance applied, images by digest; and a page of the default branch's first-parent history, newest first, each commit that is a version carrying it. A workflow whose versions agk push sent as trees, and which no git push has filled yet, lists those versions instead, and a run naming no ref runs the latest of them. Pages follow next, through from. Requires workflow:read.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#the-workflow-repository"
@@ -4297,7 +4297,6 @@
                         "source": "git"
                       },
                       "graph": {
-                        "namespace": "finance",
                         "workflow": "monthly-invoicing",
                         "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
                         "includes": [
@@ -4422,11 +4421,11 @@
                               }
                             ],
                             "before_script": [
-                              "apk add --no-cache jq"
+                              "echo \"$AGK_STEP attempt $AGK_ATTEMPT\" >&2"
                             ],
                             "script": [
-                              "agk items | jq -c '.data' > /tmp/rows",
-                              "agk emit out --from /tmp/rows"
+                              "agk items > /tmp/rows.json",
+                              "agk emit out --from /tmp/rows.json"
                             ],
                             "shell": [
                               "/bin/sh",
@@ -4529,7 +4528,7 @@
           "workflows"
         ],
         "summary": "Rename, move or protect a workflow",
-        "description": "Changes what the body names and nothing it leaves out, each field under its own permission, every one of them held or nothing changed. name renames the workflow within its namespace, under workflow:write on it. namespace moves it to another namespace, under workflow:write on it and ownership of both namespaces, the one it leaves and the one it goes to. default_branch and protected name the branch HEAD names and say whether it is protected, under grant:manage on the workflow, since protection decides who may move the branch production runs. A rename carries everything at once: versions, refs, runs, grants and triggers answer at the new name from the answer on, the old name is free, and a push is held to the new name in metadata.name from then, the versions recorded before keeping the name they were written with. A move carries everything too, the repository, the versions, the runs and their artifacts, re-keyed and re-counted under the target namespace and its quotas, and takes a while: the workflow is frozen from the answer, pushes, runs and replays refused with 409 naming the move, while the leading controller copies its objects, swaps every row in one transaction, then deletes the source's objects; it is read at its old address until the swap and at the new one after. A move is refused while a run of the workflow is queued or running, where the target's quotas, max_artifact_bytes above all, cannot hold what moves, and where the workflow names a secret the target does not declare. Audited as workflow.update, a move in both namespaces, and a change of protection as ref.protect.",
+        "description": "Changes what the body names and nothing it leaves out, each field under its own permission, every one of them held or nothing changed. name renames the workflow within its namespace, under workflow:write on it. namespace moves it to another namespace, under workflow:write on it and ownership of both namespaces, the one it leaves and the one it goes to. default_branch and protected name the branch HEAD names and say whether it is protected, under grant:manage on the workflow, since protection decides who may move the branch production runs. A rename carries everything at once: versions, refs, runs, grants and triggers answer at the new name from the answer on, the old name is free, and a push is held to the new name in metadata.name from then, the versions recorded before keeping the name they were written with. A move carries everything too, the repository, the versions, the runs and their artifacts, re-keyed and re-counted under the target namespace and its quotas, and takes a while: the workflow is frozen from the answer, pushes, runs and replays refused with 409 naming the move, while the leading controller copies its objects, swaps every row in one transaction, then deletes the source's objects; it is read at its old address until the swap and at the new one after. A body naming namespace answers 202 whatever else it names, every field it names applied with the move, and Location names where the workflow will be read, under its new name where the body gives one. A move is refused while a run of the workflow is queued or running, where the target's quotas, max_artifact_bytes above all, cannot hold what moves, and where the workflow names a secret the target does not declare. Audited as workflow.update, a move in both namespaces, and a change of protection as ref.protect.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#the-workflow-repository"
@@ -4618,14 +4617,14 @@
           },
           "409": {
             "$ref": "#/components/responses/conflict",
-            "description": "The new name is taken in the namespace it would have; a run of the workflow is queued or running, the target's quotas cannot hold what moves, or the workflow names a secret the target does not declare, for a move; a move is already under way; or the default branch named is no branch of a repository that holds commits."
+            "description": "The new name is taken in the namespace it would have; a run of the workflow is queued or running, the target's quotas cannot hold what moves, or the workflow names a secret the target does not declare, for a move; or a move is already under way."
           },
           "413": {
             "$ref": "#/components/responses/tooLarge"
           },
           "422": {
             "$ref": "#/components/responses/unprocessable",
-            "description": "The target namespace does not exist, or the caller does not own it: the same answer."
+            "description": "The target namespace does not exist, or the caller does not own it, as through any token narrowed by a scope, which owns none: the same answer; or default_branch names no branch of a repository that holds commits."
           }
         }
       },
@@ -4684,7 +4683,7 @@
           "workflows"
         ],
         "summary": "Read the tree at a ref",
-        "description": "The files of the commit a ref names, for the console and for review: every file with its path, mode, size and SHA-256, or, given path, that one file's bytes. A commit that is a version is read from its manifest, which is how a version agk push sent as a tree before v0.4.0 is read too; any other commit of the repository from its objects. Requires workflow:read, which reads the whole tree: narrowing a step's files is never a permission boundary.",
+        "description": "The files of the commit a ref names, for the console and for review: every file with its path, mode, size and SHA-256, or, given path, that one file's bytes. Every tree answered is a version's, read from its manifest: a branch and a tag point at commits a hook accepted, each a version, and a version agk push sent as a tree is read the same way; a commit the repository holds that is no version is the 404 of an absent one, since the rules a tree is held to, and the SHA-256 of each file, are a version's. Requires workflow:read, which reads the whole tree: narrowing a step's files is never a permission boundary.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#the-workflow-repository"
@@ -4752,7 +4751,7 @@
           },
           "404": {
             "$ref": "#/components/responses/notFound",
-            "description": "No such workflow, or one the caller cannot read: the same answer; or a ref naming nothing the repository holds, or a path naming no file of the tree, a directory included."
+            "description": "No such workflow, or one the caller cannot read: the same answer; or a ref naming no branch, no tag and no version, or a path naming no file of the tree, a directory included."
           }
         }
       }
@@ -7706,7 +7705,7 @@
           },
           "protected": {
             "type": "boolean",
-            "description": "Whether the default branch is protected, true where it is left out: moving it then takes grant:manage. false where an editor, who holds workflow:write and not grant:manage, is to push the first commit to it.",
+            "description": "Whether the default branch is protected, true where it is left out: pushing to it then takes grant:manage, where false lets whoever holds workflow:write, an editor, push to it. A force-push and a deletion take grant:manage either way.",
             "examples": [
               true,
               false
@@ -7754,7 +7753,7 @@
           },
           "protected": {
             "type": "boolean",
-            "description": "Whether the default branch is protected, under grant:manage on the workflow, since protection decides who may move the branch production runs.",
+            "description": "Whether the default branch is protected, under grant:manage on the workflow, since protection decides who may push to the branch production runs.",
             "examples": [
               true
             ]
@@ -7915,7 +7914,7 @@
           },
           "version": {
             "$ref": "wire.schema.json#/$defs/version",
-            "description": "The version a run naming no ref runs: the default branch's head, or, while that branch is unborn, the latest version agk push sent as a tree before v0.4.0. Absent where there is neither.",
+            "description": "The version a run naming no ref runs: the default branch's head, or, while that branch is unborn, the latest version agk push sent as a tree before the repository's first git push. Absent where there is neither.",
             "examples": [
               {
                 "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
@@ -7928,10 +7927,9 @@
           },
           "graph": {
             "$ref": "wire.schema.json#/$defs/resolvedGraph",
-            "description": "The graph that version resolves to, as its push recorded it; absent where version is.",
+            "description": "The graph that version resolves to, as its push recorded it, or, for a version agk push sent as a tree, as the engine rebuilds it from what that push stored. Absent where version is, and for a library, whose root agentiik.yaml is a fragment and resolves to no graph.",
             "examples": [
               {
-                "namespace": "finance",
                 "workflow": "monthly-invoicing",
                 "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
                 "includes": [
@@ -8056,11 +8054,11 @@
                       }
                     ],
                     "before_script": [
-                      "apk add --no-cache jq"
+                      "echo \"$AGK_STEP attempt $AGK_ATTEMPT\" >&2"
                     ],
                     "script": [
-                      "agk items | jq -c '.data' > /tmp/rows",
-                      "agk emit out --from /tmp/rows"
+                      "agk items > /tmp/rows.json",
+                      "agk emit out --from /tmp/rows.json"
                     ],
                     "shell": [
                       "/bin/sh",
@@ -8138,9 +8136,6 @@
           }
         },
         "dependentRequired": {
-          "version": [
-            "graph"
-          ],
           "graph": [
             "version"
           ]
@@ -8167,7 +8162,6 @@
               "source": "git"
             },
             "graph": {
-              "namespace": "finance",
               "workflow": "monthly-invoicing",
               "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
               "includes": [
@@ -8292,11 +8286,11 @@
                     }
                   ],
                   "before_script": [
-                    "apk add --no-cache jq"
+                    "echo \"$AGK_STEP attempt $AGK_ATTEMPT\" >&2"
                   ],
                   "script": [
-                    "agk items | jq -c '.data' > /tmp/rows",
-                    "agk emit out --from /tmp/rows"
+                    "agk items > /tmp/rows.json",
+                    "agk emit out --from /tmp/rows.json"
                   ],
                   "shell": [
                     "/bin/sh",
@@ -8362,18 +8356,17 @@
               "default_branch": "master",
               "protected": false,
               "labels": {},
-              "created_at": "2026-06-02T14:30:00Z",
+              "created_at": "2026-09-27T14:30:00Z",
               "head": null,
               "clone_url": "https://agentiik.example.com/finance/vat-reconciliation.git"
             },
             "version": {
               "commit": "7e4c1a9b3d5f2e8c0a6b4d2f1e3c5a7b9d0f8e6c",
               "author": "operator",
-              "created_at": "2026-06-02T14:31:00Z",
+              "created_at": "2026-09-27T14:31:00Z",
               "source": "tree"
             },
             "graph": {
-              "namespace": "finance",
               "workflow": "vat-reconciliation",
               "commit": "7e4c1a9b3d5f2e8c0a6b4d2f1e3c5a7b9d0f8e6c",
               "includes": [],
@@ -8413,10 +8406,6 @@
               "secrets": [
                 "billing"
               ],
-              "concurrency": {
-                "group": "monthly-invoicing",
-                "cancel_in_progress": false
-              },
               "timeout": "6h",
               "retain": "7d",
               "order": [
@@ -8489,11 +8478,11 @@
                     }
                   ],
                   "before_script": [
-                    "apk add --no-cache jq"
+                    "echo \"$AGK_STEP attempt $AGK_ATTEMPT\" >&2"
                   ],
                   "script": [
-                    "agk items | jq -c '.data' > /tmp/rows",
-                    "agk emit out --from /tmp/rows"
+                    "agk items > /tmp/rows.json",
+                    "agk emit out --from /tmp/rows.json"
                   ],
                   "shell": [
                     "/bin/sh",
@@ -8527,7 +8516,7 @@
                 "version": {
                   "commit": "7e4c1a9b3d5f2e8c0a6b4d2f1e3c5a7b9d0f8e6c",
                   "author": "operator",
-                  "created_at": "2026-06-02T14:31:00Z",
+                  "created_at": "2026-09-27T14:31:00Z",
                   "source": "tree"
                 }
               }
@@ -8869,7 +8858,7 @@
         "name": "ref",
         "in": "path",
         "required": true,
-        "description": "A branch or a tag, by its short name or written in full, or a commit written whole. A name a branch and a tag both hold is refused with 400 rather than guessed at. A ref holding a slash is written with it, the rest of the path being the ref, or with each slash percent-encoded, as a generated client writes it.",
+        "description": "A branch or a tag, by its short name or written in full, or a commit written whole that is a version of the workflow. A name a branch and a tag both hold is refused with 400 rather than guessed at. A ref holding a slash is written with it, the rest of the path being the ref, or with each slash percent-encoded, as a generated client writes it.",
         "schema": {
           "type": "string",
           "minLength": 1

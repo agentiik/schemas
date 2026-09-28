@@ -815,6 +815,13 @@ ONE_GRAMMAR = (
             ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/brick/properties/name/pattern"),
         ),
     ),
+    (
+        "a brick's version",
+        (
+            ("brick.schema.json", "#/properties/metadata/properties/version/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/brick/properties/version/pattern"),
+        ),
+    ),
     # Git's rules for a ref name, refused beside a branch and beside a ref written in full.
     (
         "what git refuses in a ref name",
@@ -835,6 +842,8 @@ ONE_GRAMMAR = (
         (
             ("workflow.schema.json", "#/$defs/workflowPath/not/pattern"),
             ("workflow.schema.json", "#/$defs/step/properties/workflow/oneOf/0/not/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/includes/items/properties/workflow/not/pattern"),
+            ("wire.schema.json", "#/$defs/resolvedGraph/properties/steps/additionalProperties/properties/workflow/properties/workflow/not/pattern"),
         ),
     ),
     # A bound rather than a pattern, held the same way: a namespace's name is at most what a

@@ -3028,7 +3028,7 @@
     },
     "refName": {
       "title": "Ref name",
-      "description": "A ref as git writes it in full: refs/heads/<branch> for a branch and refs/tags/<tag> for a tag, the only two kinds a workflow repository holds, the name after the prefix on the rules of $defs/branch. Full, so that a branch and a tag of one short name are two refs rather than one ambiguity.",
+      "description": "A ref as git writes it in full: refs/heads/<branch> for a branch and refs/tags/<tag> for a tag, the only two kinds a workflow repository holds, the name after the prefix on the rules of $defs/branch save the two git keeps for a branch's short name, a leading - and @ alone. Full, so that a branch and a tag of one short name are two refs rather than one ambiguity.",
       "type": "string",
       "pattern": "^refs/(heads|tags)/[^\\x00-\\x20\\x7f~^:?*\\[\\\\]+$",
       "not": {
@@ -4722,7 +4722,7 @@
         },
         "name": {
           "$ref": "#/$defs/identifier",
-          "description": "Its name in the namespace, on the grammar every name of the workflow file is written on. The entry point's metadata.name writes the same name, or a push is refused.",
+          "description": "Its name in the namespace, on the grammar every name of the workflow file is written on. The entry point's metadata.name writes the same name, or a push is refused; a library's root agentiik.yaml, a fragment, writes none.",
           "examples": [
             "monthly-invoicing"
           ]
@@ -4737,7 +4737,7 @@
         },
         "protected": {
           "type": "boolean",
-          "description": "Whether the default branch is protected: moving it, forcing it or deleting it then takes grant:manage, the permission that governs sharing, so that branch protection needs no second mechanism, where any other branch takes workflow:write. true for a repository created from v0.4.0 unless it was created with protected: false, and false for a workflow from before v0.4.0, so that an editor's agk push keeps landing after the upgrade; whoever holds grant:manage on the workflow changes it.",
+          "description": "Whether the default branch is protected: pushing to it then takes grant:manage, the permission that governs sharing, so that branch protection needs no second mechanism, where pushing to any other branch, or to the default branch of an unprotected repository, takes workflow:write. A force-push and the deletion of a ref take grant:manage whatever this says. true for a repository created from v0.4.0 unless it was created with protected: false, and false for a workflow from before v0.4.0, so that an editor's agk push keeps landing after the upgrade; whoever holds grant:manage on the workflow changes it.",
           "examples": [
             true,
             false
@@ -4775,7 +4775,7 @@
               "type": "null"
             }
           ],
-          "description": "The commit the default branch points at, or null while it is unborn: a repository nothing was pushed to yet, or a workflow from before v0.4.0 whose versions agk push sent as trees and which no git push has filled, whose runs naming no ref run its latest version meanwhile.",
+          "description": "The commit the default branch points at, or null while it is unborn: a repository nothing was pushed to yet, or a workflow whose versions agk push sent as trees, from v0.2 or v0.3, and which no git push has filled yet, whose runs naming no ref run its latest version meanwhile.",
           "examples": [
             "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
             null
@@ -4810,7 +4810,7 @@
           "default_branch": "master",
           "protected": false,
           "labels": {},
-          "created_at": "2026-06-02T14:30:00Z",
+          "created_at": "2026-09-27T14:30:00Z",
           "head": null,
           "clone_url": "https://agentiik.example.com/finance/vat-reconciliation.git"
         }
@@ -4852,7 +4852,7 @@
         },
         "protected": {
           "type": "boolean",
-          "description": "Whether moving it, forcing it or deleting it takes grant:manage rather than workflow:write. Only the default branch is protected, and only where its repository is.",
+          "description": "Whether pushing to it takes grant:manage rather than workflow:write. Only the default branch is protected, and only where its repository is. A force-push and a deletion take grant:manage on any ref, protected or not.",
           "examples": [
             true,
             false
@@ -4868,7 +4868,7 @@
         },
         "moved_at": {
           "$ref": "#/$defs/timestamp",
-          "description": "When it last moved, in the transaction that accepted the push. Absent where moved_by is.",
+          "description": "When it last moved, in the transaction that accepted the push. Absent exactly when moved_by is.",
           "examples": [
             "2026-09-28T10:12:00Z"
           ]
@@ -4991,17 +4991,16 @@
         {
           "commit": "7e4c1a9b3d5f2e8c0a6b4d2f1e3c5a7b9d0f8e6c",
           "author": "operator",
-          "created_at": "2026-06-02T14:31:00Z",
+          "created_at": "2026-09-27T14:31:00Z",
           "source": "tree"
         }
       ]
     },
     "resolvedGraph": {
       "title": "Resolved graph",
-      "description": "The graph a version resolves to: what its hook accepted, what every run of it is evaluated against, what the API answers and what the console draws. The entry point is read with its includes merged in declaration order, each step's extends applied depth first, then the defaults, then the step's own values; every image a step names is written by the digest it runs, and a brick step is held to its manifest; the steps are ordered so that no edge points backwards. It is a record rather than a file, written by the engine and never by hand, and it names steps, images, ports and edges, never a value a run was given: an expression is kept as written, for a run to evaluate.",
+      "description": "The graph a version resolves to: what its hook accepted, written down as the engine resolves it for every run of the version, what the API answers and what the console draws. The entry point is read with its includes merged in declaration order, each step's extends applied depth first, then the defaults, then the step's own values; every image a step names is written by the digest it runs, and a brick step is held to its manifest; the steps are ordered so that no edge points backwards. It is a record rather than a file, written by the engine and never by hand, and it names steps, images, ports and edges, never a value a run was given: an expression is kept as written, for a run to evaluate.",
       "type": "object",
       "required": [
-        "namespace",
         "workflow",
         "commit",
         "includes",
@@ -5010,16 +5009,9 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "namespace": {
-          "$ref": "#/$defs/namespace",
-          "description": "The namespace owning the workflow, whose secrets, quotas and runner pools its steps reach.",
-          "examples": [
-            "finance"
-          ]
-        },
         "workflow": {
           "$ref": "#/$defs/identifier",
-          "description": "The workflow's name, as its repository is named and its entry point's metadata.name writes it.",
+          "description": "The name the version's entry point writes in metadata.name, which was its repository's name when it was pushed; a rename afterwards leaves it as written. The namespace is the repository's, and not part of what a commit resolves to.",
           "examples": [
             "monthly-invoicing"
           ]
@@ -5052,6 +5044,9 @@
               "workflow": {
                 "type": "string",
                 "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,254}/[A-Za-z0-9][A-Za-z0-9_-]{0,254}$",
+                "not": {
+                  "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats)/"
+                },
                 "description": "Another workflow repository, as <namespace>/<name>, whose root agentiik.yaml was read as a fragment.",
                 "examples": [
                   "finance/common"
@@ -5123,7 +5118,7 @@
               }
             ]
           },
-          "description": "Every file and repository the resolution read besides the entry point, in the order it read them, what a file includes before the file itself; empty for an entry point including nothing. A workflow include carries the commit its ref resolved to, so that another repository moving a tag afterwards changes nothing this graph does.",
+          "description": "Every file and repository the resolution read besides the entry point, in the order they apply, what a file includes before the file itself; empty for an entry point including nothing. A workflow include carries the commit its ref resolved to, so that another repository moving a tag afterwards changes nothing this graph does.",
           "examples": [
             [
               {
@@ -5304,7 +5299,7 @@
               "items": {
                 "type": "object"
               },
-              "description": "The schedule triggers as the entry point writes them, each held to workflow.schema.json's $defs/scheduleTrigger.",
+              "description": "The schedule triggers as the entry point writes them, as workflow.schema.json's $defs/scheduleTrigger describes them.",
               "examples": [
                 [
                   {
@@ -5319,7 +5314,7 @@
               "items": {
                 "type": "object"
               },
-              "description": "The webhook triggers as written, each held to $defs/webhookTrigger there.",
+              "description": "The webhook triggers as written, as $defs/webhookTrigger there describes them.",
               "examples": [
                 [
                   {
@@ -5335,7 +5330,7 @@
               "items": {
                 "type": "object"
               },
-              "description": "The event triggers as written, each held to $defs/eventTrigger there.",
+              "description": "The event triggers as written, as $defs/eventTrigger there describes them.",
               "examples": [
                 [
                   {
@@ -5359,7 +5354,7 @@
         },
         "mcp": {
           "type": "object",
-          "description": "The mcp block as the entry point writes it, held to workflow.schema.json's: the tools this version publishes. Absent where it declares none, which serves no server, and never absent where it declares an empty tool list, which serves one carrying nothing.",
+          "description": "The mcp block as the entry point writes it, as workflow.schema.json describes it: the tools this version publishes. Absent where it declares none, which serves no server, and never absent where it declares an empty tool list, which serves one carrying nothing.",
           "examples": [
             {
               "name": "invoicing",
@@ -5505,7 +5500,7 @@
                   },
                   "version": {
                     "type": "string",
-                    "minLength": 1,
+                    "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
                     "description": "The brick's release, as its manifest's metadata.version writes it: what a person reads to know which release the digest holds.",
                     "examples": [
                       "1.4.0",
@@ -5531,6 +5526,9 @@
                   "workflow": {
                     "type": "string",
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,254}/[A-Za-z0-9][A-Za-z0-9_-]{0,254}$",
+                    "not": {
+                      "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats)/"
+                    },
                     "description": "The workflow called, as <namespace>/<name>.",
                     "examples": [
                       "finance/vat-check"
@@ -5650,7 +5648,7 @@
                 "propertyNames": {
                   "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
                 },
-                "description": "The parameters as written, merged by name from the blocks the step extends, then the defaults, then the step itself, expressions unevaluated. A sensitive parameter is a name here and a value only a redeemed grant gives.",
+                "description": "The parameters as written, merged by name from the blocks the step extends, outermost first, then from what the step itself writes, an included file's step of the same name before the including file's, expressions unevaluated, so that a secret a parameter reads is the expression naming it and never its value. defaults carries no params.",
                 "examples": [
                   {
                     "currency": "${{ vars.currency }}",
@@ -5692,7 +5690,6 @@
                 "oneOf": [
                   {
                     "enum": [
-                      "wait_all",
                       "zip",
                       "first"
                     ]
@@ -5730,7 +5727,7 @@
                     }
                   }
                 ],
-                "description": "How several edges arriving on one input port are combined, spelled as the file spells it; absent for wait_all, the default.",
+                "description": "How several edges arriving on one input port are combined, spelled as the file spells it; absent for wait_all, the default, whether written or not.",
                 "examples": [
                   "zip",
                   {
@@ -5748,7 +5745,6 @@
                     "anyOf": [
                       {
                         "enum": [
-                          "none",
                           "item",
                           "matrix"
                         ]
@@ -5758,7 +5754,7 @@
                         "pattern": "^batch\\([1-9][0-9]*\\)$"
                       }
                     ],
-                    "description": "How the step is divided into shards, spelled as the file spells it, batch(n) with its size.",
+                    "description": "How the step is divided into shards, spelled as the file spells it, batch(n) with its size; absent for none, the default.",
                     "examples": [
                       "item",
                       "batch(50)",
@@ -5778,6 +5774,7 @@
                     "propertyNames": {
                       "$ref": "#/$defs/identifier"
                     },
+                    "minProperties": 1,
                     "additionalProperties": {
                       "type": "array",
                       "minItems": 1
@@ -5805,7 +5802,7 @@
                     ]
                   }
                 },
-                "description": "How the step is split into shards, as resolution left it; absent for a step that does not fan out.",
+                "description": "How the step is split into shards, as resolution left it; absent where it is the language's default, a step that does not fan out.",
                 "examples": [
                   {
                     "fan_out": "matrix",
@@ -5834,6 +5831,7 @@
                   },
                   "on": {
                     "type": "array",
+                    "minItems": 1,
                     "uniqueItems": true,
                     "items": {
                       "enum": [
@@ -5914,14 +5912,14 @@
               },
               "retain": {
                 "$ref": "#/$defs/duration",
-                "description": "How long the step's artifacts stay fetchable, from defaults.retain, a step writing none of its own; capped by the namespace's max_retention_days when a run writes them.",
+                "description": "How long the step's artifacts stay fetchable: defaults.retain, since a step never writes one of its own, capped by the namespace's max_retention_days when a run writes them.",
                 "examples": [
                   "7d"
                 ]
               },
               "continue_on_error": {
-                "type": "boolean",
-                "description": "Whether a failure here leaves the run going.",
+                "const": true,
+                "description": "Written where a failure here leaves the run going, and absent where it does not, the default.",
                 "examples": [
                   true
                 ]
@@ -5938,9 +5936,13 @@
               },
               "network": {
                 "$ref": "#/$defs/network",
-                "description": "The network posture; absent where nothing wrote one, none then applying.",
+                "not": {
+                  "const": "none"
+                },
+                "description": "The network posture; absent for none, the default, whether written or not.",
                 "examples": [
-                  "egress"
+                  "egress",
+                  "internal"
                 ]
               },
               "egress": {
@@ -6003,8 +6005,8 @@
                 ]
               },
               "cache": {
-                "type": "boolean",
-                "description": "Whether the step is memoised.",
+                "const": true,
+                "description": "Written where the step is memoised, and absent where it is not, the default.",
                 "examples": [
                   true
                 ]
@@ -6279,7 +6281,7 @@
                 }
               }
             ],
-            "description": "One step with every keyword resolved: what arrived from an include, then from the blocks it extends, depth first, then from defaults, then what the step wrote itself. A keyword is written where resolution gave it a value and absent otherwise, the language's default then applying, save idempotent and, on a script step, shell, which the engine writes in. A step carries an image or a call and never both, and the script keywords only where it runs a script.",
+            "description": "One step with every keyword resolved, includes, extends, defaults and the step's own values applied in the order the language fixes. A keyword is absent where resolution leaves the language's default and written otherwise, save idempotent and, on a script step, shell, which are always written. A step carries an image or a call and never both, and before_script, after_script and shell only where it runs a script: a brick runs its own entry point and a call runs no container, whatever the defaults write.",
             "examples": [
               {
                 "kind": "brick",
@@ -6345,11 +6347,11 @@
                   }
                 ],
                 "before_script": [
-                  "apk add --no-cache jq"
+                  "echo \"$AGK_STEP attempt $AGK_ATTEMPT\" >&2"
                 ],
                 "script": [
-                  "agk items | jq -c '.data' > /tmp/rows",
-                  "agk emit out --from /tmp/rows"
+                  "agk items > /tmp/rows.json",
+                  "agk emit out --from /tmp/rows.json"
                 ],
                 "shell": [
                   "/bin/sh",
@@ -6425,7 +6427,6 @@
       },
       "examples": [
         {
-          "namespace": "finance",
           "workflow": "monthly-invoicing",
           "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
           "includes": [
@@ -6547,11 +6548,11 @@
                 }
               ],
               "before_script": [
-                "apk add --no-cache jq"
+                "echo \"$AGK_STEP attempt $AGK_ATTEMPT\" >&2"
               ],
               "script": [
-                "agk items | jq -c '.data' > /tmp/rows",
-                "agk emit out --from /tmp/rows"
+                "agk items > /tmp/rows.json",
+                "agk emit out --from /tmp/rows.json"
               ],
               "shell": [
                 "/bin/sh",

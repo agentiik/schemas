@@ -399,7 +399,7 @@
               "from": {
                 "type": "string",
                 "minLength": 1,
-                "description": "The path or glob in the repository tree, at the run's commit, read as the workflow file's files reads it: a file, a directory with everything under it, or every file a glob matches, ** standing for any number of directories.",
+                "description": "The path or glob in the repository tree, at the run's commit, read as the workflow file's files reads it: a file, a directory with everything under it, or every file a glob matches, ** written as a segment of its own matching zero or more whole segments.",
                 "examples": [
                   "config/rates.json",
                   "./sql/**",

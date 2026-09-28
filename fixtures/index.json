@@ -445,7 +445,7 @@
         },
         {
           "file": "workflow/invalid/files-to-relative.yaml",
-          "rule": "A file relocated to a relative path. Inside a container there is no directory a relative path could be relative to, the runner refuses one, and the task message holds to to the same absolute grammar.",
+          "rule": "A file relocated to a relative path. Inside a container there is no directory a relative path could be relative to, the runner refuses one, and the task message holds that field to the same absolute grammar.",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#step-keywords"
         }

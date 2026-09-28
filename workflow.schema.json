@@ -470,7 +470,7 @@
           "examples": [{ "timeout": "10m", "network": "none" }]
         },
         "steps": {
-          "description": "Steps and hidden blocks this file contributes. A step of the same name in the including file is merged with this one keyword by keyword, the including file's values winning; a hidden block of the same name is replaced whole.",
+          "description": "Steps and hidden blocks this file contributes. A step written here carries its own values, above the defaults, and a step of the same name in the including file overrides it keyword by keyword; a hidden block of the same name is replaced whole.",
           "$ref": "#/$defs/steps",
           "examples": [{ ".billing-api": { "network": "egress", "egress": { "allow": ["api.billing.example.com:443"] }, "secrets": ["billing"] } }]
         }
@@ -828,7 +828,7 @@
     },
     "defaults": {
       "title": "Defaults",
-      "description": "Settings applied to every step that does not state its own. Resolution is ordered: includes first, then extends depth first, then these defaults, then the step's own values, so a default never overrides something a step said. Graph shape is not settable here: what a step runs and what it depends on belongs to the step.",
+      "description": "Settings applied to every step that does not state its own. Resolution is ordered: includes first, which bring hidden blocks and defaults of their own, then extends depth first, then these defaults, then the step's own values, so a default never overrides something a step said. A step written in an included file carries its own values, above these defaults, and the entry point overrides it keyword by keyword. Graph shape is not settable here: what a step runs and what it depends on belongs to the step.",
       "type": "object",
       "additionalProperties": false,
       "examples": [

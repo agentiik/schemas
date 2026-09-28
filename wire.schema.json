@@ -3316,7 +3316,8 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 256,
-          "description": "The name a person reads in the console and in the sharing panel. Free text, because it is shown and never matched against: everything that decides access reads the login.",
+          "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f]*$",
+          "description": "The name a person reads in the console and in the sharing panel: one line holding no control character, since it is shown in a console and printed at a terminal, where a line break forges a line and an escape sequence rewrites what is shown. Free text otherwise, because it is shown and never matched against: everything that decides access reads the login.",
           "examples": [
             "Alice Martin",
             "Bob"

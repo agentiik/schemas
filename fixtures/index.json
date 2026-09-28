@@ -912,6 +912,12 @@
           "reference": "https://agentiik.github.io/docs/#auth"
         },
         {
+          "file": "wire/invalid/principal-user-display-name-two-lines.json",
+          "rule": "a display name is one line holding no control character, since it is printed at a terminal, where a line break forges a line of its own",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#api"
+        },
+        {
           "file": "wire/invalid/principal-group-holding-a-group.json",
           "rule": "a group is a named set of users, so its members are logins and a group reference is not one",
           "refused_by": "schema",

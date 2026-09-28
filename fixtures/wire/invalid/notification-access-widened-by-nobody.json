@@ -3,7 +3,6 @@
   "kind": "admin_access_widened",
   "at": "2026-09-27T14:00:00Z",
   "act": "granted",
-  "by": "carol",
   "namespace": "finance",
   "grant": {
     "id": "01M2AF4T6V8X0Z2B4D6F8H0K2M",

@@ -1297,7 +1297,15 @@
       "valid": [
         {
           "file": "wire/valid/notification-admin-access-widened.json",
-          "covers": "an administrator having granted themselves editor in finance for a day, told to the namespace's owner with the grant they wrote"
+          "covers": "an administrator having granted themselves editor in finance for a day, told to the namespace's owner with the grant they wrote, the act, granted, and who did it"
+        },
+        {
+          "file": "wire/valid/notification-admin-access-widened-joined-group.json",
+          "covers": "an administrator having put dave in a group holding viewer in finance, told to the namespace's owner with the group's grant, written by somebody else long before, joined_group, who did it and the user put in"
+        },
+        {
+          "file": "wire/valid/notification-admin-access-widened-by-operator.json",
+          "covers": "the bootstrap token having written a grant in finance by the installation's power, told as by operator"
         },
         {
           "file": "wire/valid/notification-passkey-counter-refused.json",
@@ -1320,6 +1328,36 @@
           "rule": "an owner told of an administrator widening their own access is told which grant they wrote, so that it can be read and revoked",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#administrators"
+        },
+        {
+          "file": "wire/invalid/notification-access-widened-without-act.json",
+          "rule": "an owner told of an administrator widening access is told which act did it, since the grant alone does not say: a group's grant was written long before, and a deny lifted names whoever wrote it",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#administrators"
+        },
+        {
+          "file": "wire/invalid/notification-access-widened-by-nobody.json",
+          "rule": "an owner told of an administrator widening access is told who did it, which the grant's granted_by need not be",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#administrators"
+        },
+        {
+          "file": "wire/invalid/notification-joined-group-without-login.json",
+          "rule": "a user put in a group is named to the owners told of it, who could not learn otherwise who now holds the group's role, since the group routes are an administrator's alone",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#administrators"
+        },
+        {
+          "file": "wire/invalid/notification-granted-naming-a-login.json",
+          "rule": "login names the user put in a group, on joined_group alone; any other act names nobody put anywhere",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#administrators"
+        },
+        {
+          "file": "wire/invalid/notification-counter-refused-naming-an-act.json",
+          "rule": "a sign-in refused for a passkey's counter was no administrator's act, so it names none and nobody who did it; each kind carries what its reader needs and nothing of the other's",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#auth"
         },
         {
           "file": "wire/invalid/notification-break-glass-without-login.json",

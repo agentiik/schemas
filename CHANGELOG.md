@@ -15,6 +15,7 @@ Every repository of the project carries the same version and is tagged at the sa
 - `tools/check.py` validates the new `fragment` fixture group against `$defs/fragment`, `mcp-in-included-file.yaml` moved into it, and holds the two copies of `to`'s grammar together.
 - `wire.schema.json` describes the workflow repository's records, `repository`, `ref` and `version`, on `commit`, `branch` and `refName`, with fixtures for each.
 - `wire.schema.json` describes `resolvedGraph`, the graph a version resolves to, as the one shape the hook records, the API answers and the console draws, with fixtures.
+- A new workflow repository's default branch is unprotected unless created with `protected: true`: whoever holds `workflow:write` pushes to it, as before v0.4.0, and an owner protects it when wanted.
 - `openapi.json` describes `POST /api/v1/{ns}/workflows`, `GET`, `PATCH` and `DELETE /api/v1/{ns}/workflows/{name}`, and `GET /api/v1/{ns}/workflows/{name}/tree/{ref}`.
 - `tools/check.py` holds every grammar the resolved graph repeats from the workflow and brick schemas to its original, and a ref written in full to a branch's grammar.
 - `fixtures/repository/` holds conformance cases for the pre-receive hook, each a pushed tree with stand-ins for the namespace's pins, manifests and secret declarations and for the repositories a workflow include reads, and either the resolved graph it comes to or the rule and place it is refused at; `fixtures/index.json` describes the kind and its formats, and `tools/check.py` holds every case to them.

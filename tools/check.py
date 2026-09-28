@@ -79,6 +79,10 @@ INDEX = FIXTURES / "index.json"
 # message rather than "something the wire allows".
 SCHEMAS = {
     "workflow": {"file": "workflow.schema.json"},
+    # An included file is a fragment and never an entry point, so it is held to the definition
+    # of one rather than to the document's root, which would refuse it for lacking the
+    # apiVersion a fragment may not carry.
+    "fragment": {"file": "workflow.schema.json", "pointer": "#/$defs/fragment"},
     "brick": {"file": "brick.schema.json"},
     "envelope": {"file": "envelope.schema.json"},
     "task-message": {"file": "wire.schema.json", "pointer": "#/$defs/taskMessage"},
@@ -526,7 +530,7 @@ def check_fixtures(documents, report):
             continue
         validator = validator_for(document, subschema)
         group = groups[name] if isinstance(groups[name], dict) else {}
-        accepted = refused = deferred = aside = 0
+        accepted = refused = deferred = 0
 
         for verdict in ("valid", "invalid"):
             entries = group.get(verdict)
@@ -569,17 +573,6 @@ def check_fixtures(documents, report):
                     report.fail(where, "these keys did not arrive as strings, quote them: %s" % ", ".join(misread))
                     continue
 
-                # An entry carrying a role says the file is a document of another kind:
-                # an included file is a fragment merged into an entry point and has no
-                # apiVersion of its own, so validating it against the entry point schema
-                # would refuse it for a reason that has nothing to do with what it pins.
-                # The build asserts it is there and reads, and leaves the rest alone.
-                role = str(entry.get("role", "")).strip()
-                if role:
-                    aside += 1
-                    report.note("%s: %s, read but not validated" % (relative, role))
-                    continue
-
                 errors = sorted(validator.iter_errors(fixture), key=lambda error: error.json_path)
                 first = "%s at %s" % (errors[0].message, errors[0].json_path) if errors else ""
 
@@ -611,8 +604,6 @@ def check_fixtures(documents, report):
             refused,
             deferred,
         )
-        if aside:
-            summary += ", %d read as documents of another kind" % aside
         report.heading(summary)
 
     # A group whose schema came through check 1 and whose fixtures were never validated is
@@ -736,6 +727,16 @@ ONE_GRAMMAR = (
         (
             ("workflow.schema.json", "#/$defs/portName/maxLength"),
             ("brick.schema.json", "#/$defs/portName/maxLength"),
+        ),
+    ),
+    # Where a relocated file goes: the workflow file writes it and the task message carries it
+    # to the runner, which refuses a path that is not absolute, so a copy accepting one would
+    # be a push accepted and a task that fails on its runner.
+    (
+        "where the long form of files places a path",
+        (
+            ("workflow.schema.json", "#/$defs/files/items/oneOf/1/properties/to/pattern"),
+            ("wire.schema.json", "#/$defs/taskMessage/properties/files/items/properties/to/pattern"),
         ),
     ),
     (

@@ -399,19 +399,21 @@
               "from": {
                 "type": "string",
                 "minLength": 1,
-                "description": "The path or glob in the repository tree, at the run's commit.",
+                "description": "The path or glob in the repository tree, at the run's commit, read as the workflow file's files reads it: a file, a directory with everything under it, or every file a glob matches, ** standing for any number of directories.",
                 "examples": [
                   "config/rates.json",
-                  "./sql/**"
+                  "./sql/**",
+                  "./sql/**/*.sql"
                 ]
               },
               "to": {
                 "type": "string",
                 "pattern": "^/",
                 "minLength": 1,
-                "description": "Where it is mounted in the container, an absolute path. Absent where the step asked for no relocation, as the short form of a selector never does: the file is then where it is under /agk/repo/.",
+                "description": "Where it is mounted in the container, an absolute path: the path the file takes, for a path naming a file, and for a directory or a glob the directory what it selects goes under, each file keeping its path below the directory, or below the glob's fixed prefix, the segments before the first one holding a wildcard. Absent where the step asked for no relocation, as the short form of a selector never does: the file is then where it is under /agk/repo/.",
                 "examples": [
-                  "/agk/files/rates.json"
+                  "/agk/files/rates.json",
+                  "/docker-entrypoint-initdb.d"
                 ]
               },
               "mode": {

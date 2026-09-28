@@ -14,7 +14,8 @@ reports everything that is wrong rather than the first thing:
   3. every example validates against the subschema that carries it;
   4. every fixture behaves as fixtures/index.json says it does, which means every valid
      fixture is accepted and every invalid one is refused by whatever the index says
-     refuses it;
+     refuses it, and every repository case holds a resolved graph, or a refusal whose
+     position is where a node of its file begins, and the stand-ins its formats describe;
   5. no em dash appears in any text file of the repository;
   6. every pattern is one Go, Rust and every other RE2 engine can compile;
   7. a grammar written in more than one document reads the same in each of them, and a
@@ -619,12 +620,515 @@ def check_fixtures(documents, report):
             report.fail("fixtures/index.json", "the %s fixtures were not validated, and a group skipped in silence proves nothing" % name)
 
     # A fixture nobody indexed is a fixture nobody documented, and the build has no way
-    # to know what it was supposed to prove.
+    # to know what it was supposed to prove. A file inside a repository case the index
+    # lists is the case's, and check_repositories accounts for every one of them.
+    cases = listed_cases(index)
     for path in sorted(FIXTURES.rglob("*")):
         if not path.is_file() or path == INDEX:
             continue
+        if cases.intersection(path.resolve().parents):
+            continue
         if path.resolve() not in listed_paths:
             report.fail(str(path.relative_to(ROOT)), "is not listed in fixtures/index.json")
+
+
+# --------------------------------------------------------------------------------------
+# The repository kind
+#
+# A case is a directory rather than a document: the tree of a pushed commit, stand-ins for
+# what the pre-receive hook reads from the installation, and what the push comes to, the
+# graph the commit resolves to or the one refusal it meets. fixtures/index.json lists the
+# cases under "repositories", says what each file of a case is, and gives the formats of
+# case.json, tree.json and refusal.json as JSON Schemas, held here to checks 1 to 3.
+# --------------------------------------------------------------------------------------
+
+REPOSITORY_KIND = "repositories"
+
+# What a case may hold, as the index's layout names it. Anything else in a case is a file
+# no consumer reads, which proves nothing.
+CASE_LAYOUT = ("tree/", "tree.json", "case.json", "manifests/", "repositories/", "expected.json", "refusal.json")
+
+# The file saying what a push comes to, for each verdict.
+OUTCOME = {"valid": "expected.json", "invalid": "refusal.json"}
+
+FORMATS = ("case", "tree", "refusal")
+
+# The names a YAML file of a tree is an entry point under; any other YAML file there is a
+# fragment. agentiik.yml is among them because a tree holding it and no agentiik.yaml is a
+# case of its own, and what it holds is an entry point written under the wrong name.
+ENTRY_POINTS = ("agentiik.yaml", "agentiik.yml")
+
+
+def listed_cases(index):
+    """The case directories fixtures/index.json lists, whatever else is wrong with it."""
+    kind = index.get(REPOSITORY_KIND) if isinstance(index, dict) else None
+    cases = set()
+    if isinstance(kind, dict):
+        for verdict in OUTCOME:
+            entries = kind.get(verdict)
+            for entry in entries if isinstance(entries, list) else []:
+                if isinstance(entry, dict) and isinstance(entry.get("case"), str):
+                    cases.add((FIXTURES / entry["case"]).resolve())
+    return cases
+
+
+def listed_path(written):
+    """The bytes a tree listing's path stands for: %XX is one byte, anything else itself."""
+    out = bytearray()
+    at = 0
+    while at < len(written):
+        if written[at] == "%":
+            out.append(int(written[at + 1 : at + 3], 16))
+            at += 3
+        else:
+            out.append(ord(written[at]))
+            at += 1
+    return bytes(out)
+
+
+def node_starts(text):
+    """Every line and column, counted from 1, at which a node of a YAML document begins.
+
+    Keys are nodes too, which is what lets a refusal point at a key it refuses.
+    """
+    starts = set()
+    pending = [yaml.compose(text, Loader=WorkflowLoader)]
+    while pending:
+        node = pending.pop()
+        if node is None:
+            continue
+        starts.add((node.start_mark.line + 1, node.start_mark.column + 1))
+        if isinstance(node, yaml.MappingNode):
+            for key, value in node.value:
+                pending.extend((key, value))
+        elif isinstance(node, yaml.SequenceNode):
+            pending.extend(node.value)
+    return starts
+
+
+def resolved_order(steps):
+    """The order a resolved graph gives its steps: among those whose edges are all
+    satisfied, the first by name, as resolvedGraph's order says."""
+    waiting = {
+        name: {edge.get("step") for edge in step.get("needs", []) if edge.get("step") in steps and edge.get("step") != name}
+        for name, step in steps.items()
+    }
+    order = []
+    ready = [name for name, sources in waiting.items() if not sources]
+    while ready:
+        ready.sort()
+        name = ready.pop(0)
+        order.append(name)
+        for downstream, sources in sorted(waiting.items()):
+            if name in sources:
+                sources.discard(name)
+                if not sources:
+                    ready.append(downstream)
+    return order
+
+
+def read_json(path):
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def first_error(validator, instance):
+    """The first thing a validator refuses in an instance, as one line, or None."""
+    errors = sorted(validator.iter_errors(instance), key=lambda error: error.json_path)
+    if not errors:
+        return None
+    return "%s at %s" % (errors[0].message, errors[0].json_path)
+
+
+def image_repository(reference):
+    """The repository an image reference names: less its digest and its tag, where only a
+    colon after the last slash begins a tag, since registry.example:5000/brick names a port."""
+    reference = reference.split("@", 1)[0]
+    colon = reference.rfind(":")
+    if colon > reference.rfind("/"):
+        reference = reference[:colon]
+    return reference
+
+
+def check_repositories(documents, report):
+    """Check 4, the repository kind: every case holds what its verdict says it holds.
+
+    Every case: case.json and tree.json are what their formats say; tree/ holds plain files,
+    each 100644, and no name a Go embed would drop; every YAML file of the tree reads as an
+    entry point or a fragment the schemas accept, save the one a refusal is about where the
+    index says the schema refuses it, which has to be refused then, and a commit already
+    stored, which the push does not judge again; every manifest is a document
+    brick.schema.json accepts, every pin is of its tag's own repository, and every other
+    repository's tree is there with a root agentiik.yaml that is a fragment.
+
+    A valid case's expected.json is a resolved graph of the workflow and the commit case.json
+    names, its steps in the order the graph's own definition gives, its path includes files
+    of tree/, each workflow include at the commit its ref names in case.json, and each brick
+    step running an image whose recorded manifest is the brick it names. An invalid case's
+    refusal.json names a rule the formats know and a file of the tree, or agentiik.yaml
+    where the tree has no entry point, and where it gives a line and a column, a node of
+    that file begins there.
+
+    What a case pins, the graph or the refusal, is the engine's to reach and is not
+    recomputed here: that would be a second implementation of resolution to keep in step
+    with the first, which is the drift the fixtures exist to prevent.
+    """
+    try:
+        index = json.loads(INDEX.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return  # read_index has already said why
+    where = "fixtures/index.json"
+    kind = index.get(REPOSITORY_KIND)
+    if not isinstance(kind, dict):
+        report.fail(where, "describes no %s kind" % REPOSITORY_KIND)
+        return
+    if not str(kind.get("description", "")).strip():
+        report.fail(where, "describes the %s kind without saying what it is" % REPOSITORY_KIND)
+
+    layout = kind.get("layout")
+    if not isinstance(layout, dict) or set(layout) != set(CASE_LAYOUT):
+        report.fail(where, "the %s layout has to name exactly %s" % (REPOSITORY_KIND, ", ".join(CASE_LAYOUT)))
+    else:
+        for name, text in layout.items():
+            if not isinstance(text, str) or not text.strip():
+                report.fail(where, "the %s layout says nothing of %s" % (REPOSITORY_KIND, name))
+
+    # The formats are schemas in all but their place, so they are held to checks 1 to 3.
+    formats = kind.get("formats")
+    if not isinstance(formats, dict) or set(formats) != set(FORMATS):
+        report.fail(where, "the %s formats have to be exactly %s" % (REPOSITORY_KIND, ", ".join(FORMATS)))
+        return
+    named = {"%s#/%s/formats/%s" % (where, REPOSITORY_KIND, name): formats[name] for name in FORMATS}
+    usable = {}
+    for name, schema in named.items():
+        if not isinstance(schema, dict) or schema.get("$schema") != DIALECT:
+            report.fail(name, "is not a JSON Schema whose $schema is %s" % DIALECT)
+            continue
+        try:
+            Draft202012Validator.check_schema(schema)
+        except SchemaError as error:
+            report.fail(name, "the metaschema refuses it: %s" % error.message)
+            continue
+        usable[name] = schema
+    check_every_keyword_is_documented({name: schema for name, schema in named.items() if isinstance(schema, dict)}, report)
+    check_every_example_validates(usable, report)
+    if len(usable) != len(FORMATS):
+        return
+    validators = {name: Draft202012Validator(formats[name]) for name in FORMATS}
+
+    # The documents a case is also held to. A document check 1 refused has been reported
+    # already and is left out; one whose member is gone would leave every case unchecked
+    # while the build stayed green, so that is a failure of its own.
+    def member(filename, pointer=None):
+        document = documents.get(filename)
+        if document is None:
+            return None
+        subschema = document if pointer is None else resolve_pointer(document, pointer)
+        if subschema is None:
+            report.fail(filename, "holds no %s, which every repository case is held to" % pointer)
+            return None
+        return validator_for(document, subschema)
+
+    validators["graph"] = member("wire.schema.json", "#/$defs/resolvedGraph")
+    validators["brick"] = member("brick.schema.json")
+    validators["workflow"] = member("workflow.schema.json")
+    validators["fragment"] = member("workflow.schema.json", "#/$defs/fragment")
+
+    held = {verdict: 0 for verdict in OUTCOME}
+    seen = set()
+    pinned = set()
+    for verdict in OUTCOME:
+        entries = kind.get(verdict)
+        if not isinstance(entries, list) or not entries:
+            report.fail(where, "lists no %s %s cases" % (verdict, REPOSITORY_KIND))
+            continue
+        for entry in entries:
+            relative = entry.get("case") if isinstance(entry, dict) else None
+            if not isinstance(relative, str):
+                report.fail(where, "a %s entry under %s names no case" % (verdict, REPOSITORY_KIND))
+                continue
+            here = "fixtures/%s" % relative
+            if relative in seen:
+                report.fail(here, "is listed twice")
+                continue
+            seen.add(relative)
+            if not relative.startswith("repository/%s/" % verdict) or relative.count("/") != 2:
+                report.fail(here, "is listed as %s and is not a directory of repository/%s/" % (verdict, verdict))
+                continue
+            if verdict == "valid" and not str(entry.get("covers", "")).strip():
+                report.fail(here, "is listed without saying what it covers")
+            if verdict == "invalid" and not str(entry.get("rule", "")).strip():
+                report.fail(here, "is listed without the rule it breaks")
+            refused_by = entry.get("refused_by") if verdict == "invalid" else None
+            if verdict == "invalid" and refused_by not in REFUSED_BY:
+                report.fail(here, "says its file is refused by %r, expected one of %s" % (refused_by, " or ".join(REFUSED_BY)))
+                continue
+            if not str(entry.get("reference", "")).startswith("https://agentiik.github.io/docs/#"):
+                report.fail(here, "is listed without the section of the documentation stating what it pins")
+            directory = FIXTURES / relative
+            if not directory.is_dir():
+                report.fail(here, "is listed in the index and is not there")
+                continue
+            rule = check_case(directory, verdict, refused_by, validators, report)
+            if rule is not None:
+                held[verdict] += 1
+                if isinstance(rule, str):
+                    pinned.add(rule)
+                report.note("%s %s" % ("resolved" if verdict == "valid" else "refused", relative))
+
+    # A rule joins the formats with the first case that pins it, so a rule no case pins is
+    # a name nobody has shown the hook refusing by.
+    rule_schema = formats["refusal"].get("properties", {}).get("rule", {})
+    known = {branch.get("const") for branch in rule_schema.get("oneOf", []) if isinstance(branch, dict)}
+    if held["invalid"] == len(kind.get("invalid") or []):
+        for rule in sorted(known - pinned):
+            report.fail(where, "formats.refusal names the rule %s, which no case pins" % rule)
+
+    report.heading(
+        "%s: %d cases holding a resolved graph, %d holding a refusal, each as its format and its tree say"
+        % (REPOSITORY_KIND, held["valid"], held["invalid"])
+    )
+
+
+def check_case(directory, verdict, refused_by, validators, report):
+    """One repository case, as check_repositories describes it.
+
+    Returns None where the case fails, and otherwise True for a valid case and the rule an
+    invalid one pins.
+    """
+    where = str(directory.relative_to(ROOT))
+    failures = []
+
+    def fail(message):
+        failures.append(message)
+        report.fail(where, message)
+
+    present = {path.name + ("/" if path.is_dir() else "") for path in directory.iterdir()}
+    for name in sorted(present - set(CASE_LAYOUT)):
+        fail("holds %s, which the layout does not name" % name)
+    other = OUTCOME["invalid" if verdict == "valid" else "valid"]
+    if other in present:
+        fail("is a %s case and holds %s" % (verdict, other))
+    for name in ("tree/", "case.json", OUTCOME[verdict]):
+        if name not in present:
+            fail("holds no %s" % name)
+    if failures:
+        return None
+
+    # A case is plain files. A symbolic link here is one this repository commits as a link,
+    # which is what tree.json exists to avoid; a name beginning with a dot or an underscore
+    # is one go:embed leaves out of the engine's copy of the corpus; and a file of tree/ is
+    # committed 100644, an executable one being listed in tree.json with its mode.
+    for path in sorted(directory.rglob("*")):
+        relative = path.relative_to(directory)
+        if path.is_symlink():
+            fail("%s is a symbolic link; list it in tree.json" % relative)
+        elif any(part.startswith((".", "_")) for part in relative.parts):
+            fail("%s is a name a Go embed leaves out" % relative)
+        elif path.is_file() and relative.parts[0] == "tree" and path.stat().st_mode & 0o111:
+            fail("%s is executable; tree/ holds files of mode 100644, and tree.json lists a 100755 one" % relative)
+
+    try:
+        case = read_json(directory / "case.json")
+    except Exception as error:
+        fail("case.json cannot be read: %s" % error)
+        return None
+    refused = first_error(validators["case"], case)
+    if refused:
+        fail("case.json is not what formats.case describes: %s" % refused)
+        return None
+
+    refusal = None
+    if verdict == "invalid":
+        try:
+            refusal = read_json(directory / "refusal.json")
+        except Exception as error:
+            fail("refusal.json cannot be read: %s" % error)
+            return None
+        refused = first_error(validators["refusal"], refusal)
+        if refused:
+            fail("refusal.json is not what formats.refusal describes: %s" % refused)
+            return None
+
+    tree = directory / "tree"
+    files = {path.relative_to(tree).as_posix(): path for path in sorted(tree.rglob("*")) if path.is_file()}
+    in_tree = {name.encode("utf-8") for name in files}
+
+    listed = set()
+    if (directory / "tree.json").is_file():
+        try:
+            listing = read_json(directory / "tree.json")
+        except Exception as error:
+            fail("tree.json cannot be read: %s" % error)
+            listing = []
+        refused = first_error(validators["tree"], listing)
+        if refused:
+            fail("tree.json is not what formats.tree describes: %s" % refused)
+            listing = []
+        for entry in listing:
+            raw = listed_path(entry["path"])
+            if raw in listed:
+                fail("tree.json lists %s twice" % entry["path"])
+            listed.add(raw)
+            if raw.startswith(b"/") or any(segment in (b"", b".", b"..") for segment in raw.split(b"/")):
+                fail("tree.json lists %s, which is not a path from the root of a tree" % entry["path"])
+            elif raw in in_tree or any(name.startswith(raw + b"/") or raw.startswith(name + b"/") for name in in_tree):
+                fail("tree.json lists %s, which tree/ holds, or holds a file below, too" % entry["path"])
+
+    # Every YAML file of the tree reads as YAML 1.2 and is an entry point or a fragment the
+    # schemas accept, so that a case pins the one fault it names and rests on nothing the
+    # schemas refuse for another reason. The file a refusal is about is the one exception
+    # the index states, refused_by schema, and it has to be refused then, as a schema
+    # fixture has to be; every file of a commit already stored is exempt, since the push
+    # does not judge it again.
+    stored = case["commit"] in case.get("versions", [])
+    about = listed_path(refusal["file"]).decode("utf-8", "replace") if refusal else None
+    if refused_by == "schema" and (about not in files or files[about].suffix not in (".yaml", ".yml")):
+        fail("is refused by the schema, and refusal.json is about %s, which is no YAML file of tree/" % refusal["file"])
+    for name, path in files.items():
+        if path.suffix not in (".yaml", ".yml"):
+            continue
+        try:
+            document = read_fixture(path)
+        except Exception as error:
+            fail("tree/%s cannot be read: %s" % (name, error))
+            continue
+        misread = list(non_string_keys(document))
+        if misread:
+            fail("tree/%s holds keys that did not arrive as strings, quote them: %s" % (name, ", ".join(misread)))
+            continue
+        if stored:
+            continue
+        held_to = "workflow" if path.name in ENTRY_POINTS else "fragment"
+        if validators[held_to] is None:
+            continue
+        refused = first_error(validators[held_to], document)
+        if name == about and refused_by == "schema":
+            if not refused:
+                fail("tree/%s is accepted as %s, and the index says the schema refuses it" % (name, "an entry point" if held_to == "workflow" else "a fragment"))
+        elif refused:
+            fail("tree/%s is refused as %s: %s" % (name, "an entry point" if held_to == "workflow" else "a fragment", refused))
+
+    # The stand-ins: every manifest a brick manifest, every pin of its tag's own repository,
+    # every ref of another repository at a commit whose tree is there, its root a fragment.
+    named = set()
+    manifests = {}
+    for image, relative in sorted(case["manifests"].items()):
+        path = directory / relative
+        named.add(path.resolve())
+        if not path.is_file():
+            fail("case.json names %s for %s, which is not there" % (relative, image))
+            continue
+        try:
+            manifests[image] = read_fixture(path)
+        except Exception as error:
+            fail("%s cannot be read: %s" % (relative, error))
+            continue
+        if validators["brick"] is not None:
+            refused = first_error(validators["brick"], manifests[image])
+            if refused:
+                fail("%s is not a brick manifest: %s" % (relative, refused))
+    for reference, pin in sorted(case["pins"].items()):
+        if pin.split("@", 1)[0] != image_repository(reference):
+            fail("case.json pins %s to %s, and a tag is pinned to its own repository" % (reference, pin))
+
+    repositories = case.get("repositories", {})
+    for repository, held in sorted(repositories.items()):
+        for ref, commit in sorted(held["refs"].items()):
+            if commit not in held["trees"]:
+                fail("case.json points %s's %s at %s, whose tree it does not give" % (repository, ref, commit))
+        for commit, relative in sorted(held["trees"].items()):
+            root = directory / relative
+            named.add(root.resolve())
+            if not (root / "agentiik.yaml").is_file():
+                fail("%s, %s at %s, holds no root agentiik.yaml for a workflow include to read" % (relative, repository, commit))
+                continue
+            for path in sorted(root.rglob("*")):
+                if path.suffix not in (".yaml", ".yml") or not path.is_file():
+                    continue
+                try:
+                    document = read_fixture(path)
+                except Exception as error:
+                    fail("%s cannot be read: %s" % (path.relative_to(directory), error))
+                    continue
+                if validators["fragment"] is not None:
+                    refused = first_error(validators["fragment"], document)
+                    if refused:
+                        fail("%s is refused as a fragment: %s" % (path.relative_to(directory), refused))
+
+    for stand_in in ("manifests", "repositories"):
+        for path in sorted((directory / stand_in).rglob("*")):
+            if path.is_file() and not named.intersection([path.resolve(), *path.resolve().parents]):
+                fail("%s is named by nothing in case.json" % path.relative_to(directory))
+
+    if verdict == "valid":
+        try:
+            graph = read_json(directory / "expected.json")
+        except Exception as error:
+            fail("expected.json cannot be read: %s" % error)
+            return None
+        if validators["graph"] is not None:
+            refused = first_error(validators["graph"], graph)
+            if refused:
+                fail("expected.json is not a resolved graph: %s" % refused)
+                return None
+        check_graph(graph, case, files, manifests, repositories, fail)
+        return None if failures else True
+
+    # A refusal names a file of the tree, an entry of its listing, or agentiik.yaml where the
+    # tree holds no entry point for it to name. Where it gives a place, that is where a node
+    # of the file begins.
+    raw = listed_path(refusal["file"])
+    if raw not in in_tree and raw not in listed and not (raw == b"agentiik.yaml" and "agentiik.yaml" not in files):
+        fail("refusal.json is about %s, which the tree does not hold" % refusal["file"])
+    elif "line" in refusal:
+        path = files.get(raw.decode("utf-8", "replace"))
+        if path is None or path.suffix not in (".yaml", ".yml"):
+            fail("refusal.json gives a line in %s, which is no YAML file of tree/" % refusal["file"])
+        elif (refusal["line"], refusal["column"]) not in node_starts(path.read_text(encoding="utf-8")):
+            fail("refusal.json points at %s:%d:%d, where no node of the file begins" % (refusal["file"], refusal["line"], refusal["column"]))
+    return None if failures else refusal["rule"]
+
+
+def check_graph(graph, case, files, manifests, repositories, fail):
+    """What a valid case's resolved graph can be held to without resolving anything: the
+    names it carries against case.json, the tree and the stand-ins."""
+    if graph.get("workflow") != case["repository"]:
+        fail("expected.json is the graph of %s, and the case pushes to %s" % (graph.get("workflow"), case["repository"]))
+    if graph.get("commit") != case["commit"]:
+        fail("expected.json resolves %s, and the case pushes %s" % (graph.get("commit"), case["commit"]))
+
+    for include in graph.get("includes", []):
+        if "path" in include:
+            if include["path"] not in files:
+                fail("expected.json includes %s, which tree/ does not hold" % include["path"])
+            continue
+        held = repositories.get(include["workflow"])
+        if held is None:
+            fail("expected.json includes %s, which case.json does not give" % include["workflow"])
+            continue
+        at = held["refs"].get("refs/tags/" + include["ref"])
+        if at is None:
+            commits = [commit for commit in held["trees"] if commit.startswith(include["ref"])]
+            at = commits[0] if len(commits) == 1 else None
+        if at != include["commit"]:
+            fail("expected.json includes %s at %s, and case.json resolves %s to %s" % (include["workflow"], include["commit"], include["ref"], at))
+
+    steps = graph.get("steps", {})
+    for name, step in sorted(steps.items()):
+        if step.get("kind") != "brick":
+            continue
+        manifest = manifests.get(step.get("image"))
+        if manifest is None:
+            fail("expected.json runs %s in %s, for which case.json records no manifest" % (step.get("image"), name))
+            continue
+        written = (manifest.get("metadata") or {})
+        if step.get("brick") != {"name": written.get("name"), "version": str(written.get("version"))}:
+            fail("expected.json names %s's brick %s, and its manifest is %s %s" % (name, step.get("brick"), written.get("name"), written.get("version")))
+
+    if sorted(graph.get("order", [])) != sorted(steps):
+        fail("expected.json orders %s, and its steps are %s" % (", ".join(graph.get("order", [])), ", ".join(sorted(steps))))
+    elif graph["order"] != resolved_order(steps):
+        fail("expected.json orders its steps %s, and resolvedGraph's order is %s" % (", ".join(graph["order"]), ", ".join(resolved_order(steps))))
 
 
 def check_no_em_dash(report):
@@ -1833,6 +2337,7 @@ def main():
         check_every_example_validates(sound, report)
         print("Fixtures")
         check_fixtures(sound, report)
+        check_repositories(sound, report)
     if documents or openapi is not None:
         print("Patterns")
         check_every_pattern_is_portable(dict(documents, **({OPENAPI: openapi} if openapi is not None else {})), report)

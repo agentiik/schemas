@@ -17,6 +17,7 @@ Every repository of the project carries the same version and is tagged at the sa
 - `wire.schema.json` describes `resolvedGraph`, the graph a version resolves to, as the one shape the hook records, the API answers and the console draws, with fixtures.
 - `openapi.json` describes `POST /api/v1/{ns}/workflows`, `GET`, `PATCH` and `DELETE /api/v1/{ns}/workflows/{name}`, and `GET /api/v1/{ns}/workflows/{name}/tree/{ref}`.
 - `tools/check.py` holds every grammar the resolved graph repeats from the workflow and brick schemas to its original, and a ref written in full to a branch's grammar.
+- `fixtures/repository/` holds conformance cases for the pre-receive hook, each a pushed tree with stand-ins for the namespace's pins, manifests and secret declarations and for the repositories a workflow include reads, and either the resolved graph it comes to or the rule and place it is refused at; `fixtures/index.json` describes the kind and its formats, and `tools/check.py` holds every case to them.
 
 ## v0.3.0, 2026-09-28
 

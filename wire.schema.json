@@ -2965,9 +2965,10 @@
     },
     "identifier": {
       "title": "Identifier",
-      "description": "A name given in the workflow file and carried here unchanged: a step or a port. The same grammar the workflow file writes and the brick manifest declares, carrying no path separator, no comma and no space, because the name becomes a directory, a file name and one entry of a comma separated list inside the container.",
+      "description": "A name given in the workflow file and carried here unchanged: a step or a port. The same grammar the workflow file writes and the brick manifest declares, carrying no path separator, no comma and no space, because the name becomes a directory, a file name and one entry of a comma separated list inside the container; at most 255 characters, the most a directory or a file name holds.",
       "type": "string",
       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+      "maxLength": 255,
       "examples": [
         "invoice",
         "normalize",

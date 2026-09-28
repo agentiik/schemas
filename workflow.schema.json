@@ -82,7 +82,7 @@
       "title": "Workflow outputs",
       "description": "The results a run is read by, each one a view of a single step port. Naming the boundary here is what lets a step be renamed, split or replaced without anything that consumes the workflow having to change.",
       "type": "object",
-      "propertyNames": { "$ref": "#/$defs/identifier" },
+      "propertyNames": { "$ref": "#/$defs/portName" },
       "additionalProperties": { "$ref": "#/$defs/workflowOutput" },
       "examples": [
         {
@@ -239,8 +239,11 @@
       "description": "The steps of the workflow, named. The order they appear in has no bearing on scheduling: a step becomes runnable once every declared input port is satisfied, and an edge is the only form of dependency there is. A name starting with a dot is a hidden block, never executed, there to be extended.",
       "type": "object",
       "propertyNames": {
-        "description": "Step identifier, unique in the workflow. It names the step in needs, in expressions and in the run detail. A leading dot marks a hidden block, which is never executed.",
-        "pattern": "^\\.?[A-Za-z0-9][A-Za-z0-9_-]*$",
+        "description": "Step identifier, unique in the workflow. It names the step in needs, in expressions and in the run detail, and is held to $defs/identifier's 255 characters, since a step becomes a directory. A leading dot marks a hidden block, which is never executed, and so never a directory either.",
+        "anyOf": [
+          { "$ref": "#/$defs/identifier" },
+          { "pattern": "^\\.[A-Za-z0-9][A-Za-z0-9_-]*$" }
+        ],
         "examples": ["normalize", "check-vat", ".api-brick"]
       },
       "additionalProperties": { "$ref": "#/$defs/step" },
@@ -271,9 +274,10 @@
   "$defs": {
     "identifier": {
       "title": "Identifier",
-      "description": "A name written in the file and used as a key elsewhere: a workflow, a namespace, an input, an output, a port, a variable, a secret or a tool. Kept to letters, digits, hyphens and underscores so that the same name survives a URL, an environment variable and a tool list unchanged.",
+      "description": "A name written in the file and used as a key elsewhere: a workflow, a namespace, an input, an output, a port, a variable, a secret or a tool. Kept to letters, digits, hyphens and underscores so that the same name survives a URL, an environment variable and a tool list unchanged, and to 255 characters because no filesystem holds a longer name: a step becomes a directory and a secret a file. A port and a workflow output are held to 250, $defs/portName.",
       "type": "string",
       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+      "maxLength": 255,
       "examples": ["monthly-invoicing", "create_invoice", "orders"]
     },
     "namespace": {
@@ -297,6 +301,13 @@
       "type": "string",
       "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
       "examples": ["url", "method", "endpoint", "currency"]
+    },
+    "portName": {
+      "title": "Port name",
+      "description": "The name of a port, or of a workflow output: an identifier of at most 250 characters, since each becomes the file <name>.json, which a filesystem holds to 255 with its suffix. It is the grammar and the bound the brick manifest declares its ports on, so that every port a manifest declares can be named here.",
+      "$ref": "#/$defs/identifier",
+      "maxLength": 250,
+      "examples": ["out", "error", "rejected", "invoices"]
     },
     "expression": {
       "title": "Expression",
@@ -366,7 +377,7 @@
             },
             "port": {
               "description": "Output port of that step. An error port raised to a workflow output is how a run reports what it could not process without failing.",
-              "$ref": "#/$defs/identifier",
+              "$ref": "#/$defs/portName",
               "examples": ["out", "error"]
             }
           }
@@ -671,7 +682,7 @@
               "properties": {
                 "output": {
                   "description": "A workflow output declared in this file.",
-                  "$ref": "#/$defs/identifier",
+                  "$ref": "#/$defs/portName",
                   "examples": ["invoices"]
                 }
               }
@@ -886,7 +897,7 @@
         "inputs": {
           "description": "Feeds an input port from a workflow input or from an expression, creating no dependency on another step. It is how a step reads what the run was started with rather than what another step produced.",
           "type": "object",
-          "propertyNames": { "$ref": "#/$defs/identifier" },
+          "propertyNames": { "$ref": "#/$defs/portName" },
           "additionalProperties": {
             "description": "Expression, or literal value, feeding one input port.",
             "examples": ["${{ workflow.inputs.orders }}"]
@@ -900,7 +911,7 @@
           "uniqueItems": true,
           "items": {
             "description": "Name of one output port.",
-            "$ref": "#/$defs/identifier",
+            "$ref": "#/$defs/portName",
             "examples": ["out", "error", "rejected"]
           },
           "examples": [["ok", "rejected"], ["out", "error"]]
@@ -1146,13 +1157,13 @@
             },
             "port": {
               "description": "Which of that step's output ports is taken. This is what lets an item rejected by one step bypass the next and still reach the last.",
-              "$ref": "#/$defs/identifier",
+              "$ref": "#/$defs/portName",
               "default": "out",
               "examples": ["ok", "rejected", "error"]
             },
             "as": {
               "description": "The input port the envelope arrives on here. Naming it is what lets one step take two different envelopes and still tell them apart.",
-              "$ref": "#/$defs/identifier",
+              "$ref": "#/$defs/portName",
               "default": "in",
               "examples": ["in", "invoices", "rejected"]
             }

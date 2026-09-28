@@ -30,6 +30,7 @@ Every repository of the project carries the same version and is tagged at the sa
 - `POST /api/v1/auth/passkey/options` answers 503 with `Retry-After` while 10,000 challenges are open across the installation.
 - A deny of `grant:manage` on a workflow is refused with 422.
 - `user.display_name` is one line holding no control character, as the API holds it.
+- A name the workflow file writes is at most 255 characters, and a port or a workflow output 250, in `workflow.schema.json` and in every copy of the grammar, `tools/check.py` holding the copies together.
 
 ## v0.2.5, 2026-09-26
 

@@ -720,6 +720,24 @@ ONE_GRAMMAR = (
             ("envelope.schema.json", "#/$defs/identifier/pattern"),
         ),
     ),
+    # Bounds rather than patterns, held the same way: a name is at most what a directory or a file
+    # name holds, and a port, which is also the file <name>.json, five characters fewer.
+    (
+        "the longest a name the workflow file writes is",
+        (
+            ("workflow.schema.json", "#/$defs/identifier/maxLength"),
+            ("brick.schema.json", "#/$defs/secret/properties/name/maxLength"),
+            ("wire.schema.json", "#/$defs/identifier/maxLength"),
+            ("envelope.schema.json", "#/$defs/identifier/maxLength"),
+        ),
+    ),
+    (
+        "the longest a port's name is",
+        (
+            ("workflow.schema.json", "#/$defs/portName/maxLength"),
+            ("brick.schema.json", "#/$defs/portName/maxLength"),
+        ),
+    ),
     (
         "a parameter name",
         (

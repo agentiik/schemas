@@ -80,6 +80,10 @@
           "file": "workflow/valid/run-timeout.yaml",
           "covers": "timeout at the root, which bounds the whole run, beside the step limit of the same name",
           "source": "https://agentiik.github.io/docs/#yaml"
+        },
+        {
+          "file": "workflow/valid/names-at-their-bounds.yaml",
+          "covers": "a step name of 255 characters, and a port, the edge naming it and a workflow output of 250, each the longest it may be"
         }
       ],
       "invalid": [
@@ -116,6 +120,24 @@
         {
           "file": "workflow/invalid/step-name-not-an-identifier.yaml",
           "rule": "A step name that is not an identifier. The name is used in needs, in expressions and in the run detail, so it stays to letters, digits, hyphens and underscores.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#yaml"
+        },
+        {
+          "file": "workflow/invalid/step-name-256-characters.yaml",
+          "rule": "A step name of 256 characters. A step becomes a directory of its task's work directory, and no filesystem holds a name longer than 255.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#yaml"
+        },
+        {
+          "file": "workflow/invalid/port-name-251-characters.yaml",
+          "rule": "An output port of 251 characters. A port becomes the file <name>.json, which a filesystem holds to 255 characters with its suffix.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#yaml"
+        },
+        {
+          "file": "workflow/invalid/workflow-output-251-characters.yaml",
+          "rule": "A workflow output of 251 characters. A workflow output becomes the file <name>.json, as a port does, which a filesystem holds to 255 characters with its suffix.",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#yaml"
         },
@@ -434,6 +456,11 @@
           "file": "brick/valid/secret-mount-with-a-dot.yaml",
           "covers": "a secret mounted under a file name carrying a dot, as a key file naturally does, and a secret whose mount is not its name: the mount the task message and the grant redemption then carry on the same grammar",
           "reference": "https://agentiik.github.io/docs/#brick-manifest"
+        },
+        {
+          "file": "brick/valid/port-name-250-characters.yaml",
+          "covers": "a port declared with a name of 250 characters, the longest a port may be, since it becomes the file <name>.json",
+          "reference": "https://agentiik.github.io/docs/#brick-manifest"
         }
       ],
       "invalid": [
@@ -492,6 +519,12 @@
           "reference": "https://agentiik.github.io/docs/#brick-manifest"
         },
         {
+          "file": "brick/invalid/port-name-251-characters.yaml",
+          "rule": "A port name of 251 characters. A port becomes the file <name>.json under /agk/out/ports/, which a filesystem holds to 255 characters with its suffix, and a workflow could not name it.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#brick-manifest"
+        },
+        {
           "file": "brick/invalid/port-name-with-comma.yaml",
           "rule": "A port name carrying a comma. A port name becomes a directory under /agk/in/, a file name under /agk/out/ports/ and one entry of the comma separated AGK_OUT_PORTS.",
           "refused_by": "schema",
@@ -546,6 +579,11 @@
           "file": "envelope/valid/retry-attempt.json",
           "covers": "a batch published by a second attempt, carrying one item with no payload of its own and nothing attached",
           "reference": "https://agentiik.github.io/docs/#envelope-structure"
+        },
+        {
+          "file": "envelope/valid/step-name-255-characters.json",
+          "covers": "a batch from a step whose name is 255 characters, the longest a name the workflow file writes may be",
+          "reference": "https://agentiik.github.io/docs/#yaml"
         }
       ],
       "invalid": [
@@ -596,6 +634,12 @@
           "rule": "Metadata carrying a key the envelope does not define. The shard index reaches a container as AGK_SHARD and does not travel in the envelope.",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#envelope-structure"
+        },
+        {
+          "file": "envelope/invalid/meta-step-256-characters.json",
+          "rule": "An envelope naming a step of 256 characters. A step becomes a directory, and no filesystem holds a name longer than 255; workflow/invalid/step-name-256-characters.yaml refuses the name where it is written and this refuses it where it travels.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#yaml"
         },
         {
           "file": "envelope/invalid/meta-port-with-comma.json",

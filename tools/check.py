@@ -720,6 +720,24 @@ ONE_GRAMMAR = (
             ("envelope.schema.json", "#/$defs/identifier/pattern"),
         ),
     ),
+    # Bounds rather than patterns, held the same way: a name is at most what a directory or a file
+    # name holds, and a port, which is also the file <name>.json, five characters fewer.
+    (
+        "the longest a name the workflow file writes is",
+        (
+            ("workflow.schema.json", "#/$defs/identifier/maxLength"),
+            ("brick.schema.json", "#/$defs/secret/properties/name/maxLength"),
+            ("wire.schema.json", "#/$defs/identifier/maxLength"),
+            ("envelope.schema.json", "#/$defs/identifier/maxLength"),
+        ),
+    ),
+    (
+        "the longest a port's name is",
+        (
+            ("workflow.schema.json", "#/$defs/portName/maxLength"),
+            ("brick.schema.json", "#/$defs/portName/maxLength"),
+        ),
+    ),
     (
         "a parameter name",
         (
@@ -800,6 +818,25 @@ BOUNDED_NAME = (
 )
 
 
+# The bound on a name, written inside a reference the workflow file writes. <namespace>/<name> holds
+# two names in one string, and a maxLength would bound the whole of it, so each half's bound is
+# counted in the pattern itself: {0} stands for one less than the identifier's maxLength, the first
+# character being matched apart, so that a bound that moves takes every reference along, or the
+# build fails.
+BOUNDED_PATH = (
+    (
+        "each half of a workflow path",
+        ("workflow.schema.json", "#/$defs/workflowPath/pattern"),
+        "^[A-Za-z0-9][A-Za-z0-9_-]{{0,{0}}}/[A-Za-z0-9][A-Za-z0-9_-]{{0,{0}}}$",
+    ),
+    (
+        "each half of a sub-workflow call",
+        ("workflow.schema.json", "#/$defs/step/properties/workflow/oneOf/0/pattern"),
+        "^[A-Za-z0-9][A-Za-z0-9_-]{{0,{0}}}/[A-Za-z0-9][A-Za-z0-9_-]{{0,{0}}}(@\\S+)?$",
+    ),
+)
+
+
 def unanchored(pattern):
     """A pattern without the ^ and $ that anchor it, ready to be written inside another."""
     if pattern.startswith("^"):
@@ -877,6 +914,22 @@ def check_every_copy_agrees(documents, report):
                         % (pointer, written, what, bound, expected),
                     )
     report.heading("%d names inside a reference, each bounded as a namespace's name is" % len(BOUNDED_NAME))
+
+    if "workflow.schema.json" in documents:
+        bound = resolve_pointer(documents["workflow.schema.json"], "#/$defs/identifier/maxLength")
+        if not isinstance(bound, int) or isinstance(bound, bool):
+            report.fail("workflow.schema.json", "#/$defs/identifier/maxLength is the bound on a name the workflow file writes, and holds no number")
+        else:
+            for what, (filename, pointer), template in BOUNDED_PATH:
+                written = resolve_pointer(documents[filename], pointer)
+                expected = template.format(bound - 1)
+                if written != expected:
+                    report.fail(
+                        filename,
+                        "%s reads %s, and the bound of %s at #/$defs/identifier/maxLength, %d, reads %s"
+                        % (pointer, written, what, bound, expected),
+                    )
+    report.heading("%d references the workflow file writes, each half bounded as a name is" % len(BOUNDED_PATH))
 
 
 # --------------------------------------------------------------------------------------

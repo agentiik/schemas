@@ -214,6 +214,39 @@
           },
           "413": {
             "$ref": "#/components/responses/tooLarge"
+          },
+          "503": {
+            "description": "The installation has 10,000 challenges open, as many as it keeps at once, a few more where ceremonies start at the same instant: anybody may start a ceremony and each keeps a row for its 5 minutes, so without a bound whoever can send requests fills the table as fast as they send them. Nothing is written, no challenge and no sweep, and nothing is recorded, since what refused the ceremony is the installation's load rather than anybody's credential. The bound is the installation's alone, with none per address: what it keeps is the table, which a flood from many addresses fills as surely as one from one.",
+            "headers": {
+              "Retry-After": {
+                "description": "The whole seconds until the oldest open challenge lapses, rounded up and at least one, since a client asking again a moment early is refused again.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "examples": {
+                  "oldest": {
+                    "summary": "the oldest lapses in four minutes",
+                    "value": 240
+                  }
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "full": {
+                    "summary": "as many ceremonies under way as the installation keeps",
+                    "value": {
+                      "error": "the installation has 10000 passkey ceremonies under way, as many as it keeps at once, and starts another once the oldest lapses, within 5 minutes: try again then"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

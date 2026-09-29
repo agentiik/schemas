@@ -5,7 +5,7 @@
     "title": "Agentiik API",
     "version": "0.3.0",
     "summary": "The identity and access routes of /api/v1: signing in and out, a password and a TOTP generator beside it, the authentication policy, the caller, users, groups, service accounts, namespaces and their quotas, grants and API tokens; and the workflow repositories.",
-    "description": "One description of the access routes of /api/v1 for the three clients that speak them, agk, the console and the Terraform provider, so that none of them learns the API from another's code. It describes the access routes of v0.3.0 and the workflow repository routes of v0.4.0, and no other yet; tools/check.py holds its routes to the table at https://agentiik.github.io/docs#api and names every route of the table this document does not describe. Every record the API shares with the rest of the contract, a user, a grant, a token, a namespace, the policy, a repository, a version, a resolved graph, is a reference into wire.schema.json beside it rather than a copy, so that the two cannot drift; a consumer resolves the references relative to this document. What is defined here is what only a route carries: a request body, a list, a token shown once, Web Authentication's own JSON forms. Every body is JSON of at most 64 KiB, closed to fields the route does not read, save Web Authentication's own objects, which are the browser's to extend, and a route that reads no body refuses one sent. Every refusal is {\"error\"}, with the setting of the authentication policy beside it where one is the reason, and a namespace or a workflow the caller cannot see is refused as one that does not exist, so that no name can be learnt by asking."
+    "description": "One description of the access routes of /api/v1 for the three clients that speak them, agk, the console and the Terraform provider, so that none of them learns the API from another's code. It describes the access routes of v0.3.0 and the workflow repository routes of v0.4.0, and no other yet; tools/check.py holds its routes to the table at https://agentiik.github.io/docs#api and names every route of the table this document does not describe. Every record the API shares with the rest of the contract, a user, a grant, a token, a namespace, the policy, a repository, a version, a resolved graph, is a reference into wire.schema.json beside it rather than a copy, so that the two cannot drift; a consumer resolves the references relative to this document. What is defined here is what only a route carries: a request body, a list, a token shown once, Web Authentication's own JSON forms. Every body is JSON of at most 64 KiB, or of 8 MiB for a recording of image pins and brick manifests, which carries manifests whole; it is closed to fields the route does not read, save Web Authentication's own objects, which are the browser's to extend, and a route that reads no body refuses one sent. Every refusal is {\"error\"}, with the setting of the authentication policy beside it where one is the reason, and a namespace or a workflow the caller cannot see is refused as one that does not exist, so that no name can be learnt by asking."
   },
   "externalDocs": {
     "description": "The documentation, which decides what the API does: this document follows it.",
@@ -62,7 +62,7 @@
     },
     {
       "name": "workflows",
-      "description": "Workflow repositories, created, read, renamed, moved, protected and deleted, and the tree at a ref. Git itself is spoken at /{ns}/{name}.git, with an API token as the password, and is git's own protocol rather than this document's."
+      "description": "Workflow repositories, created, read, renamed, moved, protected and deleted, the tree at a ref, and the image pins and brick manifests a push is judged against. Git itself is spoken at /{ns}/{name}.git, with an API token as the password, and is git's own protocol rather than this document's."
     }
   ],
   "security": [
@@ -4755,6 +4755,238 @@
           }
         }
       }
+    },
+    "/api/v1/{ns}/workflows/{name}/images": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        },
+        {
+          "$ref": "#/components/parameters/workflow"
+        }
+      ],
+      "get": {
+        "operationId": "getWorkflowImages",
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Read a workflow's image pins and brick manifests",
+        "description": "The image pins and brick manifests the workflow's repository holds: the reference by digest each image tag its steps name is pinned to, and, for each brick image by digest, who recorded its manifest and when. They are what a push is judged against beyond its own tree. A git push carries neither, and the installation reaches no registry, so agk push resolves each tag on the pusher's own Docker daemon and reads each brick's /agk/brick.yaml there, records both with the POST beside this route, then pushes with git. A version pushed as a tree records its pins as well, and not its manifests: what a tree push carries of a manifest is the document a version keeps, a parameter's boolean required lifted out, rather than the file. The pre-receive hook then refuses a step naming a tag the repository holds no pin for as image-not-pinned, and holds a brick step to the manifest recorded for its image, refusing one with none as manifest-missing, so that a plain git push passes wherever every tag it names is pinned and every brick image it runs has a manifest. Kept per repository rather than per namespace: a pin decides which bytes the next version of a workflow runs, with that workflow's secrets, and a pin held per namespace would let an editor granted on one workflow alone choose them for every other. A manifest is listed without its text, since it is the file the image holds, and a listing carrying every manifest a repository was ever given would grow with every release of every brick it runs. The pins are listed by reference and the manifests by image, each in byte order. Requires workflow:read.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#image-pins"
+        },
+        "responses": {
+          "200": {
+            "description": "The repository's pins and manifests, each manifest without its text.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/images"
+                },
+                "examples": {
+                  "recorded": {
+                    "summary": "two tags pinned, one brick's manifest recorded",
+                    "value": {
+                      "pins": [
+                        {
+                          "reference": "alpine:3.21",
+                          "image": "alpine@sha256:5f8b1e1ad4503f1abb00387333cc6ebac7c77193d6adf4c3917794e7102dc704",
+                          "pinned_by": "alice",
+                          "pinned_at": "2026-09-29T08:40:00Z"
+                        },
+                        {
+                          "reference": "ghcr.io/acme/agk-fetch-orders:1.2.0",
+                          "image": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+                          "pinned_by": "alice",
+                          "pinned_at": "2026-09-29T08:40:00Z"
+                        }
+                      ],
+                      "manifests": [
+                        {
+                          "image": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+                          "recorded_by": "alice",
+                          "recorded_at": "2026-09-29T08:40:00Z"
+                        }
+                      ]
+                    }
+                  },
+                  "empty": {
+                    "summary": "a repository nothing was recorded for",
+                    "value": {
+                      "pins": [],
+                      "manifests": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such workflow, or one the caller cannot read: the same answer."
+          }
+        }
+      },
+      "post": {
+        "operationId": "recordWorkflowImages",
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Pin image tags and record brick manifests",
+        "description": "Records in the workflow's repository what agk push resolved and read before it pushes with git: pins maps each image a step names by a tag to the reference by digest the tag is pinned to, of the tag's own repository, and manifests maps each brick image, by digest, to its manifest, the text of the /agk/brick.yaml the image holds. Each is optional, and the two name at least one entry between them. What the body names is added, or replaces what the repository holds under the same name, and every other pin and manifest of the repository is left as it is, so that two agk push of the same workflow never drop each other's pins; all of it is recorded, or none of it. A pin moves, since a tag is a mutable pointer and pinning it again is what agk push does once the tag has moved. A manifest recorded again with other bytes replaces the one held: the runner reads the manifest out of the image itself when a step runs, so what is kept here is only what a push is judged against, and a manifest a faulty client recorded wrong is put right by recording it again, rather than left to refuse every honest push after it. A manifest is kept as it is sent, byte for byte, the file the image holds, rather than as the JSON document a version keeps, which lifts a parameter's boolean required out and so would leave the hook unable to refuse a step that omits a required parameter. It has to read as a brick manifest, held to the brick manifest schema and the engine's own rules, a port past 250 characters refused among them, so that one the hook would refuse a push over is refused here, where it is sent, naming its image. It names at most 256 pins and 256 manifests, since 256 images is more than a workflow anybody reviews names. The body is at most 8 MiB rather than the 64 KiB of the API's other bodies, since it carries brick manifests whole: room for 256 pins with manifests of the size the standard catalog's are, a few KiB each. A recording larger than either bound is sent as several, since each leaves every other entry alone. A manifest is at most 256 KiB, some sixty times the largest of the standard catalog, so that one with a large parameter schema fits. A reference is at most 384 bytes: the 255 characters clients hold a registry's host and a repository's name to together, a colon, and a tag of at most 128 characters, both from the OCI distribution specification. Requires workflow:write on the workflow, which is what registering a version of it takes, so that an editor granted on one workflow alone pins its tags, and a pin reaches no other workflow. Audited as image.pin in the namespace, once for each pin created or moved, its target the workflow and its detail the reference, the image it is pinned to and, for a pin that moved, was, the image it was pinned to before. A pin named again at the digest it holds keeps who pinned it and when, and records nothing, not even as unchanged: every agk push names again every tag its workflow uses, and an entry per tag per push would bury the moves the log is read for. A manifest recorded is not audited, since it decides no bytes that run: the runner reads the image's own. Its row keeps who recorded it last.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#image-pins"
+        },
+        "requestBody": {
+          "description": "The pins and manifests to record.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/imagesRecord"
+              },
+              "examples": {
+                "push": {
+                  "summary": "what agk push records before it pushes with git",
+                  "value": {
+                    "pins": {
+                      "ghcr.io/acme/agk-fetch-orders:1.2.0": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+                      "alpine:3.21": "alpine@sha256:5f8b1e1ad4503f1abb00387333cc6ebac7c77193d6adf4c3917794e7102dc704"
+                    },
+                    "manifests": {
+                      "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f": "apiVersion: agentiik.dev/v1\nkind: Brick\nmetadata:\n  name: fetch-orders\n  version: 1.2.0\n  summary: Reads the month's orders from the billing API.\nspec:\n  outputs:\n    out: {}\n  params:\n    currency: { type: string, required: true }\n    region: { type: string }\n  secrets:\n    - name: billing_api\n      optional: true\n  runtime:\n    network: egress\n    user: \"65532:65532\"\n"
+                    }
+                  }
+                },
+                "moved": {
+                  "summary": "a tag that has moved, pinned again",
+                  "value": {
+                    "pins": {
+                      "alpine:3.21": "alpine@sha256:21dc6063fd678b478f57c0e13f47560d0ea4eeba26dfc947b2a4f81f686b9f45"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recorded: the pins and manifests the body named, as the GET answers them.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/images"
+                },
+                "examples": {
+                  "recorded": {
+                    "summary": "two tags pinned and a manifest recorded",
+                    "value": {
+                      "pins": [
+                        {
+                          "reference": "alpine:3.21",
+                          "image": "alpine@sha256:5f8b1e1ad4503f1abb00387333cc6ebac7c77193d6adf4c3917794e7102dc704",
+                          "pinned_by": "alice",
+                          "pinned_at": "2026-09-29T08:40:00Z"
+                        },
+                        {
+                          "reference": "ghcr.io/acme/agk-fetch-orders:1.2.0",
+                          "image": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+                          "pinned_by": "alice",
+                          "pinned_at": "2026-09-29T08:40:00Z"
+                        }
+                      ],
+                      "manifests": [
+                        {
+                          "image": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+                          "recorded_by": "alice",
+                          "recorded_at": "2026-09-29T08:40:00Z"
+                        }
+                      ]
+                    }
+                  },
+                  "moved": {
+                    "summary": "a tag pinned again, by another pusher",
+                    "value": {
+                      "pins": [
+                        {
+                          "reference": "alpine:3.21",
+                          "image": "alpine@sha256:21dc6063fd678b478f57c0e13f47560d0ea4eeba26dfc947b2a4f81f686b9f45",
+                          "pinned_by": "finance/nightly-sync",
+                          "pinned_at": "2026-10-06T08:40:00Z"
+                        }
+                      ],
+                      "manifests": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The body is refused: a field the route does not read; pins and manifests naming no entry between them; a pin whose key names its image by a digest, which needs no pin, or whose value is not a reference by digest of the key's own repository; a manifest keyed by anything but a reference by digest, or empty; a reference outside its grammar or past 384 bytes. Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. A request carrying a session from another origin than the public URL's is refused as well, before the session is looked up. Every other refusal of the caller is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such workflow, or one where the caller does not hold workflow:write: the same answer. A recording creates no repository, since creating one takes workflow:write at namespace scope and this route asks it on the workflow: the repository is created first, by POST /api/v1/{ns}/workflows or by the tree push of its first version."
+          },
+          "413": {
+            "description": "A body past 8 MiB, more than 256 pins or more than 256 manifests, or a manifest past 256 KiB: the request is larger than the route is willing to read rather than wrong, as a push carrying too many files is, and a secret value past its bound. A recording past 8 MiB or past 256 entries of a kind is sent as several, since each leaves every other entry alone.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "body": {
+                    "summary": "past 8 MiB",
+                    "value": {
+                      "error": "a recording is at most 8388608 bytes, room for the pins and brick manifests of the images a workflow runs, and this one is larger: send it as several"
+                    }
+                  },
+                  "entries": {
+                    "summary": "more than 256 pins",
+                    "value": {
+                      "error": "this recording pins more than the 256 image tags it may, one per image a workflow names: send it as several"
+                    }
+                  },
+                  "manifest": {
+                    "summary": "a manifest past 256 KiB",
+                    "value": {
+                      "error": "the brick manifest of ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f is 301442 bytes, and one is at most 262144"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/unprocessable",
+            "description": "A manifest that does not read as a brick manifest, refused by the brick manifest schema or the engine's own rules, a port past 250 characters among them; the refusal names the image. Nothing is recorded, the pins included."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -8641,6 +8873,297 @@
                 "sha256": "a7e1875aa928e8a32bed8728639b06e8f8e2e297df096da697c85caffd34075a"
               }
             ]
+          }
+        ]
+      },
+      "imageTag": {
+        "title": "Image tag",
+        "type": "string",
+        "pattern": "^[^\\s@]+$",
+        "maxLength": 384,
+        "description": "An image as a step names it by a tag, or by no tag, which names latest: written as the step writes it, and never by a digest, which names one image and needs no pin. At most 384 bytes, the 255 characters clients hold a registry's host and a repository's name to together, a colon, and a tag of at most 128 characters, both from the OCI distribution specification; maxLength counts characters, which are bytes in every reference a registry accepts, since its grammar is ASCII.",
+        "examples": [
+          "ghcr.io/acme/agk-fetch-orders:1.2.0",
+          "alpine:3.21"
+        ]
+      },
+      "imageDigest": {
+        "title": "Image by digest",
+        "$ref": "wire.schema.json#/$defs/imageRef",
+        "maxLength": 384,
+        "description": "An image by digest, name@sha256: and sixty-four lowercase hexadecimal characters, as the wire's imageRef writes it: what a tag is pinned to, and what a brick manifest is recorded under, since a digest names one image and the manifest is inside it. Held to the 384 bytes of any reference, which a name of 255 characters and its digest stay under.",
+        "examples": [
+          "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+          "alpine@sha256:5f8b1e1ad4503f1abb00387333cc6ebac7c77193d6adf4c3917794e7102dc704"
+        ]
+      },
+      "imagePin": {
+        "title": "Image pin",
+        "type": "object",
+        "required": [
+          "reference",
+          "image",
+          "pinned_by",
+          "pinned_at"
+        ],
+        "additionalProperties": false,
+        "description": "One image tag of the repository and the reference by digest it is pinned to: the image a push naming the tag is judged with, and which the version it makes runs.",
+        "properties": {
+          "reference": {
+            "$ref": "#/components/schemas/imageTag",
+            "description": "The image as the workflow's steps name it, by a tag.",
+            "examples": [
+              "ghcr.io/acme/agk-fetch-orders:1.2.0"
+            ]
+          },
+          "image": {
+            "$ref": "#/components/schemas/imageDigest",
+            "description": "The reference by digest the tag is pinned to, of the tag's own repository: the reference less its tag, an @ and the digest. A digest of another repository is refused, since the digest is what is pulled from where the step says the image is.",
+            "examples": [
+              "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f"
+            ]
+          },
+          "pinned_by": {
+            "$ref": "wire.schema.json#/$defs/actor",
+            "description": "Who pinned the tag to this digest: whoever created the pin, or last moved it. Naming the pin again at the digest it holds changes neither this nor pinned_at.",
+            "examples": [
+              "alice",
+              "finance/nightly-sync"
+            ]
+          },
+          "pinned_at": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "When the tag was pinned to this digest.",
+            "examples": [
+              "2026-09-29T08:40:00Z"
+            ]
+          }
+        },
+        "examples": [
+          {
+            "reference": "ghcr.io/acme/agk-fetch-orders:1.2.0",
+            "image": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+            "pinned_by": "alice",
+            "pinned_at": "2026-09-29T08:40:00Z"
+          },
+          {
+            "reference": "alpine:3.21",
+            "image": "alpine@sha256:21dc6063fd678b478f57c0e13f47560d0ea4eeba26dfc947b2a4f81f686b9f45",
+            "pinned_by": "finance/nightly-sync",
+            "pinned_at": "2026-10-06T08:40:00Z"
+          }
+        ]
+      },
+      "brickManifest": {
+        "title": "Recorded brick manifest",
+        "type": "object",
+        "required": [
+          "image",
+          "recorded_by",
+          "recorded_at"
+        ],
+        "additionalProperties": false,
+        "description": "The brick manifest the repository holds for one image, by digest, told without its text: what a brick step running that image is held to at a push. The text is the file the image holds at /agk/brick.yaml, which is where to read it.",
+        "properties": {
+          "image": {
+            "$ref": "#/components/schemas/imageDigest",
+            "description": "The image, by digest, whose /agk/brick.yaml the manifest is.",
+            "examples": [
+              "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f"
+            ]
+          },
+          "recorded_by": {
+            "$ref": "wire.schema.json#/$defs/actor",
+            "description": "Who recorded the manifest held: whoever recorded it first, or last replaced it with other bytes. The audit log does not say, since a manifest decides no bytes that run.",
+            "examples": [
+              "alice",
+              "finance/nightly-sync"
+            ]
+          },
+          "recorded_at": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "When the manifest held was recorded.",
+            "examples": [
+              "2026-09-29T08:40:00Z"
+            ]
+          }
+        },
+        "examples": [
+          {
+            "image": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+            "recorded_by": "alice",
+            "recorded_at": "2026-09-29T08:40:00Z"
+          },
+          {
+            "image": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+            "recorded_by": "finance/nightly-sync",
+            "recorded_at": "2026-10-06T08:40:00Z"
+          }
+        ]
+      },
+      "imagesRecord": {
+        "title": "Image pins and brick manifests to record",
+        "type": "object",
+        "additionalProperties": false,
+        "description": "What a recording adds to the repository: pins, manifests or both, naming at least one entry between them, since a recording of nothing is a client's mistake rather than a request. Whatever the body leaves out stays as the repository holds it.",
+        "properties": {
+          "pins": {
+            "type": "object",
+            "maxProperties": 256,
+            "propertyNames": {
+              "$ref": "#/components/schemas/imageTag"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/imageDigest"
+            },
+            "description": "Each image a step names by a tag, mapped to the reference by digest to pin it to, of the tag's own repository: the digest the pusher's Docker daemon resolved the tag to. A tag already pinned moves to the digest named. At most 256, one for each image a workflow names.",
+            "examples": [
+              {
+                "ghcr.io/acme/agk-fetch-orders:1.2.0": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+                "alpine:3.21": "alpine@sha256:5f8b1e1ad4503f1abb00387333cc6ebac7c77193d6adf4c3917794e7102dc704"
+              }
+            ]
+          },
+          "manifests": {
+            "type": "object",
+            "maxProperties": 256,
+            "propertyNames": {
+              "$ref": "#/components/schemas/imageDigest"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 262144,
+              "description": "A brick manifest, the text of the /agk/brick.yaml the image holds, kept byte for byte: at most 256 KiB, and never empty. maxLength counts characters, and the API counts the bytes.",
+              "examples": [
+                "apiVersion: agentiik.dev/v1\nkind: Brick\nmetadata:\n  name: fetch-orders\n  version: 1.2.0\n  summary: Reads the month's orders from the billing API.\nspec:\n  outputs:\n    out: {}\n  params:\n    currency: { type: string, required: true }\n    region: { type: string }\n  secrets:\n    - name: billing_api\n      optional: true\n  runtime:\n    network: egress\n    user: \"65532:65532\"\n"
+              ]
+            },
+            "description": "Each brick image, by digest, mapped to its manifest as the image holds it at /agk/brick.yaml: read here as the engine reads a manifest, kept as sent, and replacing one recorded before for the same image. At most 256, one for each image a workflow runs.",
+            "examples": [
+              {
+                "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f": "apiVersion: agentiik.dev/v1\nkind: Brick\nmetadata:\n  name: fetch-orders\n  version: 1.2.0\n  summary: Reads the month's orders from the billing API.\nspec:\n  outputs:\n    out: {}\n  params:\n    currency: { type: string, required: true }\n    region: { type: string }\n  secrets:\n    - name: billing_api\n      optional: true\n  runtime:\n    network: egress\n    user: \"65532:65532\"\n"
+              }
+            ]
+          }
+        },
+        "not": {
+          "properties": {
+            "pins": {
+              "maxProperties": 0
+            },
+            "manifests": {
+              "maxProperties": 0
+            }
+          }
+        },
+        "examples": [
+          {
+            "pins": {
+              "ghcr.io/acme/agk-fetch-orders:1.2.0": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+              "alpine:3.21": "alpine@sha256:5f8b1e1ad4503f1abb00387333cc6ebac7c77193d6adf4c3917794e7102dc704"
+            },
+            "manifests": {
+              "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f": "apiVersion: agentiik.dev/v1\nkind: Brick\nmetadata:\n  name: fetch-orders\n  version: 1.2.0\n  summary: Reads the month's orders from the billing API.\nspec:\n  outputs:\n    out: {}\n  params:\n    currency: { type: string, required: true }\n    region: { type: string }\n  secrets:\n    - name: billing_api\n      optional: true\n  runtime:\n    network: egress\n    user: \"65532:65532\"\n"
+            }
+          },
+          {
+            "pins": {
+              "alpine:3.21": "alpine@sha256:21dc6063fd678b478f57c0e13f47560d0ea4eeba26dfc947b2a4f81f686b9f45"
+            }
+          }
+        ]
+      },
+      "images": {
+        "title": "Image pins and brick manifests",
+        "type": "object",
+        "required": [
+          "pins",
+          "manifests"
+        ],
+        "additionalProperties": false,
+        "description": "A repository's image pins and brick manifests, each manifest without its text: every one it holds, as the GET answers them, or those a recording named, as the POST answers them.",
+        "properties": {
+          "pins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/imagePin"
+            },
+            "description": "The pins, by reference in byte order. Empty where the repository holds none, or the recording named none.",
+            "examples": [
+              [
+                {
+                  "reference": "alpine:3.21",
+                  "image": "alpine@sha256:5f8b1e1ad4503f1abb00387333cc6ebac7c77193d6adf4c3917794e7102dc704",
+                  "pinned_by": "alice",
+                  "pinned_at": "2026-09-29T08:40:00Z"
+                },
+                {
+                  "reference": "ghcr.io/acme/agk-fetch-orders:1.2.0",
+                  "image": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+                  "pinned_by": "alice",
+                  "pinned_at": "2026-09-29T08:40:00Z"
+                }
+              ],
+              []
+            ]
+          },
+          "manifests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/brickManifest"
+            },
+            "description": "The manifests, by image in byte order. Empty where the repository holds none, or the recording named none.",
+            "examples": [
+              [
+                {
+                  "image": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+                  "recorded_by": "alice",
+                  "recorded_at": "2026-09-29T08:40:00Z"
+                }
+              ],
+              []
+            ]
+          }
+        },
+        "examples": [
+          {
+            "pins": [
+              {
+                "reference": "alpine:3.21",
+                "image": "alpine@sha256:5f8b1e1ad4503f1abb00387333cc6ebac7c77193d6adf4c3917794e7102dc704",
+                "pinned_by": "alice",
+                "pinned_at": "2026-09-29T08:40:00Z"
+              },
+              {
+                "reference": "ghcr.io/acme/agk-fetch-orders:1.2.0",
+                "image": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+                "pinned_by": "alice",
+                "pinned_at": "2026-09-29T08:40:00Z"
+              }
+            ],
+            "manifests": [
+              {
+                "image": "ghcr.io/acme/agk-fetch-orders@sha256:6a851b18304b7f94542f6b2c5d159ace56a5a8ab2faad1fa9ce7c63d14ad171f",
+                "recorded_by": "alice",
+                "recorded_at": "2026-09-29T08:40:00Z"
+              }
+            ]
+          },
+          {
+            "pins": [
+              {
+                "reference": "alpine:3.21",
+                "image": "alpine@sha256:21dc6063fd678b478f57c0e13f47560d0ea4eeba26dfc947b2a4f81f686b9f45",
+                "pinned_by": "finance/nightly-sync",
+                "pinned_at": "2026-10-06T08:40:00Z"
+              }
+            ],
+            "manifests": []
+          },
+          {
+            "pins": [],
+            "manifests": []
           }
         ]
       }

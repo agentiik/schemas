@@ -1590,6 +1590,10 @@
         {
           "file": "wire/valid/version-tree.json",
           "covers": "a version agk push sent as a tree before v0.4.0, by the bootstrap token, with no parent named"
+        },
+        {
+          "file": "wire/valid/version-library.json",
+          "covers": "a library's commit, which other workflows include and nothing runs"
         }
       ],
       "invalid": [
@@ -1598,6 +1602,12 @@
           "rule": "A version arriving by neither git nor a tree push.",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs#storage"
+        },
+        {
+          "file": "wire/invalid/version-library-false.json",
+          "rule": "A version saying it is no library. The flag is written where a commit is a library's and left out otherwise, so that one shape is not two.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#includes-and-inheritance"
         },
         {
           "file": "wire/invalid/version-without-author.json",

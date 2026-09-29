@@ -6,7 +6,7 @@ Every repository of the project carries the same version and is tagged at the sa
 
 `0.y.z` promises nothing beyond itself: what a release here describes may be gone in the next one.
 
-## Unreleased
+## v0.4.0, 2026-09-30
 
 - `workflow.schema.json` describes an included file as `$defs/fragment`: hidden blocks, `steps`, `defaults`, `vars`, `secrets` and `include`, refusing `apiVersion`, `kind`, `metadata`, `inputs`, `outputs`, `on`, `mcp`, `concurrency`, `timeout` and any other key, as the engine's reader does; the four blocks an entry point and a fragment both write are `$defs/includes`, `$defs/vars`, `$defs/secrets` and `$defs/steps`.
 - A workflow include reads the other repository's root `agentiik.yaml`, written as a fragment, and a path include resolves against the directory of the file naming it, or the root where it starts with `/`.

@@ -12,6 +12,7 @@ Every repository of the project carries the same version and is tagged at the sa
 - A workflow include reads the other repository's root `agentiik.yaml`, written as a fragment, and a path include resolves against the directory of the file naming it, or the root where it starts with `/`.
 - `$defs/defaults` and the fragment's `steps` say what the include layer brings, hidden blocks and defaults, and that a step written in an included file carries its own values above the defaults, the entry point overriding it keyword by keyword, as the engine resolves it.
 - `files` says what a glob matches, `**` included, and where the long form places a directory or a glob; `to` is an absolute path, as the task message holds it.
+- `files`' `mode` says what it decides, whether a file is executable, and why it never decides who may read it: the container reads the tree through a read-only bind as the image's user, and what must not be readable by everything in it is a secret.
 - `tools/check.py` validates the new `fragment` fixture group against `$defs/fragment`, `mcp-in-included-file.yaml` moved into it, and holds the two copies of `to`'s grammar together.
 - `wire.schema.json` describes the workflow repository's records, `repository`, `ref` and `version`, on `commit`, `branch` and `refName`, with fixtures for each.
 - `wire.schema.json` describes `resolvedGraph`, the graph a version resolves to, as the one shape the hook records, the API answers and the console draws, with fixtures.

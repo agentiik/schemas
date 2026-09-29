@@ -2264,7 +2264,7 @@
       },
       {
         "case": "repository/invalid/step-output-not-in-manifest",
-        "rule": "A brick step declaring an output port the manifest its namespace recorded for the image does not carry. outputs must be a subset of the ports the manifest declares.",
+        "rule": "A brick step declaring an output port the manifest the repository's store holds for the image does not carry. outputs must be a subset of the ports the manifest declares.",
         "refused_by": "validator",
         "reference": "https://agentiik.github.io/docs/#step-keywords"
       },

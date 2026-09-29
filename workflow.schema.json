@@ -569,10 +569,10 @@
           "examples": ["finance/common"]
         },
         "ref": {
-          "description": "Tag or commit the included repository is read at. It is required because a moving ref would let another repository change what this workflow does without this commit changing.",
+          "description": "Tag or commit the included repository is read at: a tag, by its name or in full, or a commit written whole that a branch or a tag of the library was pushed to, which is a version its hook judged. It is required because a moving ref would let another repository change what this workflow does without this commit changing, so a branch is refused. A commit abbreviated is refused too: an abbreviation is a name another commit of the library can come to share, and the file would then name two. The version records the commit it resolved to, and every run of it names that commit.",
           "type": "string",
           "minLength": 1,
-          "examples": ["v2.1.0", "a3f9c1e"]
+          "examples": ["v2.1.0", "c41d9e2a7b3f5e8d1c0a9b6e4f2d8c7a5b3e1f09"]
         }
       }
     },

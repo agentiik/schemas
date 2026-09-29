@@ -4171,7 +4171,8 @@
                 "default": {
                   "summary": "protected, on main",
                   "value": {
-                    "name": "monthly-invoicing"
+                    "name": "monthly-invoicing",
+                    "protected": true
                   }
                 },
                 "unprotected": {

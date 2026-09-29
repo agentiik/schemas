@@ -4215,7 +4215,7 @@
           },
           "400": {
             "$ref": "#/components/responses/badRequest",
-            "description": "The body is refused: a name outside the identifier grammar or past 255 characters, a default branch git would refuse, a field the route does not read. Two credentials: a bearer token beside the session cookie, or two session cookies."
+            "description": "The body is refused: a name outside the identifier grammar or past 255 characters, a default branch git would refuse or could not check out by that name, beginning with - or @ alone, or empty, a field the route does not read. Two credentials: a bearer token beside the session cookie, or two session cookies."
           },
           "401": {
             "$ref": "#/components/responses/unauthorised"
@@ -4529,7 +4529,7 @@
           "workflows"
         ],
         "summary": "Rename, move or protect a workflow",
-        "description": "Changes what the body names and nothing it leaves out, each field under its own permission, every one of them held or nothing changed. name renames the workflow within its namespace, under workflow:write on it. namespace moves it to another namespace, under workflow:write on it and ownership of both namespaces, the one it leaves and the one it goes to. default_branch and protected name the branch HEAD names and say whether it is protected, under grant:manage on the workflow, since protection decides who may move the branch production runs. A rename carries everything at once: versions, refs, runs, grants and triggers answer at the new name from the answer on, the old name is free, and a push is held to the new name in metadata.name from then, the versions recorded before keeping the name they were written with. A move carries everything too, the repository, the versions, the grants written on the workflow, the runs and their artifacts, re-keyed and re-counted under the target namespace and its quotas, and takes a while: the workflow is frozen from the answer, pushes, runs and replays refused with 409 naming the move, while the leading controller copies its objects, swaps every row in one transaction, then deletes the source's objects; it is read at its old address until the swap and at the new one after. A body naming namespace answers 202 whatever else it names, every field it names applied with the move, and Location names where the workflow will be read, under its new name where the body gives one. A move is refused while a run of the workflow is queued or running, where the target's quotas, max_artifact_bytes above all, cannot hold what moves, and where the workflow names a secret the target does not declare. Audited as workflow.update, a move in both namespaces, and a change of protection as ref.protect.",
+        "description": "Changes what the body names and nothing it leaves out, each field under its own permission, every one of them held or nothing changed. name renames the workflow within its namespace, under workflow:write on it. namespace moves it to another namespace, under workflow:write on it and ownership of both namespaces, the one it leaves and the one it goes to. default_branch and protected name the branch HEAD names and say whether it is protected, under grant:manage on the workflow, since protection decides who may move the branch production runs. Protection moves with the default branch, since only the default branch is protected: the branch named takes it over, or the protection the body gives, and the branch it leaves is unprotected. A branch the repository does not hold is refused where it holds commits; while it holds none, default_branch renames the unborn branch its first push will create. A rename carries everything at once: versions, refs, runs, grants and triggers answer at the new name from the answer on, the old name is free, and a push is held to the new name in metadata.name from then, the versions recorded before keeping the name they were written with. A move carries everything too, the repository, the versions, the grants written on the workflow, the runs and their artifacts, re-keyed and re-counted under the target namespace and its quotas, and takes a while: the workflow is frozen from the answer, pushes, runs and replays refused with 409 naming the move, while the leading controller copies its objects, swaps every row in one transaction, then deletes the source's objects; it is read at its old address until the swap and at the new one after. A body naming namespace answers 202 whatever else it names, every field it names applied with the move, and Location names where the workflow will be read, under its new name where the body gives one. A move is refused while a run of the workflow is queued or running, where the target's quotas, max_artifact_bytes above all, cannot hold what moves, and where the workflow names a secret the target does not declare. Audited as workflow.update, a move in both namespaces, and a change of protection as ref.protect, one entry per branch whose protection changed, the protected branch a new default branch leaves among them.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#the-workflow-repository"
@@ -4603,7 +4603,7 @@
           },
           "400": {
             "$ref": "#/components/responses/badRequest",
-            "description": "The body is refused: empty, a field the route does not read, a name or a namespace outside its grammar, a branch git would refuse. Two credentials: a bearer token beside the session cookie, or two session cookies."
+            "description": "The body is refused: empty, a field the route does not read, a name or a namespace outside its grammar, a branch git would refuse or could not check out by that name, beginning with - or @ alone, or empty. Two credentials: a bearer token beside the session cookie, or two session cookies."
           },
           "401": {
             "$ref": "#/components/responses/unauthorised"
@@ -4684,7 +4684,7 @@
           "workflows"
         ],
         "summary": "Read the tree at a ref",
-        "description": "The files of the commit a ref names, for the console and for review: every file with its path, mode, size and SHA-256, or, given path, that one file's bytes. Every tree answered is a version's, read from its manifest: a branch and a tag point at commits a hook accepted, each a version, and a version agk push sent as a tree is read the same way; a commit the repository holds that is no version is the 404 of an absent one, since the rules a tree is held to, and the SHA-256 of each file, are a version's. Requires workflow:read, which reads the whole tree: narrowing a step's files is never a permission boundary.",
+        "description": "The files of the commit a ref names, for the console and for review: every file with its path, mode, size and SHA-256, sorted by path, or, given path, that one file's bytes, with its SHA-256 as its ETag. Every tree answered is a version's, read from its manifest: a branch and a tag point at commits a hook accepted, each a version, and a version agk push sent as a tree is read the same way; a commit the repository holds that is no version is the 404 of an absent one, since the rules a tree is held to, and the SHA-256 of each file, are a version's. Requires workflow:read, which reads the whole tree: narrowing a step's files is never a permission boundary.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#the-workflow-repository"
@@ -4736,6 +4736,11 @@
                     "value": "import json\n"
                   }
                 }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/treeFileTag"
               }
             }
           },
@@ -9554,6 +9559,19 @@
           "tag": {
             "summary": "a file's tag",
             "value": "\"9f2c1d4e7a0b3c6d8e1f2a4b5c7d9e0f\""
+          }
+        }
+      },
+      "treeFileTag": {
+        "description": "With path, the file's SHA-256 in quotes: a file of a version is named by its content, so the same tag is the same bytes at whatever ref it is read. Absent from the listing.",
+        "schema": {
+          "type": "string",
+          "pattern": "^\"[0-9a-f]{64}\"$"
+        },
+        "examples": {
+          "tag": {
+            "summary": "a file's SHA-256",
+            "value": "\"a7e1875aa928e8a32bed8728639b06e8f8e2e297df096da697c85caffd34075a\""
           }
         }
       },

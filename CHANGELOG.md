@@ -16,6 +16,7 @@ Every repository of the project carries the same version and is tagged at the sa
   - Durations are whole milliseconds. A task's queue wait runs from when it could be handed out, its creation or, for a further attempt, the end of its retry's backoff, to its dispatch.
   - `compare=previous` adds the span just before the range in as many buckets of the same length, which ends where the range's first bucket begins; the examples show the two hours before rather than the day before.
   - `/runs` refuses nobody it answers: a namespace or a workflow the caller cannot read counts nothing, as one that does not exist, since `GET /api/v1/runs` lists nothing for it either.
+  - `/steps` lists the steps in the order the latest version runs them, upstream first, since a graph keeps no order of declaration, and says what an attempt, its exit code, its duration and a fan-out's items a minute are counted from.
   - The routes are taken off `NOT_DESCRIBED_YET`.
 
 ## v0.5.0, 2026-09-30

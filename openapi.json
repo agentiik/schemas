@@ -5533,7 +5533,7 @@
               "text/csv": {
                 "schema": {
                   "type": "string",
-                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a step and a bucket; with by=hour, one a step, a weekday and an hour, under weekday, hour and duration_p50_ms. Exit codes are not in the CSV.",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a step and a bucket, every step's buckets in turn; with by=hour, one a step, a weekday and an hour, under period, step, weekday, hour and duration_p50_ms. Exit codes are not in the CSV.",
                   "examples": [
                     "period,step,since,until,attempts,duration_p50_ms,duration_p95_ms,duration_p99_ms,items_per_minute\r\ncurrent,normalize,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,12,1200,1900,2100,\r\ncurrent,invoice,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,15,178000,240000,251000,74.5\r\n"
                   ]
@@ -11174,7 +11174,7 @@
           },
           "duration_ms": {
             "$ref": "#/components/schemas/statsPercentiles",
-            "description": "How long its attempts ran, from dispatch to their end, each shard of a fan-out an attempt of its own. Absent where none ended.",
+            "description": "How long its attempts that ended ran, from their last dispatch to their end, each shard of a fan-out an attempt of its own: a lost dispatch handed out again is the same attempt. Absent where none ended.",
             "examples": [
               {
                 "p50": 1200,
@@ -11186,14 +11186,14 @@
           "attempts": {
             "type": "integer",
             "minimum": 0,
-            "description": "How many attempts it was dispatched, retries and shards included.",
+            "description": "How many attempts it was handed out, retries and shards included, one still running among them.",
             "examples": [
               12
             ]
           },
           "exit_codes": {
             "$ref": "#/components/schemas/statsExitCodes",
-            "description": "Those attempts by the exit code they ended with, 0 among them.",
+            "description": "The attempts that ended, by the exit code of their last dispatch, 0 among them: one still running is counted in attempts and not here.",
             "examples": [
               [
                 {
@@ -11206,7 +11206,7 @@
           "items_per_minute": {
             "type": "number",
             "minimum": 0,
-            "description": "For a step that fans out, the items its shards consumed a minute while any of them ran, over the bucket. Absent for any other step.",
+            "description": "For a step that fans out, the items its shards consumed a minute while any of them ran, over the runs created in the bucket: the items of the shards that succeeded, each the longest of its input ports, which is what a fan-out cuts on, over the time any dispatch of a shard ran, a minute two ran side by side counted once. Absent for any other step, and where no shard ran.",
             "examples": [
               74.5
             ]
@@ -11260,7 +11260,7 @@
           "weekday",
           "hour"
         ],
-        "description": "One cell of the heatmap: the attempts of the step dispatched on that weekday, in that hour, in UTC, over the range.",
+        "description": "One cell of the heatmap: the attempts of the step in the runs created over the range that ended, by the weekday and the hour of the day of their last dispatch, in UTC.",
         "properties": {
           "weekday": {
             "type": "integer",
@@ -11534,7 +11534,7 @@
                 }
               ]
             },
-            "description": "The steps of the workflow, in the order its latest version declares them, a step it no longer declares after them where the range reaches runs of an older version.",
+            "description": "The steps of the workflow in the order its latest version runs them, upstream first and those no edge orders by name, then, by name, a step it no longer declares where the range reaches runs of an older version. The latest version is the head of the default branch, or, for a workflow no git push has filled, the last version a tree push recorded. A graph keeps no order of declaration, so the order is the one a reader of the workflow meets its steps in.",
             "examples": [
               [
                 {

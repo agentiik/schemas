@@ -22,6 +22,7 @@ Every repository of the project carries the same version and is tagged at the sa
   - `/stats/pools` says what a slot held and a capacity offered are counted from, takes no `compare`, and its CSV has no `period` column.
   - The routes are taken off `NOT_DESCRIBED_YET`.
 - `openapi.json` describes `GET /api/v1/runs`, served since v0.2.0, which the web console's runs view reads and its generated client may therefore call: `namespace`, `workflow`, `state`, `since`, `until` and `limit`, newest first, each run the `run` record of `wire.schema.json`. A limit outside 1 to 500 is read as 50, as the API reads it. The route is taken off `NOT_DESCRIBED_YET`, and a new tag, `runs`, holds it.
+- `openapi.json` describes `GET /api/v1/runs/{id}`, served since v0.2.0, which the web console's run inspector reads: the run's record, each step's verdict and the envelopes it published, each task with its runner, its exit code and the envelopes it was handed, all by digest, size and item count and never their items, and the run's inputs, answered only under `run:read_data`. The route is taken off `NOT_DESCRIBED_YET`.
 
 ## v0.5.0, 2026-09-30
 

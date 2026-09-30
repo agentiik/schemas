@@ -12363,7 +12363,7 @@
           "slots_in_use_max": {
             "type": "integer",
             "minimum": 0,
-            "description": "The most slots in use at once in the bucket, as the heartbeats reported them.",
+            "description": "The most slots in use at once in the bucket: the tasks held from when the runner redeemed each to when it ended, one ending as another is taken not two at once.",
             "examples": [
               6
             ]

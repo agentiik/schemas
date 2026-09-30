@@ -6,6 +6,16 @@ Every repository of the project carries the same version and is tagged at the sa
 
 `0.y.z` promises nothing beyond itself: what a release here describes may be gone in the next one.
 
+## Unreleased
+
+- `openapi.json` describes the statistics routes the web console's charts read, served from v0.6.0:
+  - The routes are `GET /api/v1/{ns}/stats/runs`, `/steps`, `/ports` and `/quotas`, and `GET /api/v1/stats/pools`.
+  - Each takes `from`, `to`, `bucket` and `compare=previous`. `/runs` also takes `workflow` and `histogram`, `/steps` takes `workflow` and `by=hour`, and `/ports` takes `workflow`.
+  - Each answers JSON, or CSV to `Accept: text/csv`.
+  - Every bucket carries the `since` and the `until` that `GET /api/v1/runs` takes, the latter a nanosecond before the next bucket. A point therefore opens exactly the runs it counts.
+  - Durations are whole milliseconds.
+  - The routes are taken off `NOT_DESCRIBED_YET`.
+
 ## v0.4.0, 2026-09-30
 
 - `workflow.schema.json` describes an included file as `$defs/fragment`: hidden blocks, `steps`, `defaults`, `vars`, `secrets` and `include`, refusing `apiVersion`, `kind`, `metadata`, `inputs`, `outputs`, `on`, `mcp`, `concurrency`, `timeout` and any other key, as the engine's reader does; the four blocks an entry point and a fragment both write are `$defs/includes`, `$defs/vars`, `$defs/secrets` and `$defs/steps`.

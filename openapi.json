@@ -4,8 +4,8 @@
   "info": {
     "title": "Agentiik API",
     "version": "0.4.0",
-    "summary": "The identity and access routes of /api/v1: signing in and out, a password and a TOTP generator beside it, the authentication policy, the caller, users, groups, service accounts, namespaces and their quotas, grants and API tokens; and the workflow repositories.",
-    "description": "One description of the access routes of /api/v1 for the three clients that speak them, agk, the console and the Terraform provider, so that none of them learns the API from another's code. It describes the access routes of v0.3.0 and the workflow repository routes of v0.4.0, and no other yet; tools/check.py holds its routes to the table at https://agentiik.github.io/docs#api and names every route of the table this document does not describe. Every record the API shares with the rest of the contract, a user, a grant, a token, a namespace, the policy, a repository, a version, a resolved graph, is a reference into wire.schema.json beside it rather than a copy, so that the two cannot drift; a consumer resolves the references relative to this document. What is defined here is what only a route carries: a request body, a list, a token shown once, Web Authentication's own JSON forms. Every body is JSON of at most 64 KiB, or of 8 MiB for a recording of image pins and brick manifests, which carries manifests whole; it is closed to fields the route does not read, save Web Authentication's own objects, which are the browser's to extend, and a route that reads no body refuses one sent. Every refusal is {\"error\"}, with the setting of the authentication policy beside it where one is the reason, and a namespace or a workflow the caller cannot see is refused as one that does not exist, so that no name can be learnt by asking."
+    "summary": "The identity and access routes of /api/v1: signing in and out, a password and a TOTP generator beside it, the authentication policy, the caller, users, groups, service accounts, namespaces and their quotas, grants and API tokens; the workflow repositories; and the statistics the console's charts read.",
+    "description": "One description of the access routes of /api/v1 for the three clients that speak them, agk, the console and the Terraform provider, so that none of them learns the API from another's code. It describes the access routes of v0.3.0, the workflow repository routes of v0.4.0 and the statistics routes of v0.6.0, and no other yet; tools/check.py holds its routes to the table at https://agentiik.github.io/docs#api and names every route of the table this document does not describe. Every record the API shares with the rest of the contract, a user, a grant, a token, a namespace, the policy, a repository, a version, a resolved graph, is a reference into wire.schema.json beside it rather than a copy, so that the two cannot drift; a consumer resolves the references relative to this document. What is defined here is what only a route carries: a request body, a list, a token shown once, Web Authentication's own JSON forms. Every body is JSON of at most 64 KiB, or of 8 MiB for a recording of image pins and brick manifests, which carries manifests whole; it is closed to fields the route does not read, save Web Authentication's own objects, which are the browser's to extend, and a route that reads no body refuses one sent. Every refusal is {\"error\"}, with the setting of the authentication policy beside it where one is the reason, and a namespace or a workflow the caller cannot see is refused as one that does not exist, so that no name can be learnt by asking."
   },
   "externalDocs": {
     "description": "The documentation, which decides what the API does: this document follows it.",
@@ -63,6 +63,10 @@
     {
       "name": "workflows",
       "description": "Workflow repositories, created, read, renamed, moved, protected and deleted, the tree at a ref, and the image pins and brick manifests a push is judged against. Git itself is spoken at /{ns}/{name}.git, with an API token as the password, and is git's own protocol rather than this document's."
+    },
+    {
+      "name": "statistics",
+      "description": "The series the web console's charts and agk console's compact forms read: a namespace's runs, a workflow's steps and ports, a namespace's load against its quotas, and, to an administrator, the pools and runners. From v0.6.0."
     }
   ],
   "security": [
@@ -5001,6 +5005,993 @@
           }
         }
       }
+    },
+    "/api/v1/{ns}/stats/runs": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        }
+      ],
+      "get": {
+        "operationId": "getRunStatistics",
+        "tags": [
+          "statistics"
+        ],
+        "summary": "Read a namespace's runs as series",
+        "description": "Per bucket, the runs of the namespace's workflows by state, the p50, p95 and p99 of their duration and of their tasks' queue wait, and the attempts retried by exit code; with histogram, their durations over the range in bins. Counts only the workflows the caller holds run:read on, as GET /api/v1/runs lists them, and never asks run:read_data: a series carries counts, durations and exit codes, never an item. Computed from the run and task records rather than kept apart, so a range reaches back as far as the namespace keeps its runs, and no further.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#console-statistics"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/statsFrom"
+          },
+          {
+            "$ref": "#/components/parameters/statsTo"
+          },
+          {
+            "$ref": "#/components/parameters/statsBucket"
+          },
+          {
+            "$ref": "#/components/parameters/statsCompare"
+          },
+          {
+            "$ref": "#/components/parameters/statsWorkflowFilter"
+          },
+          {
+            "$ref": "#/components/parameters/statsHistogram"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The series.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/noStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/statsRuns"
+                },
+                "examples": {
+                  "one workflow": {
+                    "summary": "one workflow over two hours",
+                    "value": {
+                      "from": "2026-09-30T06:00:00Z",
+                      "to": "2026-09-30T08:00:00Z",
+                      "bucket": "1h",
+                      "workflow": "monthly-invoicing",
+                      "buckets": [
+                        {
+                          "since": "2026-09-30T06:00:00Z",
+                          "until": "2026-09-30T06:59:59.999999999Z",
+                          "runs": {
+                            "queued": 0,
+                            "running": 0,
+                            "waiting": 0,
+                            "succeeded": 11,
+                            "failed": 1,
+                            "cancelled": 0,
+                            "timed_out": 0
+                          },
+                          "duration_ms": {
+                            "p50": 222000,
+                            "p95": 301000,
+                            "p99": 309000
+                          },
+                          "queue_wait_ms": {
+                            "p50": 420,
+                            "p95": 1900,
+                            "p99": 2600
+                          },
+                          "retries": [
+                            {
+                              "exit_code": 108,
+                              "attempts": 3
+                            }
+                          ]
+                        },
+                        {
+                          "since": "2026-09-30T07:00:00Z",
+                          "until": "2026-09-30T07:59:59.999999999Z",
+                          "runs": {
+                            "queued": 0,
+                            "running": 1,
+                            "waiting": 0,
+                            "succeeded": 9,
+                            "failed": 0,
+                            "cancelled": 0,
+                            "timed_out": 0
+                          },
+                          "duration_ms": {
+                            "p50": 208000,
+                            "p95": 262000,
+                            "p99": 266000
+                          },
+                          "queue_wait_ms": {
+                            "p50": 380,
+                            "p95": 1500,
+                            "p99": 1700
+                          },
+                          "retries": []
+                        }
+                      ]
+                    }
+                  },
+                  "every workflow": {
+                    "summary": "every workflow the caller reads, one hour with nothing",
+                    "value": {
+                      "from": "2026-09-30T06:00:00Z",
+                      "to": "2026-09-30T08:00:00Z",
+                      "bucket": "1h",
+                      "buckets": [
+                        {
+                          "since": "2026-09-30T06:00:00Z",
+                          "until": "2026-09-30T06:59:59.999999999Z",
+                          "runs": {
+                            "queued": 0,
+                            "running": 0,
+                            "waiting": 0,
+                            "succeeded": 11,
+                            "failed": 1,
+                            "cancelled": 0,
+                            "timed_out": 0
+                          },
+                          "duration_ms": {
+                            "p50": 222000,
+                            "p95": 301000,
+                            "p99": 309000
+                          },
+                          "queue_wait_ms": {
+                            "p50": 420,
+                            "p95": 1900,
+                            "p99": 2600
+                          },
+                          "retries": [
+                            {
+                              "exit_code": 108,
+                              "attempts": 3
+                            }
+                          ]
+                        },
+                        {
+                          "since": "2026-09-30T07:00:00Z",
+                          "until": "2026-09-30T07:59:59.999999999Z",
+                          "runs": {
+                            "queued": 0,
+                            "running": 0,
+                            "waiting": 0,
+                            "succeeded": 0,
+                            "failed": 0,
+                            "cancelled": 0,
+                            "timed_out": 0
+                          },
+                          "retries": []
+                        }
+                      ]
+                    }
+                  },
+                  "compared": {
+                    "summary": "with the day before and a histogram",
+                    "value": {
+                      "from": "2026-09-30T06:00:00Z",
+                      "to": "2026-09-30T08:00:00Z",
+                      "bucket": "1h",
+                      "workflow": "monthly-invoicing",
+                      "buckets": [
+                        {
+                          "since": "2026-09-30T06:00:00Z",
+                          "until": "2026-09-30T06:59:59.999999999Z",
+                          "runs": {
+                            "queued": 0,
+                            "running": 0,
+                            "waiting": 0,
+                            "succeeded": 11,
+                            "failed": 1,
+                            "cancelled": 0,
+                            "timed_out": 0
+                          },
+                          "duration_ms": {
+                            "p50": 222000,
+                            "p95": 301000,
+                            "p99": 309000
+                          },
+                          "queue_wait_ms": {
+                            "p50": 420,
+                            "p95": 1900,
+                            "p99": 2600
+                          },
+                          "retries": [
+                            {
+                              "exit_code": 108,
+                              "attempts": 3
+                            }
+                          ]
+                        },
+                        {
+                          "since": "2026-09-30T07:00:00Z",
+                          "until": "2026-09-30T07:59:59.999999999Z",
+                          "runs": {
+                            "queued": 0,
+                            "running": 1,
+                            "waiting": 0,
+                            "succeeded": 9,
+                            "failed": 0,
+                            "cancelled": 0,
+                            "timed_out": 0
+                          },
+                          "duration_ms": {
+                            "p50": 208000,
+                            "p95": 262000,
+                            "p99": 266000
+                          },
+                          "queue_wait_ms": {
+                            "p50": 380,
+                            "p95": 1500,
+                            "p99": 1700
+                          },
+                          "retries": []
+                        }
+                      ],
+                      "histogram": [
+                        {
+                          "from_ms": 180000,
+                          "until_ms": 212000,
+                          "runs": 8
+                        },
+                        {
+                          "from_ms": 212000,
+                          "until_ms": 244000,
+                          "runs": 9
+                        },
+                        {
+                          "from_ms": 244000,
+                          "until_ms": 276000,
+                          "runs": 2
+                        },
+                        {
+                          "from_ms": 276000,
+                          "until_ms": 309000,
+                          "runs": 2
+                        }
+                      ],
+                      "previous": {
+                        "from": "2026-09-29T06:00:00Z",
+                        "to": "2026-09-29T08:00:00Z",
+                        "buckets": [
+                          {
+                            "since": "2026-09-29T06:00:00Z",
+                            "until": "2026-09-29T06:59:59.999999999Z",
+                            "runs": {
+                              "queued": 0,
+                              "running": 0,
+                              "waiting": 0,
+                              "succeeded": 12,
+                              "failed": 0,
+                              "cancelled": 0,
+                              "timed_out": 0
+                            },
+                            "duration_ms": {
+                              "p50": 231000,
+                              "p95": 290000,
+                              "p99": 298000
+                            },
+                            "queue_wait_ms": {
+                              "p50": 450,
+                              "p95": 2100,
+                              "p99": 2400
+                            },
+                            "retries": []
+                          },
+                          {
+                            "since": "2026-09-29T07:00:00Z",
+                            "until": "2026-09-29T07:59:59.999999999Z",
+                            "runs": {
+                              "queued": 0,
+                              "running": 0,
+                              "waiting": 0,
+                              "succeeded": 10,
+                              "failed": 0,
+                              "cancelled": 0,
+                              "timed_out": 1
+                            },
+                            "duration_ms": {
+                              "p50": 219000,
+                              "p95": 3600000,
+                              "p99": 3600000
+                            },
+                            "queue_wait_ms": {
+                              "p50": 400,
+                              "p95": 1800,
+                              "p99": 1900
+                            },
+                            "retries": [
+                              {
+                                "exit_code": null,
+                                "attempts": 1
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. retried is the attempts retried, whatever their exit code; the histogram is not in the CSV.",
+                  "examples": [
+                    "period,since,until,queued,running,waiting,succeeded,failed,cancelled,timed_out,duration_p50_ms,duration_p95_ms,duration_p99_ms,queue_wait_p50_ms,queue_wait_p95_ms,queue_wait_p99_ms,retried\r\ncurrent,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,0,0,0,11,1,0,0,222000,301000,309000,420,1900,2600,3\r\ncurrent,2026-09-30T07:00:00Z,2026-09-30T07:59:59.999999999Z,0,1,0,9,0,0,0,208000,262000,266000,380,1500,1700,0\r\n"
+                  ]
+                },
+                "examples": {
+                  "two hours": {
+                    "summary": "two hours of one workflow",
+                    "value": "period,since,until,queued,running,waiting,succeeded,failed,cancelled,timed_out,duration_p50_ms,duration_p95_ms,duration_p99_ms,queue_wait_p50_ms,queue_wait_p95_ms,queue_wait_p99_ms,retried\r\ncurrent,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,0,0,0,11,1,0,0,222000,301000,309000,420,1900,2600,3\r\ncurrent,2026-09-30T07:00:00Z,2026-09-30T07:59:59.999999999Z,0,1,0,9,0,0,0,208000,262000,266000,380,1500,1700,0\r\n"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The query is refused: from or to not in RFC 3339, from not before to, a bucket or a compare the route does not know, or a range that would take more than 1,000 buckets, or a histogram below 1 or past 100. A request carrying two credentials, a bearer token beside the session cookie or two session cookies, too."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such namespace, one the caller holds nothing in and does not administer, or a workflow named that it does not hold run:read on."
+          }
+        }
+      }
+    },
+    "/api/v1/{ns}/stats/steps": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        }
+      ],
+      "get": {
+        "operationId": "getStepStatistics",
+        "tags": [
+          "statistics"
+        ],
+        "summary": "Read a workflow's steps as series",
+        "description": "Per step of one workflow, per bucket: the percentiles of its duration, its attempts and exit codes, and a fan-out's items a minute; with by=hour, its p50 by weekday and hour over the range. Requires run:read on the workflow.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#console-statistics"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/statsFrom"
+          },
+          {
+            "$ref": "#/components/parameters/statsTo"
+          },
+          {
+            "$ref": "#/components/parameters/statsBucket"
+          },
+          {
+            "$ref": "#/components/parameters/statsCompare"
+          },
+          {
+            "$ref": "#/components/parameters/statsWorkflow"
+          },
+          {
+            "$ref": "#/components/parameters/statsBy"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The series.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/noStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/statsSteps"
+                },
+                "examples": {
+                  "buckets": {
+                    "summary": "two steps over two hours",
+                    "value": {
+                      "from": "2026-09-30T06:00:00Z",
+                      "to": "2026-09-30T08:00:00Z",
+                      "bucket": "1h",
+                      "workflow": "monthly-invoicing",
+                      "steps": [
+                        {
+                          "step": "normalize",
+                          "buckets": [
+                            {
+                              "since": "2026-09-30T06:00:00Z",
+                              "until": "2026-09-30T06:59:59.999999999Z",
+                              "duration_ms": {
+                                "p50": 1200,
+                                "p95": 1900,
+                                "p99": 2100
+                              },
+                              "attempts": 12,
+                              "exit_codes": [
+                                {
+                                  "exit_code": 0,
+                                  "attempts": 12
+                                }
+                              ]
+                            },
+                            {
+                              "since": "2026-09-30T07:00:00Z",
+                              "until": "2026-09-30T07:59:59.999999999Z",
+                              "duration_ms": {
+                                "p50": 1100,
+                                "p95": 1500,
+                                "p99": 1600
+                              },
+                              "attempts": 9,
+                              "exit_codes": [
+                                {
+                                  "exit_code": 0,
+                                  "attempts": 9
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "step": "invoice",
+                          "buckets": [
+                            {
+                              "since": "2026-09-30T06:00:00Z",
+                              "until": "2026-09-30T06:59:59.999999999Z",
+                              "duration_ms": {
+                                "p50": 178000,
+                                "p95": 240000,
+                                "p99": 251000
+                              },
+                              "attempts": 15,
+                              "exit_codes": [
+                                {
+                                  "exit_code": 0,
+                                  "attempts": 11
+                                },
+                                {
+                                  "exit_code": 108,
+                                  "attempts": 4
+                                }
+                              ],
+                              "items_per_minute": 74.5
+                            },
+                            {
+                              "since": "2026-09-30T07:00:00Z",
+                              "until": "2026-09-30T07:59:59.999999999Z",
+                              "duration_ms": {
+                                "p50": 170000,
+                                "p95": 199000,
+                                "p99": 203000
+                              },
+                              "attempts": 9,
+                              "exit_codes": [
+                                {
+                                  "exit_code": 0,
+                                  "attempts": 9
+                                }
+                              ],
+                              "items_per_minute": 81.0
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "by hour": {
+                    "summary": "the heatmap of one step over a month",
+                    "value": {
+                      "from": "2026-09-01T00:00:00Z",
+                      "to": "2026-10-01T00:00:00Z",
+                      "by": "hour",
+                      "workflow": "monthly-invoicing",
+                      "steps": [
+                        {
+                          "step": "normalize",
+                          "hours": [
+                            {
+                              "weekday": 1,
+                              "hour": 6,
+                              "duration_ms": {
+                                "p50": 1200
+                              }
+                            },
+                            {
+                              "weekday": 1,
+                              "hour": 7,
+                              "duration_ms": {
+                                "p50": 1100
+                              }
+                            },
+                            {
+                              "weekday": 2,
+                              "hour": 6
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a step and a bucket; with by=hour, one a step, a weekday and an hour, under weekday, hour and duration_p50_ms. Exit codes are not in the CSV.",
+                  "examples": [
+                    "period,step,since,until,attempts,duration_p50_ms,duration_p95_ms,duration_p99_ms,items_per_minute\r\ncurrent,normalize,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,12,1200,1900,2100,\r\ncurrent,invoice,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,15,178000,240000,251000,74.5\r\n"
+                  ]
+                },
+                "examples": {
+                  "buckets": {
+                    "summary": "two steps",
+                    "value": "period,step,since,until,attempts,duration_p50_ms,duration_p95_ms,duration_p99_ms,items_per_minute\r\ncurrent,normalize,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,12,1200,1900,2100,\r\ncurrent,invoice,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,15,178000,240000,251000,74.5\r\n"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The query is refused: from or to not in RFC 3339, from not before to, a bucket or a compare the route does not know, or a range that would take more than 1,000 buckets, no workflow, or a by the route does not know. A request carrying two credentials, a bearer token beside the session cookie or two session cookies, too."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such namespace or workflow, or one the caller does not hold run:read on."
+          }
+        }
+      }
+    },
+    "/api/v1/{ns}/stats/ports": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        }
+      ],
+      "get": {
+        "operationId": "getPortStatistics",
+        "tags": [
+          "statistics"
+        ],
+        "summary": "Read what a workflow's steps published",
+        "description": "Per port of each step of one workflow, per bucket, the items published, from each envelope's meta.count and never its items. Requires run:read on the workflow, and never run:read_data.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#console-statistics"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/statsFrom"
+          },
+          {
+            "$ref": "#/components/parameters/statsTo"
+          },
+          {
+            "$ref": "#/components/parameters/statsBucket"
+          },
+          {
+            "$ref": "#/components/parameters/statsCompare"
+          },
+          {
+            "$ref": "#/components/parameters/statsWorkflow"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The series.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/noStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/statsPorts"
+                },
+                "examples": {
+                  "two steps": {
+                    "summary": "two steps over two hours",
+                    "value": {
+                      "from": "2026-09-30T06:00:00Z",
+                      "to": "2026-09-30T08:00:00Z",
+                      "bucket": "1h",
+                      "workflow": "monthly-invoicing",
+                      "steps": [
+                        {
+                          "step": "normalize",
+                          "buckets": [
+                            {
+                              "since": "2026-09-30T06:00:00Z",
+                              "until": "2026-09-30T06:59:59.999999999Z",
+                              "items": {
+                                "ok": 2502,
+                                "rejected": 38
+                              }
+                            },
+                            {
+                              "since": "2026-09-30T07:00:00Z",
+                              "until": "2026-09-30T07:59:59.999999999Z",
+                              "items": {
+                                "ok": 1913,
+                                "rejected": 0
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "step": "invoice",
+                          "buckets": [
+                            {
+                              "since": "2026-09-30T06:00:00Z",
+                              "until": "2026-09-30T06:59:59.999999999Z",
+                              "items": {
+                                "out": 2499,
+                                "error": 3
+                              }
+                            },
+                            {
+                              "since": "2026-09-30T07:00:00Z",
+                              "until": "2026-09-30T07:59:59.999999999Z",
+                              "items": {
+                                "out": 1913,
+                                "error": 0
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a step, a port and a bucket.",
+                  "examples": [
+                    "period,step,port,since,until,items\r\ncurrent,normalize,ok,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,2502\r\ncurrent,normalize,rejected,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,38\r\n"
+                  ]
+                },
+                "examples": {
+                  "ports": {
+                    "summary": "one step",
+                    "value": "period,step,port,since,until,items\r\ncurrent,normalize,ok,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,2502\r\ncurrent,normalize,rejected,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,38\r\n"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The query is refused: from or to not in RFC 3339, from not before to, a bucket or a compare the route does not know, or a range that would take more than 1,000 buckets, or no workflow. A request carrying two credentials, a bearer token beside the session cookie or two session cookies, too."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such namespace or workflow, or one the caller does not hold run:read on."
+          }
+        }
+      }
+    },
+    "/api/v1/{ns}/stats/quotas": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        }
+      ],
+      "get": {
+        "operationId": "getQuotaStatistics",
+        "tags": [
+          "statistics"
+        ],
+        "summary": "Read a namespace's load against its quotas",
+        "description": "Per bucket, the runs created and those refused with 429, the most tasks in flight at once, and the artifact bytes live and added, each beside the quota it meets. Read by an administrator and by whoever holds a grant in the namespace, as its quotas are.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#console-statistics"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/statsFrom"
+          },
+          {
+            "$ref": "#/components/parameters/statsTo"
+          },
+          {
+            "$ref": "#/components/parameters/statsBucket"
+          },
+          {
+            "$ref": "#/components/parameters/statsCompare"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The series.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/noStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/statsQuotas"
+                },
+                "examples": {
+                  "every quota set": {
+                    "summary": "an hour at the rate limit",
+                    "value": {
+                      "from": "2026-09-30T06:00:00Z",
+                      "to": "2026-09-30T08:00:00Z",
+                      "bucket": "1h",
+                      "quotas": {
+                        "max_runs_per_hour": 500,
+                        "max_concurrent_tasks": 20,
+                        "max_artifact_bytes": 536870912000
+                      },
+                      "buckets": [
+                        {
+                          "since": "2026-09-30T06:00:00Z",
+                          "until": "2026-09-30T06:59:59.999999999Z",
+                          "runs_created": 412,
+                          "runs_refused": 0,
+                          "tasks_in_flight_max": 20,
+                          "artifact_bytes": 48318382080,
+                          "artifact_bytes_added": 1073741824
+                        },
+                        {
+                          "since": "2026-09-30T07:00:00Z",
+                          "until": "2026-09-30T07:59:59.999999999Z",
+                          "runs_created": 500,
+                          "runs_refused": 37,
+                          "tasks_in_flight_max": 20,
+                          "artifact_bytes": 49392123904,
+                          "artifact_bytes_added": 1073741824
+                        }
+                      ]
+                    }
+                  },
+                  "defaults": {
+                    "summary": "a namespace bounded by max_concurrent_tasks alone",
+                    "value": {
+                      "from": "2026-09-30T06:00:00Z",
+                      "to": "2026-09-30T08:00:00Z",
+                      "bucket": "1h",
+                      "quotas": {
+                        "max_concurrent_tasks": 20
+                      },
+                      "buckets": [
+                        {
+                          "since": "2026-09-30T06:00:00Z",
+                          "until": "2026-09-30T06:59:59.999999999Z",
+                          "runs_created": 3,
+                          "runs_refused": 0,
+                          "tasks_in_flight_max": 2,
+                          "artifact_bytes": 0,
+                          "artifact_bytes_added": 0
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. Each quota is a column beside the series it bounds, empty where it bounds nothing.",
+                  "examples": [
+                    "period,since,until,runs_created,runs_refused,max_runs_per_hour,tasks_in_flight_max,max_concurrent_tasks,artifact_bytes,artifact_bytes_added,max_artifact_bytes\r\ncurrent,2026-09-30T07:00:00Z,2026-09-30T07:59:59.999999999Z,500,37,500,20,20,49392123904,1073741824,536870912000\r\n"
+                  ]
+                },
+                "examples": {
+                  "quotas": {
+                    "summary": "one hour",
+                    "value": "period,since,until,runs_created,runs_refused,max_runs_per_hour,tasks_in_flight_max,max_concurrent_tasks,artifact_bytes,artifact_bytes_added,max_artifact_bytes\r\ncurrent,2026-09-30T07:00:00Z,2026-09-30T07:59:59.999999999Z,500,37,500,20,20,49392123904,1073741824,536870912000\r\n"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The query is refused: from or to not in RFC 3339, from not before to, a bucket or a compare the route does not know, or a range that would take more than 1,000 buckets. A request carrying two credentials, a bearer token beside the session cookie or two session cookies, too."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such namespace, or one the caller holds nothing in and does not administer."
+          }
+        }
+      }
+    },
+    "/api/v1/stats/pools": {
+      "get": {
+        "operationId": "getPoolStatistics",
+        "tags": [
+          "statistics"
+        ],
+        "summary": "Read the pools' and the runners' slots and silences",
+        "description": "Per pool and per runner, per bucket: the slots in use and the capacity; and each silence between heartbeats of 20 s or more, with its length and the tasks it cost. Administrator only. Served at this path alone, so that a namespace named stats made before v0.3.0 reserved the word keeps every route it has.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#console-statistics"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/statsFrom"
+          },
+          {
+            "$ref": "#/components/parameters/statsTo"
+          },
+          {
+            "$ref": "#/components/parameters/statsBucket"
+          },
+          {
+            "$ref": "#/components/parameters/statsCompare"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The series.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/noStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/statsPools"
+                },
+                "examples": {
+                  "one pool": {
+                    "summary": "one pool of two runners, one of which went silent twice",
+                    "value": {
+                      "from": "2026-09-30T06:00:00Z",
+                      "to": "2026-09-30T08:00:00Z",
+                      "bucket": "1h",
+                      "pools": [
+                        {
+                          "pool": "default",
+                          "buckets": [
+                            {
+                              "since": "2026-09-30T06:00:00Z",
+                              "until": "2026-09-30T06:59:59.999999999Z",
+                              "slots_in_use_max": 10,
+                              "capacity": 16
+                            },
+                            {
+                              "since": "2026-09-30T07:00:00Z",
+                              "until": "2026-09-30T07:59:59.999999999Z",
+                              "slots_in_use_max": 12,
+                              "capacity": 12
+                            }
+                          ],
+                          "runners": [
+                            {
+                              "runner": "build-01",
+                              "buckets": [
+                                {
+                                  "since": "2026-09-30T06:00:00Z",
+                                  "until": "2026-09-30T06:59:59.999999999Z",
+                                  "slots_in_use_max": 6,
+                                  "capacity": 8
+                                },
+                                {
+                                  "since": "2026-09-30T07:00:00Z",
+                                  "until": "2026-09-30T07:59:59.999999999Z",
+                                  "slots_in_use_max": 8,
+                                  "capacity": 4
+                                }
+                              ],
+                              "silences": [
+                                {
+                                  "at": "2026-09-30T06:41:10Z",
+                                  "length_ms": 23500,
+                                  "tasks_lost": 0
+                                },
+                                {
+                                  "at": "2026-09-30T07:12:02Z",
+                                  "length_ms": 41000,
+                                  "tasks_lost": 2
+                                }
+                              ]
+                            },
+                            {
+                              "runner": "build-02",
+                              "buckets": [
+                                {
+                                  "since": "2026-09-30T06:00:00Z",
+                                  "until": "2026-09-30T06:59:59.999999999Z",
+                                  "slots_in_use_max": 4,
+                                  "capacity": 8
+                                },
+                                {
+                                  "since": "2026-09-30T07:00:00Z",
+                                  "until": "2026-09-30T07:59:59.999999999Z",
+                                  "slots_in_use_max": 4,
+                                  "capacity": 8
+                                }
+                              ],
+                              "silences": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a pool or a runner and a bucket, runner empty on a pool's rows. Silences are not in the CSV, which is a table of buckets.",
+                  "examples": [
+                    "pool,runner,since,until,slots_in_use_max,capacity\r\ndefault,,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,10,16\r\ndefault,build-01,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,6,8\r\n"
+                  ]
+                },
+                "examples": {
+                  "pools": {
+                    "summary": "one pool",
+                    "value": "pool,runner,since,until,slots_in_use_max,capacity\r\ndefault,,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,10,16\r\ndefault,build-01,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,6,8\r\n"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The query is refused: from or to not in RFC 3339, from not before to, a bucket or a compare the route does not know, or a range that would take more than 1,000 buckets. A request carrying two credentials, a bearer token beside the session cookie or two session cookies, too."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "A caller who is not an administrator, or a session that may only enrol."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -9196,6 +10187,2708 @@
             "manifests": []
           }
         ]
+      },
+      "statsPercentiles": {
+        "title": "Percentiles",
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Three percentiles of a length of time, in whole milliseconds, taken over what the bucket counts. Each is absent where the bucket counts nothing to take it over, which a chart draws as a gap rather than as zero.",
+        "properties": {
+          "p50": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The median.",
+            "examples": [
+              222000
+            ]
+          },
+          "p95": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The 95th percentile.",
+            "examples": [
+              301000
+            ]
+          },
+          "p99": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The 99th percentile.",
+            "examples": [
+              309000
+            ]
+          }
+        },
+        "examples": [
+          {
+            "p50": 222000,
+            "p95": 301000,
+            "p99": 309000
+          },
+          {}
+        ]
+      },
+      "statsExitCodes": {
+        "title": "Attempts by exit code",
+        "type": "array",
+        "description": "Attempts counted by the exit code they ended with, the most frequent first, one entry a code. An attempt that ended with none, lost with its runner or stopped at its deadline, is counted under null.",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "exit_code",
+            "attempts"
+          ],
+          "description": "The attempts that ended with one exit code.",
+          "properties": {
+            "exit_code": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 255,
+              "description": "The exit code, or null for an attempt that ended with none.",
+              "examples": [
+                108,
+                null
+              ]
+            },
+            "attempts": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "How many attempts ended with it.",
+              "examples": [
+                3
+              ]
+            }
+          },
+          "examples": [
+            {
+              "exit_code": 108,
+              "attempts": 3
+            },
+            {
+              "exit_code": null,
+              "attempts": 1
+            }
+          ]
+        },
+        "examples": [
+          [
+            {
+              "exit_code": 0,
+              "attempts": 11
+            },
+            {
+              "exit_code": 108,
+              "attempts": 4
+            }
+          ],
+          []
+        ]
+      },
+      "statsRunsBucket": {
+        "title": "A bucket of runs",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "since",
+          "until",
+          "runs",
+          "retries"
+        ],
+        "description": "What the runs created in one bucket came to.",
+        "properties": {
+          "since": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "Where the bucket starts, included: the since GET /api/v1/runs takes.",
+            "examples": [
+              "2026-09-30T06:00:00Z"
+            ]
+          },
+          "until": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The last instant of the bucket, included, a nanosecond before the next one starts: the until GET /api/v1/runs takes, so that a point opens exactly the runs it counts.",
+            "examples": [
+              "2026-09-30T06:59:59.999999999Z"
+            ]
+          },
+          "runs": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "queued",
+              "running",
+              "waiting",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "timed_out"
+            ],
+            "description": "The runs created in the bucket, by state: a run that has ended under its final state, one still going under where it is now, so that the counts add up to what GET /api/v1/runs lists over the bucket. The share that did not succeed is failed, cancelled and timed_out over the runs that ended, which a client works out.",
+            "properties": {
+              "queued": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in queued.",
+                "examples": [
+                  0
+                ]
+              },
+              "running": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in running.",
+                "examples": [
+                  0
+                ]
+              },
+              "waiting": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in waiting.",
+                "examples": [
+                  0
+                ]
+              },
+              "succeeded": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in succeeded.",
+                "examples": [
+                  11
+                ]
+              },
+              "failed": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in failed.",
+                "examples": [
+                  1
+                ]
+              },
+              "cancelled": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in cancelled.",
+                "examples": [
+                  0
+                ]
+              },
+              "timed_out": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in timed_out.",
+                "examples": [
+                  0
+                ]
+              }
+            },
+            "examples": [
+              {
+                "queued": 0,
+                "running": 0,
+                "waiting": 0,
+                "succeeded": 11,
+                "failed": 1,
+                "cancelled": 0,
+                "timed_out": 0
+              },
+              {
+                "queued": 0,
+                "running": 0,
+                "waiting": 0,
+                "succeeded": 0,
+                "failed": 0,
+                "cancelled": 0,
+                "timed_out": 0
+              }
+            ]
+          },
+          "duration_ms": {
+            "$ref": "#/components/schemas/statsPercentiles",
+            "description": "How long the runs of the bucket that ended took, from started_at to finished_at, so that the time a run queued behind a quota is not counted as its own. Absent where none has ended.",
+            "examples": [
+              {
+                "p50": 222000,
+                "p95": 301000,
+                "p99": 309000
+              }
+            ]
+          },
+          "queue_wait_ms": {
+            "$ref": "#/components/schemas/statsPercentiles",
+            "description": "How long the tasks of those runs waited, from the task's creation to its dispatch: the time a runner took to have room. Absent where no task was dispatched.",
+            "examples": [
+              {
+                "p50": 420,
+                "p95": 1900,
+                "p99": 2600
+              }
+            ]
+          },
+          "retries": {
+            "$ref": "#/components/schemas/statsExitCodes",
+            "description": "The attempts that were retried, by the exit code of the attempt that failed. Empty where nothing was retried.",
+            "examples": [
+              [
+                {
+                  "exit_code": 108,
+                  "attempts": 3
+                }
+              ],
+              []
+            ]
+          }
+        },
+        "examples": [
+          {
+            "since": "2026-09-30T06:00:00Z",
+            "until": "2026-09-30T06:59:59.999999999Z",
+            "runs": {
+              "queued": 0,
+              "running": 0,
+              "waiting": 0,
+              "succeeded": 11,
+              "failed": 1,
+              "cancelled": 0,
+              "timed_out": 0
+            },
+            "duration_ms": {
+              "p50": 222000,
+              "p95": 301000,
+              "p99": 309000
+            },
+            "queue_wait_ms": {
+              "p50": 420,
+              "p95": 1900,
+              "p99": 2600
+            },
+            "retries": [
+              {
+                "exit_code": 108,
+                "attempts": 3
+              }
+            ]
+          },
+          {
+            "since": "2026-09-30T07:00:00Z",
+            "until": "2026-09-30T07:59:59.999999999Z",
+            "runs": {
+              "queued": 0,
+              "running": 0,
+              "waiting": 0,
+              "succeeded": 0,
+              "failed": 0,
+              "cancelled": 0,
+              "timed_out": 0
+            },
+            "retries": []
+          }
+        ]
+      },
+      "statsRuns": {
+        "title": "Run statistics",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "bucket",
+          "buckets"
+        ],
+        "description": "The runs of a namespace's workflows, bucket by bucket, over the range: only the workflows the caller holds run:read on, as GET /api/v1/runs lists them, so that a chart shows nothing a list would not.",
+        "properties": {
+          "from": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The start of the range, included, as the request gave it or as it was taken.",
+            "examples": [
+              "2026-09-30T06:00:00Z"
+            ]
+          },
+          "to": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The end of the range, excluded.",
+            "examples": [
+              "2026-09-30T08:00:00Z"
+            ]
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "1m",
+              "15m",
+              "1h",
+              "1d"
+            ],
+            "description": "How long a bucket is, as asked or as the range chose.",
+            "examples": [
+              "1h"
+            ]
+          },
+          "workflow": {
+            "$ref": "wire.schema.json#/$defs/identifier",
+            "description": "The workflow the series are narrowed to, where the request named one.",
+            "examples": [
+              "monthly-invoicing"
+            ]
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/statsRunsBucket"
+            },
+            "description": "Every bucket of the range, oldest first, those counting nothing included, so that a chart's points are evenly spaced.",
+            "examples": [
+              [
+                {
+                  "since": "2026-09-30T06:00:00Z",
+                  "until": "2026-09-30T06:59:59.999999999Z",
+                  "runs": {
+                    "queued": 0,
+                    "running": 0,
+                    "waiting": 0,
+                    "succeeded": 11,
+                    "failed": 1,
+                    "cancelled": 0,
+                    "timed_out": 0
+                  },
+                  "duration_ms": {
+                    "p50": 222000,
+                    "p95": 301000,
+                    "p99": 309000
+                  },
+                  "queue_wait_ms": {
+                    "p50": 420,
+                    "p95": 1900,
+                    "p99": 2600
+                  },
+                  "retries": [
+                    {
+                      "exit_code": 108,
+                      "attempts": 3
+                    }
+                  ]
+                },
+                {
+                  "since": "2026-09-30T07:00:00Z",
+                  "until": "2026-09-30T07:59:59.999999999Z",
+                  "runs": {
+                    "queued": 0,
+                    "running": 1,
+                    "waiting": 0,
+                    "succeeded": 9,
+                    "failed": 0,
+                    "cancelled": 0,
+                    "timed_out": 0
+                  },
+                  "duration_ms": {
+                    "p50": 208000,
+                    "p95": 262000,
+                    "p99": 266000
+                  },
+                  "queue_wait_ms": {
+                    "p50": 380,
+                    "p95": 1500,
+                    "p99": 1700
+                  },
+                  "retries": []
+                }
+              ]
+            ]
+          },
+          "histogram": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "from_ms",
+                "until_ms",
+                "runs"
+              ],
+              "description": "One bin: the runs whose duration falls in it.",
+              "properties": {
+                "from_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "The shortest duration of the bin, included, in milliseconds.",
+                  "examples": [
+                    180000
+                  ]
+                },
+                "until_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "The longest, excluded, save for the last bin, which holds the longest run.",
+                  "examples": [
+                    212000
+                  ]
+                },
+                "runs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "How many runs took that long.",
+                  "examples": [
+                    8
+                  ]
+                }
+              },
+              "examples": [
+                {
+                  "from_ms": 180000,
+                  "until_ms": 212000,
+                  "runs": 8
+                }
+              ]
+            },
+            "description": "The durations of the runs that ended over the range, in the bins histogram asked for, shortest first; fewer where the runs are fewer than the bins, and empty where none has ended. Present where histogram was asked for.",
+            "examples": [
+              [
+                {
+                  "from_ms": 180000,
+                  "until_ms": 212000,
+                  "runs": 8
+                },
+                {
+                  "from_ms": 212000,
+                  "until_ms": 244000,
+                  "runs": 9
+                },
+                {
+                  "from_ms": 244000,
+                  "until_ms": 276000,
+                  "runs": 2
+                },
+                {
+                  "from_ms": 276000,
+                  "until_ms": 309000,
+                  "runs": 2
+                }
+              ],
+              []
+            ]
+          },
+          "previous": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from",
+              "to",
+              "buckets"
+            ],
+            "properties": {
+              "from": {
+                "$ref": "wire.schema.json#/$defs/timestamp",
+                "description": "The start of the span before, included: from minus the range's length.",
+                "examples": [
+                  "2026-09-29T06:00:00Z"
+                ]
+              },
+              "to": {
+                "$ref": "wire.schema.json#/$defs/timestamp",
+                "description": "The end of the span before, excluded: the range's from.",
+                "examples": [
+                  "2026-09-29T08:00:00Z"
+                ]
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/statsRunsBucket"
+                },
+                "description": "The buckets of the span before, in the range's own length.",
+                "examples": [
+                  [
+                    {
+                      "since": "2026-09-29T06:00:00Z",
+                      "until": "2026-09-29T06:59:59.999999999Z",
+                      "runs": {
+                        "queued": 0,
+                        "running": 0,
+                        "waiting": 0,
+                        "succeeded": 12,
+                        "failed": 0,
+                        "cancelled": 0,
+                        "timed_out": 0
+                      },
+                      "duration_ms": {
+                        "p50": 231000,
+                        "p95": 290000,
+                        "p99": 298000
+                      },
+                      "queue_wait_ms": {
+                        "p50": 450,
+                        "p95": 2100,
+                        "p99": 2400
+                      },
+                      "retries": []
+                    },
+                    {
+                      "since": "2026-09-29T07:00:00Z",
+                      "until": "2026-09-29T07:59:59.999999999Z",
+                      "runs": {
+                        "queued": 0,
+                        "running": 0,
+                        "waiting": 0,
+                        "succeeded": 10,
+                        "failed": 0,
+                        "cancelled": 0,
+                        "timed_out": 1
+                      },
+                      "duration_ms": {
+                        "p50": 219000,
+                        "p95": 3600000,
+                        "p99": 3600000
+                      },
+                      "queue_wait_ms": {
+                        "p50": 400,
+                        "p95": 1800,
+                        "p99": 1900
+                      },
+                      "retries": [
+                        {
+                          "exit_code": null,
+                          "attempts": 1
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              "histogram": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "from_ms",
+                    "until_ms",
+                    "runs"
+                  ],
+                  "description": "One bin: the runs whose duration falls in it.",
+                  "properties": {
+                    "from_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "The shortest duration of the bin, included, in milliseconds.",
+                      "examples": [
+                        180000
+                      ]
+                    },
+                    "until_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "The longest, excluded, save for the last bin, which holds the longest run.",
+                      "examples": [
+                        212000
+                      ]
+                    },
+                    "runs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "How many runs took that long.",
+                      "examples": [
+                        8
+                      ]
+                    }
+                  },
+                  "examples": [
+                    {
+                      "from_ms": 180000,
+                      "until_ms": 212000,
+                      "runs": 8
+                    }
+                  ]
+                },
+                "description": "The durations of the runs that ended over the range, in the bins histogram asked for, shortest first; fewer where the runs are fewer than the bins, and empty where none has ended. Present where histogram was asked for.",
+                "examples": [
+                  [
+                    {
+                      "from_ms": 180000,
+                      "until_ms": 212000,
+                      "runs": 8
+                    },
+                    {
+                      "from_ms": 212000,
+                      "until_ms": 244000,
+                      "runs": 9
+                    },
+                    {
+                      "from_ms": 244000,
+                      "until_ms": 276000,
+                      "runs": 2
+                    },
+                    {
+                      "from_ms": 276000,
+                      "until_ms": 309000,
+                      "runs": 2
+                    }
+                  ],
+                  []
+                ]
+              }
+            },
+            "examples": [
+              {
+                "from": "2026-09-29T06:00:00Z",
+                "to": "2026-09-29T08:00:00Z",
+                "buckets": [
+                  {
+                    "since": "2026-09-29T06:00:00Z",
+                    "until": "2026-09-29T06:59:59.999999999Z",
+                    "runs": {
+                      "queued": 0,
+                      "running": 0,
+                      "waiting": 0,
+                      "succeeded": 12,
+                      "failed": 0,
+                      "cancelled": 0,
+                      "timed_out": 0
+                    },
+                    "duration_ms": {
+                      "p50": 231000,
+                      "p95": 290000,
+                      "p99": 298000
+                    },
+                    "queue_wait_ms": {
+                      "p50": 450,
+                      "p95": 2100,
+                      "p99": 2400
+                    },
+                    "retries": []
+                  },
+                  {
+                    "since": "2026-09-29T07:00:00Z",
+                    "until": "2026-09-29T07:59:59.999999999Z",
+                    "runs": {
+                      "queued": 0,
+                      "running": 0,
+                      "waiting": 0,
+                      "succeeded": 10,
+                      "failed": 0,
+                      "cancelled": 0,
+                      "timed_out": 1
+                    },
+                    "duration_ms": {
+                      "p50": 219000,
+                      "p95": 3600000,
+                      "p99": 3600000
+                    },
+                    "queue_wait_ms": {
+                      "p50": 400,
+                      "p95": 1800,
+                      "p99": 1900
+                    },
+                    "retries": [
+                      {
+                        "exit_code": null,
+                        "attempts": 1
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "description": "The same span just before the range, in the same buckets, with its histogram where one was asked for. Present where compare=previous."
+          }
+        },
+        "examples": [
+          {
+            "from": "2026-09-30T06:00:00Z",
+            "to": "2026-09-30T08:00:00Z",
+            "bucket": "1h",
+            "workflow": "monthly-invoicing",
+            "buckets": [
+              {
+                "since": "2026-09-30T06:00:00Z",
+                "until": "2026-09-30T06:59:59.999999999Z",
+                "runs": {
+                  "queued": 0,
+                  "running": 0,
+                  "waiting": 0,
+                  "succeeded": 11,
+                  "failed": 1,
+                  "cancelled": 0,
+                  "timed_out": 0
+                },
+                "duration_ms": {
+                  "p50": 222000,
+                  "p95": 301000,
+                  "p99": 309000
+                },
+                "queue_wait_ms": {
+                  "p50": 420,
+                  "p95": 1900,
+                  "p99": 2600
+                },
+                "retries": [
+                  {
+                    "exit_code": 108,
+                    "attempts": 3
+                  }
+                ]
+              },
+              {
+                "since": "2026-09-30T07:00:00Z",
+                "until": "2026-09-30T07:59:59.999999999Z",
+                "runs": {
+                  "queued": 0,
+                  "running": 1,
+                  "waiting": 0,
+                  "succeeded": 9,
+                  "failed": 0,
+                  "cancelled": 0,
+                  "timed_out": 0
+                },
+                "duration_ms": {
+                  "p50": 208000,
+                  "p95": 262000,
+                  "p99": 266000
+                },
+                "queue_wait_ms": {
+                  "p50": 380,
+                  "p95": 1500,
+                  "p99": 1700
+                },
+                "retries": []
+              }
+            ]
+          },
+          {
+            "from": "2026-09-30T06:00:00Z",
+            "to": "2026-09-30T08:00:00Z",
+            "bucket": "1h",
+            "buckets": [
+              {
+                "since": "2026-09-30T06:00:00Z",
+                "until": "2026-09-30T06:59:59.999999999Z",
+                "runs": {
+                  "queued": 0,
+                  "running": 0,
+                  "waiting": 0,
+                  "succeeded": 11,
+                  "failed": 1,
+                  "cancelled": 0,
+                  "timed_out": 0
+                },
+                "duration_ms": {
+                  "p50": 222000,
+                  "p95": 301000,
+                  "p99": 309000
+                },
+                "queue_wait_ms": {
+                  "p50": 420,
+                  "p95": 1900,
+                  "p99": 2600
+                },
+                "retries": [
+                  {
+                    "exit_code": 108,
+                    "attempts": 3
+                  }
+                ]
+              },
+              {
+                "since": "2026-09-30T07:00:00Z",
+                "until": "2026-09-30T07:59:59.999999999Z",
+                "runs": {
+                  "queued": 0,
+                  "running": 0,
+                  "waiting": 0,
+                  "succeeded": 0,
+                  "failed": 0,
+                  "cancelled": 0,
+                  "timed_out": 0
+                },
+                "retries": []
+              }
+            ]
+          },
+          {
+            "from": "2026-09-30T06:00:00Z",
+            "to": "2026-09-30T08:00:00Z",
+            "bucket": "1h",
+            "workflow": "monthly-invoicing",
+            "buckets": [
+              {
+                "since": "2026-09-30T06:00:00Z",
+                "until": "2026-09-30T06:59:59.999999999Z",
+                "runs": {
+                  "queued": 0,
+                  "running": 0,
+                  "waiting": 0,
+                  "succeeded": 11,
+                  "failed": 1,
+                  "cancelled": 0,
+                  "timed_out": 0
+                },
+                "duration_ms": {
+                  "p50": 222000,
+                  "p95": 301000,
+                  "p99": 309000
+                },
+                "queue_wait_ms": {
+                  "p50": 420,
+                  "p95": 1900,
+                  "p99": 2600
+                },
+                "retries": [
+                  {
+                    "exit_code": 108,
+                    "attempts": 3
+                  }
+                ]
+              },
+              {
+                "since": "2026-09-30T07:00:00Z",
+                "until": "2026-09-30T07:59:59.999999999Z",
+                "runs": {
+                  "queued": 0,
+                  "running": 1,
+                  "waiting": 0,
+                  "succeeded": 9,
+                  "failed": 0,
+                  "cancelled": 0,
+                  "timed_out": 0
+                },
+                "duration_ms": {
+                  "p50": 208000,
+                  "p95": 262000,
+                  "p99": 266000
+                },
+                "queue_wait_ms": {
+                  "p50": 380,
+                  "p95": 1500,
+                  "p99": 1700
+                },
+                "retries": []
+              }
+            ],
+            "histogram": [
+              {
+                "from_ms": 180000,
+                "until_ms": 212000,
+                "runs": 8
+              },
+              {
+                "from_ms": 212000,
+                "until_ms": 244000,
+                "runs": 9
+              },
+              {
+                "from_ms": 244000,
+                "until_ms": 276000,
+                "runs": 2
+              },
+              {
+                "from_ms": 276000,
+                "until_ms": 309000,
+                "runs": 2
+              }
+            ],
+            "previous": {
+              "from": "2026-09-29T06:00:00Z",
+              "to": "2026-09-29T08:00:00Z",
+              "buckets": [
+                {
+                  "since": "2026-09-29T06:00:00Z",
+                  "until": "2026-09-29T06:59:59.999999999Z",
+                  "runs": {
+                    "queued": 0,
+                    "running": 0,
+                    "waiting": 0,
+                    "succeeded": 12,
+                    "failed": 0,
+                    "cancelled": 0,
+                    "timed_out": 0
+                  },
+                  "duration_ms": {
+                    "p50": 231000,
+                    "p95": 290000,
+                    "p99": 298000
+                  },
+                  "queue_wait_ms": {
+                    "p50": 450,
+                    "p95": 2100,
+                    "p99": 2400
+                  },
+                  "retries": []
+                },
+                {
+                  "since": "2026-09-29T07:00:00Z",
+                  "until": "2026-09-29T07:59:59.999999999Z",
+                  "runs": {
+                    "queued": 0,
+                    "running": 0,
+                    "waiting": 0,
+                    "succeeded": 10,
+                    "failed": 0,
+                    "cancelled": 0,
+                    "timed_out": 1
+                  },
+                  "duration_ms": {
+                    "p50": 219000,
+                    "p95": 3600000,
+                    "p99": 3600000
+                  },
+                  "queue_wait_ms": {
+                    "p50": 400,
+                    "p95": 1800,
+                    "p99": 1900
+                  },
+                  "retries": [
+                    {
+                      "exit_code": null,
+                      "attempts": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "statsStepBucket": {
+        "title": "A bucket of one step",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "since",
+          "until",
+          "attempts",
+          "exit_codes"
+        ],
+        "description": "What one step came to in the runs created in one bucket.",
+        "properties": {
+          "since": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "Where the bucket starts, included: the since GET /api/v1/runs takes.",
+            "examples": [
+              "2026-09-30T06:00:00Z"
+            ]
+          },
+          "until": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The last instant of the bucket, included, a nanosecond before the next one starts: the until GET /api/v1/runs takes, so that a point opens exactly the runs it counts.",
+            "examples": [
+              "2026-09-30T06:59:59.999999999Z"
+            ]
+          },
+          "duration_ms": {
+            "$ref": "#/components/schemas/statsPercentiles",
+            "description": "How long its attempts ran, from dispatch to their end, each shard of a fan-out an attempt of its own. Absent where none ended.",
+            "examples": [
+              {
+                "p50": 1200,
+                "p95": 1900,
+                "p99": 2100
+              }
+            ]
+          },
+          "attempts": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "How many attempts it was dispatched, retries and shards included.",
+            "examples": [
+              12
+            ]
+          },
+          "exit_codes": {
+            "$ref": "#/components/schemas/statsExitCodes",
+            "description": "Those attempts by the exit code they ended with, 0 among them.",
+            "examples": [
+              [
+                {
+                  "exit_code": 0,
+                  "attempts": 12
+                }
+              ]
+            ]
+          },
+          "items_per_minute": {
+            "type": "number",
+            "minimum": 0,
+            "description": "For a step that fans out, the items its shards consumed a minute while any of them ran, over the bucket. Absent for any other step.",
+            "examples": [
+              74.5
+            ]
+          }
+        },
+        "examples": [
+          {
+            "since": "2026-09-30T06:00:00Z",
+            "until": "2026-09-30T06:59:59.999999999Z",
+            "duration_ms": {
+              "p50": 1200,
+              "p95": 1900,
+              "p99": 2100
+            },
+            "attempts": 12,
+            "exit_codes": [
+              {
+                "exit_code": 0,
+                "attempts": 12
+              }
+            ]
+          },
+          {
+            "since": "2026-09-30T06:00:00Z",
+            "until": "2026-09-30T06:59:59.999999999Z",
+            "duration_ms": {
+              "p50": 178000,
+              "p95": 240000,
+              "p99": 251000
+            },
+            "attempts": 15,
+            "exit_codes": [
+              {
+                "exit_code": 0,
+                "attempts": 11
+              },
+              {
+                "exit_code": 108,
+                "attempts": 4
+              }
+            ],
+            "items_per_minute": 74.5
+          }
+        ]
+      },
+      "statsStepHour": {
+        "title": "One hour of the week of one step",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "weekday",
+          "hour"
+        ],
+        "description": "One cell of the heatmap: the attempts of the step dispatched on that weekday, in that hour, in UTC, over the range.",
+        "properties": {
+          "weekday": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7,
+            "description": "The day of the week, 1 for Monday to 7 for Sunday, as ISO 8601 numbers them.",
+            "examples": [
+              1
+            ]
+          },
+          "hour": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 23,
+            "description": "The hour of the day, in UTC.",
+            "examples": [
+              6
+            ]
+          },
+          "duration_ms": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "p50": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The median.",
+                "examples": [
+                  1200
+                ]
+              }
+            },
+            "examples": [
+              {
+                "p50": 1200
+              }
+            ],
+            "description": "The median of how long those attempts ran. Absent where the cell counts none."
+          }
+        },
+        "examples": [
+          {
+            "weekday": 1,
+            "hour": 6,
+            "duration_ms": {
+              "p50": 1200
+            }
+          },
+          {
+            "weekday": 2,
+            "hour": 6
+          }
+        ]
+      },
+      "statsSteps": {
+        "title": "Step statistics",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "workflow",
+          "steps"
+        ],
+        "description": "The steps of one workflow over the range, bucket by bucket or, with by=hour, by weekday and hour.",
+        "properties": {
+          "from": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The start of the range, included, as the request gave it or as it was taken.",
+            "examples": [
+              "2026-09-30T06:00:00Z"
+            ]
+          },
+          "to": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The end of the range, excluded.",
+            "examples": [
+              "2026-09-30T08:00:00Z"
+            ]
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "1m",
+              "15m",
+              "1h",
+              "1d"
+            ],
+            "description": "How long a bucket is. Absent with by=hour.",
+            "examples": [
+              "1h"
+            ]
+          },
+          "by": {
+            "type": "string",
+            "enum": [
+              "hour"
+            ],
+            "description": "hour, where the request asked for the heatmap.",
+            "examples": [
+              "hour"
+            ]
+          },
+          "workflow": {
+            "$ref": "wire.schema.json#/$defs/identifier",
+            "description": "The workflow.",
+            "examples": [
+              "monthly-invoicing"
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "step"
+              ],
+              "description": "One step of the workflow, as its latest version names it.",
+              "properties": {
+                "step": {
+                  "$ref": "wire.schema.json#/$defs/identifier",
+                  "description": "The step.",
+                  "examples": [
+                    "invoice"
+                  ]
+                },
+                "buckets": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/statsStepBucket"
+                  },
+                  "description": "Every bucket of the range, oldest first. Absent with by=hour.",
+                  "examples": [
+                    [
+                      {
+                        "since": "2026-09-30T06:00:00Z",
+                        "until": "2026-09-30T06:59:59.999999999Z",
+                        "duration_ms": {
+                          "p50": 178000,
+                          "p95": 240000,
+                          "p99": 251000
+                        },
+                        "attempts": 15,
+                        "exit_codes": [
+                          {
+                            "exit_code": 0,
+                            "attempts": 11
+                          },
+                          {
+                            "exit_code": 108,
+                            "attempts": 4
+                          }
+                        ],
+                        "items_per_minute": 74.5
+                      },
+                      {
+                        "since": "2026-09-30T07:00:00Z",
+                        "until": "2026-09-30T07:59:59.999999999Z",
+                        "duration_ms": {
+                          "p50": 170000,
+                          "p95": 199000,
+                          "p99": 203000
+                        },
+                        "attempts": 9,
+                        "exit_codes": [
+                          {
+                            "exit_code": 0,
+                            "attempts": 9
+                          }
+                        ],
+                        "items_per_minute": 81.0
+                      }
+                    ]
+                  ]
+                },
+                "hours": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/statsStepHour"
+                  },
+                  "description": "The 168 cells, Monday at midnight first. Present with by=hour alone.",
+                  "examples": [
+                    [
+                      {
+                        "weekday": 1,
+                        "hour": 6,
+                        "duration_ms": {
+                          "p50": 1200
+                        }
+                      },
+                      {
+                        "weekday": 1,
+                        "hour": 7,
+                        "duration_ms": {
+                          "p50": 1100
+                        }
+                      },
+                      {
+                        "weekday": 2,
+                        "hour": 6
+                      }
+                    ]
+                  ]
+                },
+                "previous": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/statsStepBucket"
+                  },
+                  "description": "The buckets of the span just before the range. Present where compare=previous.",
+                  "examples": [
+                    [
+                      {
+                        "since": "2026-09-30T06:00:00Z",
+                        "until": "2026-09-30T06:59:59.999999999Z",
+                        "duration_ms": {
+                          "p50": 1200,
+                          "p95": 1900,
+                          "p99": 2100
+                        },
+                        "attempts": 12,
+                        "exit_codes": [
+                          {
+                            "exit_code": 0,
+                            "attempts": 12
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                }
+              },
+              "examples": [
+                {
+                  "step": "normalize",
+                  "buckets": [
+                    {
+                      "since": "2026-09-30T06:00:00Z",
+                      "until": "2026-09-30T06:59:59.999999999Z",
+                      "duration_ms": {
+                        "p50": 1200,
+                        "p95": 1900,
+                        "p99": 2100
+                      },
+                      "attempts": 12,
+                      "exit_codes": [
+                        {
+                          "exit_code": 0,
+                          "attempts": 12
+                        }
+                      ]
+                    },
+                    {
+                      "since": "2026-09-30T07:00:00Z",
+                      "until": "2026-09-30T07:59:59.999999999Z",
+                      "duration_ms": {
+                        "p50": 1100,
+                        "p95": 1500,
+                        "p99": 1600
+                      },
+                      "attempts": 9,
+                      "exit_codes": [
+                        {
+                          "exit_code": 0,
+                          "attempts": 9
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "description": "The steps of the workflow, in the order its latest version declares them, a step it no longer declares after them where the range reaches runs of an older version.",
+            "examples": [
+              [
+                {
+                  "step": "normalize",
+                  "buckets": [
+                    {
+                      "since": "2026-09-30T06:00:00Z",
+                      "until": "2026-09-30T06:59:59.999999999Z",
+                      "duration_ms": {
+                        "p50": 1200,
+                        "p95": 1900,
+                        "p99": 2100
+                      },
+                      "attempts": 12,
+                      "exit_codes": [
+                        {
+                          "exit_code": 0,
+                          "attempts": 12
+                        }
+                      ]
+                    },
+                    {
+                      "since": "2026-09-30T07:00:00Z",
+                      "until": "2026-09-30T07:59:59.999999999Z",
+                      "duration_ms": {
+                        "p50": 1100,
+                        "p95": 1500,
+                        "p99": 1600
+                      },
+                      "attempts": 9,
+                      "exit_codes": [
+                        {
+                          "exit_code": 0,
+                          "attempts": 9
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "step": "invoice",
+                  "buckets": [
+                    {
+                      "since": "2026-09-30T06:00:00Z",
+                      "until": "2026-09-30T06:59:59.999999999Z",
+                      "duration_ms": {
+                        "p50": 178000,
+                        "p95": 240000,
+                        "p99": 251000
+                      },
+                      "attempts": 15,
+                      "exit_codes": [
+                        {
+                          "exit_code": 0,
+                          "attempts": 11
+                        },
+                        {
+                          "exit_code": 108,
+                          "attempts": 4
+                        }
+                      ],
+                      "items_per_minute": 74.5
+                    },
+                    {
+                      "since": "2026-09-30T07:00:00Z",
+                      "until": "2026-09-30T07:59:59.999999999Z",
+                      "duration_ms": {
+                        "p50": 170000,
+                        "p95": 199000,
+                        "p99": 203000
+                      },
+                      "attempts": 9,
+                      "exit_codes": [
+                        {
+                          "exit_code": 0,
+                          "attempts": 9
+                        }
+                      ],
+                      "items_per_minute": 81.0
+                    }
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        "examples": [
+          {
+            "from": "2026-09-30T06:00:00Z",
+            "to": "2026-09-30T08:00:00Z",
+            "bucket": "1h",
+            "workflow": "monthly-invoicing",
+            "steps": [
+              {
+                "step": "normalize",
+                "buckets": [
+                  {
+                    "since": "2026-09-30T06:00:00Z",
+                    "until": "2026-09-30T06:59:59.999999999Z",
+                    "duration_ms": {
+                      "p50": 1200,
+                      "p95": 1900,
+                      "p99": 2100
+                    },
+                    "attempts": 12,
+                    "exit_codes": [
+                      {
+                        "exit_code": 0,
+                        "attempts": 12
+                      }
+                    ]
+                  },
+                  {
+                    "since": "2026-09-30T07:00:00Z",
+                    "until": "2026-09-30T07:59:59.999999999Z",
+                    "duration_ms": {
+                      "p50": 1100,
+                      "p95": 1500,
+                      "p99": 1600
+                    },
+                    "attempts": 9,
+                    "exit_codes": [
+                      {
+                        "exit_code": 0,
+                        "attempts": 9
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "step": "invoice",
+                "buckets": [
+                  {
+                    "since": "2026-09-30T06:00:00Z",
+                    "until": "2026-09-30T06:59:59.999999999Z",
+                    "duration_ms": {
+                      "p50": 178000,
+                      "p95": 240000,
+                      "p99": 251000
+                    },
+                    "attempts": 15,
+                    "exit_codes": [
+                      {
+                        "exit_code": 0,
+                        "attempts": 11
+                      },
+                      {
+                        "exit_code": 108,
+                        "attempts": 4
+                      }
+                    ],
+                    "items_per_minute": 74.5
+                  },
+                  {
+                    "since": "2026-09-30T07:00:00Z",
+                    "until": "2026-09-30T07:59:59.999999999Z",
+                    "duration_ms": {
+                      "p50": 170000,
+                      "p95": 199000,
+                      "p99": 203000
+                    },
+                    "attempts": 9,
+                    "exit_codes": [
+                      {
+                        "exit_code": 0,
+                        "attempts": 9
+                      }
+                    ],
+                    "items_per_minute": 81.0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "from": "2026-09-01T00:00:00Z",
+            "to": "2026-10-01T00:00:00Z",
+            "by": "hour",
+            "workflow": "monthly-invoicing",
+            "steps": [
+              {
+                "step": "normalize",
+                "hours": [
+                  {
+                    "weekday": 1,
+                    "hour": 6,
+                    "duration_ms": {
+                      "p50": 1200
+                    }
+                  },
+                  {
+                    "weekday": 1,
+                    "hour": 7,
+                    "duration_ms": {
+                      "p50": 1100
+                    }
+                  },
+                  {
+                    "weekday": 2,
+                    "hour": 6
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "statsPortBucket": {
+        "title": "A bucket of one step's ports",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "since",
+          "until",
+          "items"
+        ],
+        "description": "What one step published in the runs created in one bucket.",
+        "properties": {
+          "since": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "Where the bucket starts, included: the since GET /api/v1/runs takes.",
+            "examples": [
+              "2026-09-30T06:00:00Z"
+            ]
+          },
+          "until": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The last instant of the bucket, included, a nanosecond before the next one starts: the until GET /api/v1/runs takes, so that a point opens exactly the runs it counts.",
+            "examples": [
+              "2026-09-30T06:59:59.999999999Z"
+            ]
+          },
+          "items": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "wire.schema.json#/$defs/identifier"
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "The items published on each output port of the step, from each envelope's meta.count and never its items, so that run:read_data is never asked. Every port the step declares is named, 0 where it published nothing. The share rejected, or sent to error, is what the rejected or the error port published over what every output port of the step did, which a client works out.",
+            "examples": [
+              {
+                "ok": 2502,
+                "rejected": 38
+              },
+              {
+                "out": 2499,
+                "error": 3
+              }
+            ]
+          }
+        },
+        "examples": [
+          {
+            "since": "2026-09-30T06:00:00Z",
+            "until": "2026-09-30T06:59:59.999999999Z",
+            "items": {
+              "ok": 2502,
+              "rejected": 38
+            }
+          },
+          {
+            "since": "2026-09-30T07:00:00Z",
+            "until": "2026-09-30T07:59:59.999999999Z",
+            "items": {
+              "out": 1913,
+              "error": 0
+            }
+          }
+        ]
+      },
+      "statsPorts": {
+        "title": "Port statistics",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "bucket",
+          "workflow",
+          "steps"
+        ],
+        "description": "What each step of one workflow published, port by port, bucket by bucket, over the range.",
+        "properties": {
+          "from": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The start of the range, included, as the request gave it or as it was taken.",
+            "examples": [
+              "2026-09-30T06:00:00Z"
+            ]
+          },
+          "to": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The end of the range, excluded.",
+            "examples": [
+              "2026-09-30T08:00:00Z"
+            ]
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "1m",
+              "15m",
+              "1h",
+              "1d"
+            ],
+            "description": "How long a bucket is, as asked or as the range chose.",
+            "examples": [
+              "1h"
+            ]
+          },
+          "workflow": {
+            "$ref": "wire.schema.json#/$defs/identifier",
+            "description": "The workflow.",
+            "examples": [
+              "monthly-invoicing"
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "step",
+                "buckets"
+              ],
+              "description": "One step of the workflow.",
+              "properties": {
+                "step": {
+                  "$ref": "wire.schema.json#/$defs/identifier",
+                  "description": "The step.",
+                  "examples": [
+                    "normalize"
+                  ]
+                },
+                "buckets": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/statsPortBucket"
+                  },
+                  "description": "Every bucket of the range, oldest first.",
+                  "examples": [
+                    [
+                      {
+                        "since": "2026-09-30T06:00:00Z",
+                        "until": "2026-09-30T06:59:59.999999999Z",
+                        "items": {
+                          "ok": 2502,
+                          "rejected": 38
+                        }
+                      },
+                      {
+                        "since": "2026-09-30T07:00:00Z",
+                        "until": "2026-09-30T07:59:59.999999999Z",
+                        "items": {
+                          "ok": 1913,
+                          "rejected": 0
+                        }
+                      }
+                    ]
+                  ]
+                },
+                "previous": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/statsPortBucket"
+                  },
+                  "description": "The buckets of the span just before the range. Present where compare=previous.",
+                  "examples": [
+                    [
+                      {
+                        "since": "2026-09-30T06:00:00Z",
+                        "until": "2026-09-30T06:59:59.999999999Z",
+                        "items": {
+                          "ok": 2502,
+                          "rejected": 38
+                        }
+                      }
+                    ]
+                  ]
+                }
+              },
+              "examples": [
+                {
+                  "step": "normalize",
+                  "buckets": [
+                    {
+                      "since": "2026-09-30T06:00:00Z",
+                      "until": "2026-09-30T06:59:59.999999999Z",
+                      "items": {
+                        "ok": 2502,
+                        "rejected": 38
+                      }
+                    },
+                    {
+                      "since": "2026-09-30T07:00:00Z",
+                      "until": "2026-09-30T07:59:59.999999999Z",
+                      "items": {
+                        "ok": 1913,
+                        "rejected": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "description": "The steps of the workflow, in the order its latest version declares them.",
+            "examples": [
+              [
+                {
+                  "step": "normalize",
+                  "buckets": [
+                    {
+                      "since": "2026-09-30T06:00:00Z",
+                      "until": "2026-09-30T06:59:59.999999999Z",
+                      "items": {
+                        "ok": 2502,
+                        "rejected": 38
+                      }
+                    },
+                    {
+                      "since": "2026-09-30T07:00:00Z",
+                      "until": "2026-09-30T07:59:59.999999999Z",
+                      "items": {
+                        "ok": 1913,
+                        "rejected": 0
+                      }
+                    }
+                  ]
+                },
+                {
+                  "step": "invoice",
+                  "buckets": [
+                    {
+                      "since": "2026-09-30T06:00:00Z",
+                      "until": "2026-09-30T06:59:59.999999999Z",
+                      "items": {
+                        "out": 2499,
+                        "error": 3
+                      }
+                    },
+                    {
+                      "since": "2026-09-30T07:00:00Z",
+                      "until": "2026-09-30T07:59:59.999999999Z",
+                      "items": {
+                        "out": 1913,
+                        "error": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        "examples": [
+          {
+            "from": "2026-09-30T06:00:00Z",
+            "to": "2026-09-30T08:00:00Z",
+            "bucket": "1h",
+            "workflow": "monthly-invoicing",
+            "steps": [
+              {
+                "step": "normalize",
+                "buckets": [
+                  {
+                    "since": "2026-09-30T06:00:00Z",
+                    "until": "2026-09-30T06:59:59.999999999Z",
+                    "items": {
+                      "ok": 2502,
+                      "rejected": 38
+                    }
+                  },
+                  {
+                    "since": "2026-09-30T07:00:00Z",
+                    "until": "2026-09-30T07:59:59.999999999Z",
+                    "items": {
+                      "ok": 1913,
+                      "rejected": 0
+                    }
+                  }
+                ]
+              },
+              {
+                "step": "invoice",
+                "buckets": [
+                  {
+                    "since": "2026-09-30T06:00:00Z",
+                    "until": "2026-09-30T06:59:59.999999999Z",
+                    "items": {
+                      "out": 2499,
+                      "error": 3
+                    }
+                  },
+                  {
+                    "since": "2026-09-30T07:00:00Z",
+                    "until": "2026-09-30T07:59:59.999999999Z",
+                    "items": {
+                      "out": 1913,
+                      "error": 0
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "statsQuotaBucket": {
+        "title": "A bucket of a namespace's load",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "since",
+          "until",
+          "runs_created",
+          "runs_refused",
+          "tasks_in_flight_max",
+          "artifact_bytes",
+          "artifact_bytes_added"
+        ],
+        "description": "What the namespace asked of its quotas in one bucket.",
+        "properties": {
+          "since": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "Where the bucket starts, included: the since GET /api/v1/runs takes.",
+            "examples": [
+              "2026-09-30T06:00:00Z"
+            ]
+          },
+          "until": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The last instant of the bucket, included, a nanosecond before the next one starts: the until GET /api/v1/runs takes, so that a point opens exactly the runs it counts.",
+            "examples": [
+              "2026-09-30T06:59:59.999999999Z"
+            ]
+          },
+          "runs_created": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The runs created in the bucket, whoever created them, against max_runs_per_hour.",
+            "examples": [
+              412
+            ]
+          },
+          "runs_refused": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The runs refused with 429 in the bucket for max_runs_per_hour.",
+            "examples": [
+              37
+            ]
+          },
+          "tasks_in_flight_max": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The most tasks dispatched and not yet ended at once in the bucket, against max_concurrent_tasks.",
+            "examples": [
+              20
+            ]
+          },
+          "artifact_bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The bytes of the namespace's live artifacts at the bucket's end, against max_artifact_bytes.",
+            "examples": [
+              48318382080
+            ]
+          },
+          "artifact_bytes_added": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The bytes stored in the bucket.",
+            "examples": [
+              1073741824
+            ]
+          }
+        },
+        "examples": [
+          {
+            "since": "2026-09-30T06:00:00Z",
+            "until": "2026-09-30T06:59:59.999999999Z",
+            "runs_created": 412,
+            "runs_refused": 0,
+            "tasks_in_flight_max": 20,
+            "artifact_bytes": 48318382080,
+            "artifact_bytes_added": 1073741824
+          },
+          {
+            "since": "2026-09-30T07:00:00Z",
+            "until": "2026-09-30T07:59:59.999999999Z",
+            "runs_created": 500,
+            "runs_refused": 37,
+            "tasks_in_flight_max": 20,
+            "artifact_bytes": 49392123904,
+            "artifact_bytes_added": 1073741824
+          }
+        ]
+      },
+      "statsQuotas": {
+        "title": "Quota statistics",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "bucket",
+          "quotas",
+          "buckets"
+        ],
+        "description": "A namespace's load, bucket by bucket, beside the quotas it meets. Whoever reads the namespace reads it, since a quota bounds every workflow of it alike.",
+        "properties": {
+          "from": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The start of the range, included, as the request gave it or as it was taken.",
+            "examples": [
+              "2026-09-30T06:00:00Z"
+            ]
+          },
+          "to": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The end of the range, excluded.",
+            "examples": [
+              "2026-09-30T08:00:00Z"
+            ]
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "1m",
+              "15m",
+              "1h",
+              "1d"
+            ],
+            "description": "How long a bucket is, as asked or as the range chose.",
+            "examples": [
+              "1h"
+            ]
+          },
+          "quotas": {
+            "$ref": "wire.schema.json#/$defs/quotas",
+            "description": "The namespace's quotas as they stand now, which a chart draws as the line each series runs under: an earlier value is the audit log's to tell. A quota that bounds nothing is absent, as GET /api/v1/namespaces/{ns}/quotas answers it.",
+            "examples": [
+              {
+                "max_runs_per_hour": 500,
+                "max_concurrent_tasks": 20,
+                "max_artifact_bytes": 536870912000
+              }
+            ]
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/statsQuotaBucket"
+            },
+            "description": "Every bucket of the range, oldest first.",
+            "examples": [
+              [
+                {
+                  "since": "2026-09-30T06:00:00Z",
+                  "until": "2026-09-30T06:59:59.999999999Z",
+                  "runs_created": 412,
+                  "runs_refused": 0,
+                  "tasks_in_flight_max": 20,
+                  "artifact_bytes": 48318382080,
+                  "artifact_bytes_added": 1073741824
+                },
+                {
+                  "since": "2026-09-30T07:00:00Z",
+                  "until": "2026-09-30T07:59:59.999999999Z",
+                  "runs_created": 500,
+                  "runs_refused": 37,
+                  "tasks_in_flight_max": 20,
+                  "artifact_bytes": 49392123904,
+                  "artifact_bytes_added": 1073741824
+                }
+              ]
+            ]
+          },
+          "previous": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from",
+              "to",
+              "buckets"
+            ],
+            "properties": {
+              "from": {
+                "$ref": "wire.schema.json#/$defs/timestamp",
+                "description": "The start of the span before, included: from minus the range's length.",
+                "examples": [
+                  "2026-09-29T06:00:00Z"
+                ]
+              },
+              "to": {
+                "$ref": "wire.schema.json#/$defs/timestamp",
+                "description": "The end of the span before, excluded: the range's from.",
+                "examples": [
+                  "2026-09-29T08:00:00Z"
+                ]
+              },
+              "buckets": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/statsQuotaBucket"
+                },
+                "description": "The buckets of the span before.",
+                "examples": [
+                  [
+                    {
+                      "since": "2026-09-30T06:00:00Z",
+                      "until": "2026-09-30T06:59:59.999999999Z",
+                      "runs_created": 412,
+                      "runs_refused": 0,
+                      "tasks_in_flight_max": 20,
+                      "artifact_bytes": 48318382080,
+                      "artifact_bytes_added": 1073741824
+                    }
+                  ]
+                ]
+              }
+            },
+            "examples": [
+              {
+                "from": "2026-09-29T06:00:00Z",
+                "to": "2026-09-29T08:00:00Z",
+                "buckets": [
+                  {
+                    "since": "2026-09-29T06:00:00Z",
+                    "until": "2026-09-29T06:59:59.999999999Z",
+                    "runs_created": 412,
+                    "runs_refused": 0,
+                    "tasks_in_flight_max": 20,
+                    "artifact_bytes": 48318382080,
+                    "artifact_bytes_added": 1073741824
+                  }
+                ]
+              }
+            ],
+            "description": "The same span just before the range. Present where compare=previous."
+          }
+        },
+        "examples": [
+          {
+            "from": "2026-09-30T06:00:00Z",
+            "to": "2026-09-30T08:00:00Z",
+            "bucket": "1h",
+            "quotas": {
+              "max_runs_per_hour": 500,
+              "max_concurrent_tasks": 20,
+              "max_artifact_bytes": 536870912000
+            },
+            "buckets": [
+              {
+                "since": "2026-09-30T06:00:00Z",
+                "until": "2026-09-30T06:59:59.999999999Z",
+                "runs_created": 412,
+                "runs_refused": 0,
+                "tasks_in_flight_max": 20,
+                "artifact_bytes": 48318382080,
+                "artifact_bytes_added": 1073741824
+              },
+              {
+                "since": "2026-09-30T07:00:00Z",
+                "until": "2026-09-30T07:59:59.999999999Z",
+                "runs_created": 500,
+                "runs_refused": 37,
+                "tasks_in_flight_max": 20,
+                "artifact_bytes": 49392123904,
+                "artifact_bytes_added": 1073741824
+              }
+            ]
+          },
+          {
+            "from": "2026-09-30T06:00:00Z",
+            "to": "2026-09-30T08:00:00Z",
+            "bucket": "1h",
+            "quotas": {
+              "max_concurrent_tasks": 20
+            },
+            "buckets": [
+              {
+                "since": "2026-09-30T06:00:00Z",
+                "until": "2026-09-30T06:59:59.999999999Z",
+                "runs_created": 3,
+                "runs_refused": 0,
+                "tasks_in_flight_max": 2,
+                "artifact_bytes": 0,
+                "artifact_bytes_added": 0
+              }
+            ]
+          }
+        ]
+      },
+      "statsSlotBucket": {
+        "title": "A bucket of slots",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "since",
+          "until",
+          "slots_in_use_max",
+          "capacity"
+        ],
+        "description": "A pool's or a runner's slots in one bucket.",
+        "properties": {
+          "since": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "Where the bucket starts, included: the since GET /api/v1/runs takes.",
+            "examples": [
+              "2026-09-30T06:00:00Z"
+            ]
+          },
+          "until": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The last instant of the bucket, included, a nanosecond before the next one starts: the until GET /api/v1/runs takes, so that a point opens exactly the runs it counts.",
+            "examples": [
+              "2026-09-30T06:59:59.999999999Z"
+            ]
+          },
+          "slots_in_use_max": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The most slots in use at once in the bucket, as the heartbeats reported them.",
+            "examples": [
+              6
+            ]
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The slots offered at the bucket's end, which falls as a runner drains and to 0 once it has left.",
+            "examples": [
+              8
+            ]
+          }
+        },
+        "examples": [
+          {
+            "since": "2026-09-30T06:00:00Z",
+            "until": "2026-09-30T06:59:59.999999999Z",
+            "slots_in_use_max": 6,
+            "capacity": 8
+          },
+          {
+            "since": "2026-09-30T07:00:00Z",
+            "until": "2026-09-30T07:59:59.999999999Z",
+            "slots_in_use_max": 8,
+            "capacity": 4
+          }
+        ]
+      },
+      "statsPools": {
+        "title": "Pool statistics",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "bucket",
+          "pools"
+        ],
+        "description": "Every pool's slots and each of its runners', bucket by bucket, and every silence between a runner's heartbeats over the range. Administrator only.",
+        "properties": {
+          "from": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The start of the range, included, as the request gave it or as it was taken.",
+            "examples": [
+              "2026-09-30T06:00:00Z"
+            ]
+          },
+          "to": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The end of the range, excluded.",
+            "examples": [
+              "2026-09-30T08:00:00Z"
+            ]
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "1m",
+              "15m",
+              "1h",
+              "1d"
+            ],
+            "description": "How long a bucket is, as asked or as the range chose.",
+            "examples": [
+              "1h"
+            ]
+          },
+          "pools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "pool",
+                "buckets",
+                "runners"
+              ],
+              "description": "One pool.",
+              "properties": {
+                "pool": {
+                  "$ref": "wire.schema.json#/$defs/identifier",
+                  "description": "The pool.",
+                  "examples": [
+                    "default"
+                  ]
+                },
+                "buckets": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/statsSlotBucket"
+                  },
+                  "description": "The pool's slots, its runners' summed, every bucket of the range, oldest first.",
+                  "examples": [
+                    [
+                      {
+                        "since": "2026-09-30T06:00:00Z",
+                        "until": "2026-09-30T06:59:59.999999999Z",
+                        "slots_in_use_max": 10,
+                        "capacity": 16
+                      },
+                      {
+                        "since": "2026-09-30T07:00:00Z",
+                        "until": "2026-09-30T07:59:59.999999999Z",
+                        "slots_in_use_max": 12,
+                        "capacity": 12
+                      }
+                    ]
+                  ]
+                },
+                "runners": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "runner",
+                      "buckets",
+                      "silences"
+                    ],
+                    "description": "One runner of the pool, one that was in it at any time over the range included.",
+                    "properties": {
+                      "runner": {
+                        "$ref": "wire.schema.json#/$defs/identifier",
+                        "description": "The runner, by the name it joined under.",
+                        "examples": [
+                          "build-01"
+                        ]
+                      },
+                      "buckets": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/statsSlotBucket"
+                        },
+                        "description": "Its slots, every bucket of the range, oldest first.",
+                        "examples": [
+                          [
+                            {
+                              "since": "2026-09-30T06:00:00Z",
+                              "until": "2026-09-30T06:59:59.999999999Z",
+                              "slots_in_use_max": 6,
+                              "capacity": 8
+                            },
+                            {
+                              "since": "2026-09-30T07:00:00Z",
+                              "until": "2026-09-30T07:59:59.999999999Z",
+                              "slots_in_use_max": 8,
+                              "capacity": 4
+                            }
+                          ]
+                        ]
+                      },
+                      "silences": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "at",
+                            "length_ms",
+                            "tasks_lost"
+                          ],
+                          "description": "One silence between two heartbeats of 20 s or more, two intervals: those of 30 s and more are the ones after which the runner's tasks are declared lost.",
+                          "properties": {
+                            "at": {
+                              "$ref": "wire.schema.json#/$defs/timestamp",
+                              "description": "When the silence began: the last heartbeat before it.",
+                              "examples": [
+                                "2026-09-30T06:41:10Z"
+                              ]
+                            },
+                            "length_ms": {
+                              "type": "integer",
+                              "minimum": 20000,
+                              "description": "How long it lasted, in milliseconds, until the next heartbeat or the end of the range for one still going.",
+                              "examples": [
+                                23500
+                              ]
+                            },
+                            "tasks_lost": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "The tasks declared lost because of it, and handed out again.",
+                              "examples": [
+                                2
+                              ]
+                            }
+                          },
+                          "examples": [
+                            {
+                              "at": "2026-09-30T06:41:10Z",
+                              "length_ms": 23500,
+                              "tasks_lost": 0
+                            },
+                            {
+                              "at": "2026-09-30T07:12:02Z",
+                              "length_ms": 41000,
+                              "tasks_lost": 2
+                            }
+                          ]
+                        },
+                        "description": "Every silence that began over the range, oldest first.",
+                        "examples": [
+                          [
+                            {
+                              "at": "2026-09-30T06:41:10Z",
+                              "length_ms": 23500,
+                              "tasks_lost": 0
+                            },
+                            {
+                              "at": "2026-09-30T07:12:02Z",
+                              "length_ms": 41000,
+                              "tasks_lost": 2
+                            }
+                          ],
+                          []
+                        ]
+                      }
+                    },
+                    "examples": [
+                      {
+                        "runner": "build-01",
+                        "buckets": [
+                          {
+                            "since": "2026-09-30T06:00:00Z",
+                            "until": "2026-09-30T06:59:59.999999999Z",
+                            "slots_in_use_max": 6,
+                            "capacity": 8
+                          },
+                          {
+                            "since": "2026-09-30T07:00:00Z",
+                            "until": "2026-09-30T07:59:59.999999999Z",
+                            "slots_in_use_max": 8,
+                            "capacity": 4
+                          }
+                        ],
+                        "silences": [
+                          {
+                            "at": "2026-09-30T06:41:10Z",
+                            "length_ms": 23500,
+                            "tasks_lost": 0
+                          },
+                          {
+                            "at": "2026-09-30T07:12:02Z",
+                            "length_ms": 41000,
+                            "tasks_lost": 2
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "description": "The pool's runners, by name.",
+                  "examples": [
+                    [
+                      {
+                        "runner": "build-01",
+                        "buckets": [
+                          {
+                            "since": "2026-09-30T06:00:00Z",
+                            "until": "2026-09-30T06:59:59.999999999Z",
+                            "slots_in_use_max": 6,
+                            "capacity": 8
+                          },
+                          {
+                            "since": "2026-09-30T07:00:00Z",
+                            "until": "2026-09-30T07:59:59.999999999Z",
+                            "slots_in_use_max": 8,
+                            "capacity": 4
+                          }
+                        ],
+                        "silences": [
+                          {
+                            "at": "2026-09-30T06:41:10Z",
+                            "length_ms": 23500,
+                            "tasks_lost": 0
+                          },
+                          {
+                            "at": "2026-09-30T07:12:02Z",
+                            "length_ms": 41000,
+                            "tasks_lost": 2
+                          }
+                        ]
+                      },
+                      {
+                        "runner": "build-02",
+                        "buckets": [
+                          {
+                            "since": "2026-09-30T06:00:00Z",
+                            "until": "2026-09-30T06:59:59.999999999Z",
+                            "slots_in_use_max": 4,
+                            "capacity": 8
+                          },
+                          {
+                            "since": "2026-09-30T07:00:00Z",
+                            "until": "2026-09-30T07:59:59.999999999Z",
+                            "slots_in_use_max": 4,
+                            "capacity": 8
+                          }
+                        ],
+                        "silences": []
+                      }
+                    ]
+                  ]
+                }
+              },
+              "examples": [
+                {
+                  "pool": "default",
+                  "buckets": [
+                    {
+                      "since": "2026-09-30T06:00:00Z",
+                      "until": "2026-09-30T06:59:59.999999999Z",
+                      "slots_in_use_max": 10,
+                      "capacity": 16
+                    },
+                    {
+                      "since": "2026-09-30T07:00:00Z",
+                      "until": "2026-09-30T07:59:59.999999999Z",
+                      "slots_in_use_max": 12,
+                      "capacity": 12
+                    }
+                  ],
+                  "runners": [
+                    {
+                      "runner": "build-01",
+                      "buckets": [
+                        {
+                          "since": "2026-09-30T06:00:00Z",
+                          "until": "2026-09-30T06:59:59.999999999Z",
+                          "slots_in_use_max": 6,
+                          "capacity": 8
+                        },
+                        {
+                          "since": "2026-09-30T07:00:00Z",
+                          "until": "2026-09-30T07:59:59.999999999Z",
+                          "slots_in_use_max": 8,
+                          "capacity": 4
+                        }
+                      ],
+                      "silences": [
+                        {
+                          "at": "2026-09-30T06:41:10Z",
+                          "length_ms": 23500,
+                          "tasks_lost": 0
+                        },
+                        {
+                          "at": "2026-09-30T07:12:02Z",
+                          "length_ms": 41000,
+                          "tasks_lost": 2
+                        }
+                      ]
+                    },
+                    {
+                      "runner": "build-02",
+                      "buckets": [
+                        {
+                          "since": "2026-09-30T06:00:00Z",
+                          "until": "2026-09-30T06:59:59.999999999Z",
+                          "slots_in_use_max": 4,
+                          "capacity": 8
+                        },
+                        {
+                          "since": "2026-09-30T07:00:00Z",
+                          "until": "2026-09-30T07:59:59.999999999Z",
+                          "slots_in_use_max": 4,
+                          "capacity": 8
+                        }
+                      ],
+                      "silences": []
+                    }
+                  ]
+                }
+              ]
+            },
+            "description": "Every pool, by name.",
+            "examples": [
+              [
+                {
+                  "pool": "default",
+                  "buckets": [
+                    {
+                      "since": "2026-09-30T06:00:00Z",
+                      "until": "2026-09-30T06:59:59.999999999Z",
+                      "slots_in_use_max": 10,
+                      "capacity": 16
+                    },
+                    {
+                      "since": "2026-09-30T07:00:00Z",
+                      "until": "2026-09-30T07:59:59.999999999Z",
+                      "slots_in_use_max": 12,
+                      "capacity": 12
+                    }
+                  ],
+                  "runners": [
+                    {
+                      "runner": "build-01",
+                      "buckets": [
+                        {
+                          "since": "2026-09-30T06:00:00Z",
+                          "until": "2026-09-30T06:59:59.999999999Z",
+                          "slots_in_use_max": 6,
+                          "capacity": 8
+                        },
+                        {
+                          "since": "2026-09-30T07:00:00Z",
+                          "until": "2026-09-30T07:59:59.999999999Z",
+                          "slots_in_use_max": 8,
+                          "capacity": 4
+                        }
+                      ],
+                      "silences": [
+                        {
+                          "at": "2026-09-30T06:41:10Z",
+                          "length_ms": 23500,
+                          "tasks_lost": 0
+                        },
+                        {
+                          "at": "2026-09-30T07:12:02Z",
+                          "length_ms": 41000,
+                          "tasks_lost": 2
+                        }
+                      ]
+                    },
+                    {
+                      "runner": "build-02",
+                      "buckets": [
+                        {
+                          "since": "2026-09-30T06:00:00Z",
+                          "until": "2026-09-30T06:59:59.999999999Z",
+                          "slots_in_use_max": 4,
+                          "capacity": 8
+                        },
+                        {
+                          "since": "2026-09-30T07:00:00Z",
+                          "until": "2026-09-30T07:59:59.999999999Z",
+                          "slots_in_use_max": 4,
+                          "capacity": 8
+                        }
+                      ],
+                      "silences": []
+                    }
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        "examples": [
+          {
+            "from": "2026-09-30T06:00:00Z",
+            "to": "2026-09-30T08:00:00Z",
+            "bucket": "1h",
+            "pools": [
+              {
+                "pool": "default",
+                "buckets": [
+                  {
+                    "since": "2026-09-30T06:00:00Z",
+                    "until": "2026-09-30T06:59:59.999999999Z",
+                    "slots_in_use_max": 10,
+                    "capacity": 16
+                  },
+                  {
+                    "since": "2026-09-30T07:00:00Z",
+                    "until": "2026-09-30T07:59:59.999999999Z",
+                    "slots_in_use_max": 12,
+                    "capacity": 12
+                  }
+                ],
+                "runners": [
+                  {
+                    "runner": "build-01",
+                    "buckets": [
+                      {
+                        "since": "2026-09-30T06:00:00Z",
+                        "until": "2026-09-30T06:59:59.999999999Z",
+                        "slots_in_use_max": 6,
+                        "capacity": 8
+                      },
+                      {
+                        "since": "2026-09-30T07:00:00Z",
+                        "until": "2026-09-30T07:59:59.999999999Z",
+                        "slots_in_use_max": 8,
+                        "capacity": 4
+                      }
+                    ],
+                    "silences": [
+                      {
+                        "at": "2026-09-30T06:41:10Z",
+                        "length_ms": 23500,
+                        "tasks_lost": 0
+                      },
+                      {
+                        "at": "2026-09-30T07:12:02Z",
+                        "length_ms": 41000,
+                        "tasks_lost": 2
+                      }
+                    ]
+                  },
+                  {
+                    "runner": "build-02",
+                    "buckets": [
+                      {
+                        "since": "2026-09-30T06:00:00Z",
+                        "until": "2026-09-30T06:59:59.999999999Z",
+                        "slots_in_use_max": 4,
+                        "capacity": 8
+                      },
+                      {
+                        "since": "2026-09-30T07:00:00Z",
+                        "until": "2026-09-30T07:59:59.999999999Z",
+                        "slots_in_use_max": 4,
+                        "capacity": 8
+                      }
+                    ],
+                    "silences": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     },
     "parameters": {
@@ -9481,6 +13174,140 @@
           "small page": {
             "summary": "ten commits",
             "value": 10
+          }
+        }
+      },
+      "statsFrom": {
+        "name": "from",
+        "in": "query",
+        "required": false,
+        "description": "The start of the range, included, in RFC 3339. Where it is left out the range is the 24 hours before to, and where both are left out the last 24 hours. Refused with 400 where it is not before to.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/timestamp"
+        },
+        "examples": {
+          "morning": {
+            "summary": "six in the morning",
+            "value": "2026-09-30T06:00:00Z"
+          }
+        }
+      },
+      "statsTo": {
+        "name": "to",
+        "in": "query",
+        "required": false,
+        "description": "The end of the range, excluded, in RFC 3339: now where it is left out.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/timestamp"
+        },
+        "examples": {
+          "two hours later": {
+            "summary": "eight in the morning",
+            "value": "2026-09-30T08:00:00Z"
+          }
+        }
+      },
+      "statsBucket": {
+        "name": "bucket",
+        "in": "query",
+        "required": false,
+        "description": "How long a bucket is: 1m, 15m, 1h or 1d. Where it is left out it follows the range, so that a chart holds a few hundred points at most: a minute up to two hours, 15 minutes up to two days, an hour up to 14 days, a day beyond. Buckets fall on whole minutes, quarters, hours and days in UTC, the first holding from and the last the instant before to. Refused with 400 where the range would take more than 1,000, which no chart draws and which a query would pay for all the same.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "1m",
+            "15m",
+            "1h",
+            "1d"
+          ]
+        },
+        "examples": {
+          "hourly": {
+            "summary": "an hour a bucket",
+            "value": "1h"
+          }
+        }
+      },
+      "statsCompare": {
+        "name": "compare",
+        "in": "query",
+        "required": false,
+        "description": "previous adds the same span just before the range, in the same buckets, under previous, so that a chart draws it behind and a figure shows its change. The only value.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "previous"
+          ]
+        },
+        "examples": {
+          "previous": {
+            "summary": "the span before",
+            "value": "previous"
+          }
+        }
+      },
+      "statsWorkflowFilter": {
+        "name": "workflow",
+        "in": "query",
+        "required": false,
+        "description": "Narrows the series to one workflow of the namespace. Answered 404, as a workflow that does not exist, where the caller does not hold run:read on it.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/identifier"
+        },
+        "examples": {
+          "one workflow": {
+            "summary": "the invoicing workflow",
+            "value": "monthly-invoicing"
+          }
+        }
+      },
+      "statsWorkflow": {
+        "name": "workflow",
+        "in": "query",
+        "required": true,
+        "description": "The workflow whose steps the series are of: a step belongs to one workflow, so this route reads one. Refused with 400 where it is left out, and answered 404, as a workflow that does not exist, where the caller does not hold run:read on it.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/identifier"
+        },
+        "examples": {
+          "one workflow": {
+            "summary": "the invoicing workflow",
+            "value": "monthly-invoicing"
+          }
+        }
+      },
+      "statsHistogram": {
+        "name": "histogram",
+        "in": "query",
+        "required": false,
+        "description": "Adds histogram: the durations of the runs that ended over the range in this many bins of one width, from the shortest to the longest. At most 100, which is more than a chart has room to draw; refused with 400 past it or below 1.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "examples": {
+          "a dozen": {
+            "summary": "what agk console draws",
+            "value": 12
+          }
+        }
+      },
+      "statsBy": {
+        "name": "by",
+        "in": "query",
+        "required": false,
+        "description": "hour answers, instead of buckets, each step's p50 by weekday and hour of the day over the range, in UTC: 168 cells, a heatmap's, which bucket then does not shape and compare does not take. The only value.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "hour"
+          ]
+        },
+        "examples": {
+          "hour": {
+            "summary": "by weekday and hour",
+            "value": "hour"
           }
         }
       }

@@ -5671,7 +5671,7 @@
               "text/csv": {
                 "schema": {
                   "type": "string",
-                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a step, a port and a bucket.",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a step, a port and a bucket, in that order: every bucket of a port in turn, the ports of a step in the order it declares them.",
                   "examples": [
                     "period,step,port,since,until,items\r\ncurrent,normalize,ok,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,2502\r\ncurrent,normalize,rejected,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,38\r\n"
                   ]
@@ -11777,7 +11777,7 @@
               "type": "integer",
               "minimum": 0
             },
-            "description": "The items published on each output port of the step, from each envelope's meta.count and never its items, so that run:read_data is never asked. Every port the step declares is named, 0 where it published nothing. The share rejected, or sent to error, is what the rejected or the error port published over what every output port of the step did, which a client works out.",
+            "description": "The items published on each output port of the step, summed over the runs created in the bucket, from the count each envelope's meta.count gives and the step's record keeps, and never from its items, so that run:read_data is never asked. Every port the latest version declares on the step is named, 0 where it published nothing, and so is a port an older version declared that a run in the range published on. The share rejected, or sent to error, is what the rejected or the error port published over what every output port of the step did, which a client works out.",
             "examples": [
               {
                 "ok": 2502,
@@ -11945,7 +11945,7 @@
                 }
               ]
             },
-            "description": "The steps of the workflow, in the order its latest version declares them.",
+            "description": "The steps of the workflow in the order its latest version runs them, upstream first and those no edge orders by name, then, by name, a step it no longer declares where the range reaches runs of an older version, as GET /api/v1/{ns}/stats/steps orders them.",
             "examples": [
               [
                 {

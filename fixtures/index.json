@@ -466,6 +466,12 @@
           "reference": "https://agentiik.github.io/docs/#triggers"
         },
         {
+          "file": "workflow/invalid/cron-value-stepped-alone.yaml",
+          "rule": "A cron value stepped on its own. Some crons read 5/15 as 5-59/15 and others refuse it, so a step follows * or a range and the file says which.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#triggers"
+        },
+        {
           "file": "workflow/invalid/cron-value-out-of-range.yaml",
           "rule": "A cron field naming a minute past the hour's last. Each field is bounded by what it counts, and a value outside it names an occurrence that never comes.",
           "refused_by": "validator",

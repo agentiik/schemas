@@ -21,6 +21,7 @@ Every repository of the project carries the same version and is tagged at the sa
   - `/quotas` counts as refused every run refused for max_runs_per_hour, whatever asked for it, and says what an in-flight task and the artifact bytes held and written are counted from.
   - `/stats/pools` says what a slot held and a capacity offered are counted from, takes no `compare`, and its CSV has no `period` column.
   - The routes are taken off `NOT_DESCRIBED_YET`.
+- `openapi.json` describes `GET /api/v1/runs`, served since v0.2.0, which the web console's runs view reads and its generated client may therefore call: `namespace`, `workflow`, `state`, `since`, `until` and `limit`, newest first, each run the `run` record of `wire.schema.json`. A limit outside 1 to 500 is read as 50, as the API reads it. The route is taken off `NOT_DESCRIBED_YET`, and a new tag, `runs`, holds it.
 
 ## v0.5.0, 2026-09-30
 

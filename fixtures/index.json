@@ -308,6 +308,24 @@
           "reference": "https://agentiik.github.io/docs/#publishing-tools"
         },
         {
+          "file": "workflow/invalid/mcp-annotation-not-a-hint.yaml",
+          "rule": "An annotation other than the four hints the protocol defines. They are passed through to a client unchanged, so a key the protocol does not define is one no client reads, and a grant is never written here.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#publishing-tools"
+        },
+        {
+          "file": "workflow/invalid/mcp-mode-unknown.yaml",
+          "rule": "A tool mode other than sync and async. A call either waits for the run or returns its identifier at once, and there is no third way for a call to end.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#publishing-tools"
+        },
+        {
+          "file": "workflow/invalid/mcp-tool-name-not-an-identifier.yaml",
+          "rule": "A tool name that is not an identifier. Clients hold the name and send it back in every call, so it is kept to letters, digits, hyphens and underscores.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#publishing-tools"
+        },
+        {
           "file": "workflow/invalid/network-unknown-value.yaml",
           "rule": "A network posture outside none, egress and internal. Every task gets its own network, and there is no posture that puts a container on the host's.",
           "refused_by": "schema",

@@ -15,6 +15,13 @@ Every repository of the project carries the same version and is tagged at the sa
   - Every bucket carries the `since` and the `until` that `GET /api/v1/runs` takes, the latter a nanosecond before the next bucket. A point therefore opens exactly the runs it counts.
   - Durations are whole milliseconds.
   - The routes are taken off `NOT_DESCRIBED_YET`.
+- `language/` is the language reference `workflow.language` teaches, generated from `workflow.schema.json` by `tools/language.py`:
+  - `index.md` is the orientation: what the language is, one complete minimal workflow, the sixteen topics and the schema parts.
+  - A page per topic, `repository` to `mcp`, gives a summary, the keywords it covers, the schema fragment governing them and worked examples written where they go in `agentiik.yaml`.
+  - `topics.json` gives each topic's keywords as pointers into the schema and the instance paths it answers for, so a validation error can name the topic that explains it, and the parts `workflow`, `brick` and `envelope` by name.
+- `workflow.schema.json`'s first example is the workflow Get started runs, the smallest that runs, since the orientation shows it; and `$defs/expression` names the roots an expression reads and where each is available, as the Expressions chapter's table does.
+- Fixtures: three invalid workflow fixtures pin the constraints on a published tool the schema already stated and no fixture held, each refused by the schema: an annotation other than the protocol's four hints, a `mode` other than `sync` and `async`, and a tool name that is not an identifier.
+- `tools/check.py` holds `language/` to what the generator writes, every keyword of the workflow schema to a topic, every topic to a worked example, and every worked example, read back from its page with a YAML 1.2 loader, to the keyword it illustrates.
 
 ## v0.5.0, 2026-09-30
 

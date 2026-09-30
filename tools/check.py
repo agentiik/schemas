@@ -5,7 +5,7 @@ Run it with no arguments, from anywhere:
 
     python tools/check.py
 
-Ten checks run, and all of them run even when an earlier one fails, so one pass
+Eleven checks run, and all of them run even when an earlier one fails, so one pass
 reports everything that is wrong rather than the first thing:
 
   1. every schema is a legal JSON Schema 2020-12 document, carries the $schema and the
@@ -27,7 +27,10 @@ reports everything that is wrong rather than the first thing:
   9. every operation, parameter, request body, response, header and schema in it carries a
      description and examples, and every example validates against what it illustrates;
  10. the routes it describes and the route table of the documentation agree: a route in one
-     and not in the other fails, unless NOT_DESCRIBED_YET names it and says why.
+     and not in the other fails, unless NOT_DESCRIBED_YET names it and says why;
+ 11. language/ is what tools/language.py generates, every keyword of the workflow schema
+     belongs to a topic, no topic lacks a worked example, and every worked example, read
+     back from its page's YAML, is the example it illustrates and validates against it.
 
 Check 2 is the one the documentation asks for by name: the language reference on the
 site and the workflow.language tool are projections of the description and examples
@@ -63,6 +66,11 @@ except ImportError as missing:  # pragma: no cover, this is the first-run messag
         "%s. Install the pinned dependencies first:\n"
         "    python -m pip install -r requirements.txt" % missing
     )
+
+# The generator of the language reference sits beside this file, and check 11 runs it rather
+# than reading a description of what it would write.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import language  # noqa: E402
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -1130,6 +1138,93 @@ def check_graph(graph, case, files, manifests, repositories, fail):
         fail("expected.json orders %s, and its steps are %s" % (", ".join(graph.get("order", [])), ", ".join(sorted(steps))))
     elif graph["order"] != resolved_order(steps):
         fail("expected.json orders its steps %s, and resolvedGraph's order is %s" % (", ".join(graph["order"]), ", ".join(resolved_order(steps))))
+
+
+def check_language_reference(documents, report):
+    """Check 11: the language reference is the schema's, and teaches what the schema accepts.
+
+    language/ is what tools/language.py generates from the documents, byte for byte, because
+    the documentation forbids a second source: "The language documentation is generated from
+    the schema, never written beside it." Beyond that, the reference has to be whole and
+    right: every keyword of the workflow schema belongs to a topic, since a keyword no page
+    teaches is one a client never learns; no topic lacks a worked example; and every worked
+    example, read back from the YAML its page shows with the loader the engine reads with,
+    is the example it illustrates and validates against the keyword that carries it. Check 3
+    validates the examples as the schema holds them; this validates them as a client reads
+    them, where YAML 1.1's on, a number that should be a string or an expression the page
+    quoted wrongly would teach something the engine then refuses.
+    """
+    where = "language/"
+    missing = [filename for _, filename in language.PARTS if filename not in documents]
+    if missing:
+        report.fail(where, "cannot be generated: %s is not a usable document" % ", ".join(missing))
+        return
+    document = documents[language.WORKFLOW]
+
+    names = [name for name, _anchor, _places in language.TOPICS]
+    if len(set(names)) != len(names):
+        report.fail(where, "a topic is named twice in tools/language.py: %s" % ", ".join(names))
+    for name, anchor, places in language.TOPICS:
+        described = resolve_pointer(document, anchor)
+        if not isinstance(described, dict) or not isinstance(described.get("description"), str):
+            report.fail(where, "the %s topic takes its summary from %s, which is no described keyword" % (name, anchor or "/"))
+        for place in places:
+            if resolve_pointer(document, place) is None:
+                report.fail(where, "the %s topic covers %s, which is not in %s" % (name, place, language.WORKFLOW))
+
+    try:
+        files, worked, owners = language.reference(documents)
+    except Exception as error:  # the generator fails on a schema it cannot read
+        report.fail(where, "tools/language.py cannot generate it: %r" % error)
+        return
+
+    orphans = [pointer for pointer, owner in owners.items() if owner is None]
+    for pointer in orphans:
+        report.fail(where, "%s#%s belongs to no topic, so no page teaches it: add its place to TOPICS in tools/language.py" % (language.WORKFLOW, pointer))
+
+    for name in names:
+        if not any(example["topic"] == name for example in worked):
+            report.fail(where, "the %s topic has no worked example: its keywords carry examples, but none is written anywhere a file writes it" % name)
+
+    checked = 0
+    for example in worked:
+        label = "%s.md, %s example %d" % (example["topic"], example["keyword"] or "/", example["index"] + 1)
+        try:
+            read = yaml.load(example["yaml"], Loader=WorkflowLoader)
+        except yaml.YAMLError as error:
+            report.fail(where, "%s is not YAML a reader can load: %s" % (label, error))
+            continue
+        for token in example["path"]:
+            key = token if isinstance(token, str) else token[1]
+            if isinstance(read, dict) and key in read:
+                read = read[key]
+            elif isinstance(read, list) and isinstance(key, int) and key < len(read):
+                read = read[key]
+            else:
+                read = None
+                break
+        if read != example["value"]:
+            report.fail(where, "%s reads back as %r where the schema's example is %r" % (label, read, example["value"]))
+            continue
+        errors = list(validator_for(document, resolve_pointer(document, example["keyword"])).iter_errors(read))
+        if errors:
+            report.fail(where, "%s does not validate against its keyword: %s" % (label, errors[0].message))
+            continue
+        checked += 1
+
+    on_disk = {}
+    if language.OUT.is_dir():
+        on_disk = {path.name: path.read_text(encoding="utf-8") for path in language.OUT.iterdir() if path.is_file()}
+    for name in sorted(set(files) | set(on_disk)):
+        if name not in on_disk:
+            report.fail(where + name, "is missing: run python tools/language.py")
+        elif name not in files:
+            report.fail(where + name, "is not generated by tools/language.py, and nothing under language/ is written by hand")
+        elif on_disk[name] != files[name]:
+            report.fail(where + name, "differs from what tools/language.py generates from the schemas: run it, and never edit language/ by hand")
+
+    report.heading("%d topics covering %d keywords, %d worked examples each read back and valid, %d files as generated"
+                   % (len(names), len(owners) - len(orphans), checked, len(files)))
 
 
 def check_no_em_dash(report):
@@ -2352,6 +2447,9 @@ def main():
             check_openapi_examples_validate(openapi, sound, report)
         print("Routes")
         check_routes_agree(openapi, arguments.docs, report)
+    if documents:
+        print("Language")
+        check_language_reference(sound, report)
     print("Prose")
     check_no_em_dash(report)
 

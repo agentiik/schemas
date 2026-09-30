@@ -28,6 +28,8 @@ states it; where it is silent, the schema takes the reading that cannot contradi
 Beside them, [`fixtures/`](fixtures) holds the documents that pin what the schemas accept
 and what they refuse, and [`tools/check.py`](tools/check.py) is the check the build runs.
 
+[`language/`](language) is the language reference, generated from `workflow.schema.json` by [`tools/language.py`](tools/language.py) and never edited by hand. It is what `workflow.language` answers with, and the pages the site renders: see [The language reference](#the-language-reference).
+
 ## Running the check
 
 ```sh
@@ -39,7 +41,7 @@ No arguments, from anywhere in the repository. It is the same command [`.github/
 
 The route check reads the documentation of main from <https://agentiik.github.io/docs/v/main/>, because this repository's main follows it. Where the two change together, or offline, point it at a checkout instead: `python tools/check.py --docs ../agentiik.github.io`. The documentation's pull request merges first, since it is the authority, and this repository's build is green against the site from then on.
 
-Ten things fail the build:
+Eleven things fail the build:
 
 1. a schema that is not a legal JSON Schema 2020-12 document, that does not carry the
    `$id` it is published under, or that holds a `$ref` leading nowhere;
@@ -60,7 +62,8 @@ Ten things fail the build:
 7. an em dash, anywhere in any text file;
 8. an `openapi.json` a generator cannot rely on: not OpenAPI 3.1, a field a reader needs missing, a path parameter declared and not in its path or the other way round, an `operationId` used twice, a status that is not one, a schema the 2020-12 metaschema refuses or one writing `nullable` or `example`, which 2020-12 ignores, or a `$ref` leading nowhere, inside it or into a schema beside it;
 9. an operation, a parameter, a request body, a response, a header or a schema keyword of it without a description or without examples, or an example that does not validate against what it illustrates, a reference into the wire resolved as a consumer resolves it;
-10. a route the documentation's table lists and `openapi.json` does not describe, or the other way round, or an operation whose `externalDocs` points at an anchor the page does not carry. A route deliberately not described yet is named in `NOT_DESCRIBED_YET` in `tools/check.py` with the reason, and the list is held exact: a route on it that is now described, or gone from the table, fails too. A read of the page that comes back partial, no page, no `#api` section, no table or a row that cannot be read, fails rather than agreeing with nothing.
+10. a route the documentation's table lists and `openapi.json` does not describe, or the other way round, or an operation whose `externalDocs` points at an anchor the page does not carry. A route deliberately not described yet is named in `NOT_DESCRIBED_YET` in `tools/check.py` with the reason, and the list is held exact: a route on it that is now described, or gone from the table, fails too. A read of the page that comes back partial, no page, no `#api` section, no table or a row that cannot be read, fails rather than agreeing with nothing;
+11. a `language/` that is not exactly what `tools/language.py` generates from the schemas, a keyword of `workflow.schema.json` that no topic covers, a topic with no worked example, or a worked example that, read back from the YAML its page shows with a YAML 1.2 loader, is not the example it illustrates or does not validate against the keyword that carries it.
 
 ## Why every keyword carries a description and examples
 
@@ -76,6 +79,30 @@ for itself fails the run, and a description that only restates the keyword's own
 fails review.
 
 The API is held to the same rule for the same reason: the API reference is generated from `openapi.json`, and the console, `agk` and the Terraform provider read it as their one description of the API, so an operation or a field without a description is one none of them can explain.
+
+## The language reference
+
+`workflow.language`, the MCP tool, teaches the language one topic at a time, and the documentation names the topics: "repository, inputs, outputs, triggers, steps, ports, needs, merge, fan_out, retry, expressions, secrets, files, script, includes, mcp". Without a topic it answers an orientation. Both are generated here, so the tool, the command line and the site teach one language, the one the validator enforces:
+
+```sh
+python tools/language.py
+```
+
+It writes three kinds of file under `language/`:
+
+| File | Holds |
+| --- | --- |
+| `index.md` | The orientation: what the language is, one complete minimal workflow, the topics, and the schema parts by name. |
+| `<topic>.md` | One page per topic: a summary, the keywords it covers, the schema fragment governing them and worked examples, each written where it goes in `agentiik.yaml`. |
+| `topics.json` | The same for a program: each topic's `name`, `page`, `summary`, the `keywords` it covers as pointers into `workflow.schema.json`, and the `paths` it answers for; and the `parts`, each a `name`, the `file` and `$id` it is published as, and its `title` and `summary`. |
+
+Every sentence on a page is a `description` of the schema, and every example an entry of an `examples` array. What `tools/language.py` adds is structure alone: which keyword belongs to which topic, set by `TOPICS`, and the order a page is read in. A topic's summary is the description of one keyword it names, its anchor. A keyword belongs to the topic whose place is the longest prefix of where it is declared, so the steps topic covers the step while the retry topic takes the step's `retry` away from it, and the build fails on a keyword no topic covers. The orientation's minimal workflow is the first example of the schema's root, which is why that example is the smallest workflow that runs: one step, no brick to pull, one output.
+
+A path in `topics.json` is a JSON Pointer to where a keyword is written in `agentiik.yaml` or an included file, in which `*` stands for any one name or index and `.*` for any one name starting with a dot, a hidden block's. It is the pointer a validation error names, so an error can name the topic that explains it: the topic of the longest pattern that matches, token by token, the error's pointer or the start of it.
+
+A part is named after its file, so `workflow`, `brick` and `envelope` are `workflow.schema.json`, `brick.schema.json` and `envelope.schema.json`, published under the `$id` each carries. `workflow.schema` and `agentiik://schema/{part}` take one of these names.
+
+A definition written at several places, an expression or a duration, shows its examples as values rather than placed at the first of those places, where an expression would read as an event filter. A keyword written at one place is shown there, with the names its keyword's `propertyNames` examples give: a step is called `normalize` because that is the first example of a step's name.
 
 ## Readings taken where the documentation is silent
 

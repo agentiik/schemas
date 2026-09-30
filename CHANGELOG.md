@@ -16,6 +16,17 @@ Every repository of the project carries the same version and is tagged at the sa
   - Durations are whole milliseconds.
   - The routes are taken off `NOT_DESCRIBED_YET`.
 
+## v0.5.0, 2026-09-30
+
+- `workflow.schema.json` holds the trigger declarations to what v0.5.0 builds. `on.schedule[].cron` is five cron fields, each `*`, a value, a range, `*` or a range stepped by `/n`, or a list of those, a month or a weekday by name, and refuses `?`, `L`, a sixth field, `@daily` and a value stepped on its own, `5/15`, which crons read two ways; `timezone` is an IANA zone name, `UTC` where absent, `Local` refused; `catch_up` makes up each missed occurrence exactly once, with the instant it was due as `trigger.scheduled_for`.
+- `on.webhook[]` gains `output`, the declared workflow output a `response: sync` answers with, required beside `sync` and refused beside `async`; `method`, `auth` and `response` default to `POST`, `hmac` and `async`, written as the schema's `default`; a path is segments that begin with no dot, at most 255 characters.
+- `on.event[]` names what it listens for, a `type`, a `source` or a `filter`, since one naming none would start a run on every event its namespace can see; gains `namespace`, the namespace whose events it hears, its own where it names none, heard where that namespace grants this one's built-in identity `workflow:read`; and `map`, which fills the workflow inputs from the event as a webhook's does from its request. An event is published into a namespace with `POST /api/v1/{ns}/events`, rather than taken from the bus.
+- `on` says a manual run needs no declaration: a workflow's `inputs` are the boundary a person fills.
+- `wire.schema.json` gains `triggerKind`, the seven kinds of the Triggers table, `mcp` and `terraform` listed now so that a client of this release reads a run of a later one, and `run`, the record the API lists and reads, with `trigger_kind`, `triggered_by` and, for a run another workflow called, `from`, the calling run and step.
+- Fixtures: `triggers.yaml` covers every setting of the three declared kinds, another namespace's events filling an input by `map` among them; `sub-workflow.yaml` names the output its sync webhook returns; the invalid workflow fixtures pin the new rules, the schema's and the validator's, each validator fixture named after the rule the engine refuses it by; a `run` group holds three valid and five invalid records, which `tools/check.py` holds to `$defs/run`.
+- `tools/check.py` names among the routes `openapi.json` does not describe yet the three the documentation's table lists from v0.5.0: `GET /api/v1/{ns}/workflows/{name}/triggers`, `PUT /api/v1/{ns}/workflows/{name}/webhooks/{method}/{path}` and `POST /api/v1/{ns}/events`.
+- `openapi.json` and `fixtures/index.json` name `0.5.0`.
+
 ## v0.4.0, 2026-09-30
 
 - `workflow.schema.json` describes an included file as `$defs/fragment`: hidden blocks, `steps`, `defaults`, `vars`, `secrets` and `include`, refusing `apiVersion`, `kind`, `metadata`, `inputs`, `outputs`, `on`, `mcp`, `concurrency`, `timeout` and any other key, as the engine's reader does; the four blocks an entry point and a fragment both write are `$defs/includes`, `$defs/vars`, `$defs/secrets` and `$defs/steps`.

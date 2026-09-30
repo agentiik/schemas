@@ -13,8 +13,15 @@ Every repository of the project carries the same version and is tagged at the sa
   - Each takes `from`, `to`, `bucket` and `compare=previous`. `/runs` also takes `workflow` and `histogram`, `/steps` takes `workflow` and `by=hour`, and `/ports` takes `workflow`.
   - Each answers JSON, or CSV to `Accept: text/csv`.
   - Every bucket carries the `since` and the `until` that `GET /api/v1/runs` takes, the latter a nanosecond before the next bucket. A point therefore opens exactly the runs it counts.
-  - Durations are whole milliseconds.
+  - Durations are whole milliseconds. A task's queue wait runs from when it could be handed out, its creation or, for a further attempt, the end of its retry's backoff, to its dispatch.
+  - `compare=previous` adds the span just before the range in as many buckets of the same length, which ends where the range's first bucket begins; the examples show the two hours before rather than the day before.
+  - `/runs` refuses nobody it answers: a namespace or a workflow the caller cannot read counts nothing, as one that does not exist, since `GET /api/v1/runs` lists nothing for it either.
+  - `/steps` lists the steps in the order the latest version runs them, upstream first, since a graph keeps no order of declaration, and says what an attempt, its exit code, its duration and a fan-out's items a minute are counted from.
+  - `/ports` orders its steps as `/steps` does, and names beside the ports the latest version declares any port an older version declared that a run in the range published on.
+  - `/quotas` counts as refused every run refused for max_runs_per_hour, whatever asked for it, and says what an in-flight task and the artifact bytes held and written are counted from.
+  - `/stats/pools` says what a slot held and a capacity offered are counted from, takes no `compare`, and its CSV has no `period` column.
   - The routes are taken off `NOT_DESCRIBED_YET`.
+- `openapi.json` describes `GET /api/v1/runs`, served since v0.2.0, which the web console's runs view reads and its generated client may therefore call: `namespace`, `workflow`, `state`, `since`, `until` and `limit`, newest first, each run the `run` record of `wire.schema.json`. A limit outside 1 to 500 is read as 50, as the API reads it. The route is taken off `NOT_DESCRIBED_YET`, and a new tag, `runs`, holds it.
 
 ## v0.5.0, 2026-09-30
 

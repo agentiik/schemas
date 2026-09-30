@@ -4,8 +4,8 @@
   "info": {
     "title": "Agentiik API",
     "version": "0.5.0",
-    "summary": "The identity and access routes of /api/v1: signing in and out, a password and a TOTP generator beside it, the authentication policy, the caller, users, groups, service accounts, namespaces and their quotas, grants and API tokens; the workflow repositories; and the statistics the console's charts read.",
-    "description": "One description of the access routes of /api/v1 for the three clients that speak them, agk, the console and the Terraform provider, so that none of them learns the API from another's code. It describes the access routes of v0.3.0, the workflow repository routes of v0.4.0 and the statistics routes of v0.6.0, and no other yet; tools/check.py holds its routes to the table at https://agentiik.github.io/docs#api and names every route of the table this document does not describe. Every record the API shares with the rest of the contract, a user, a grant, a token, a namespace, the policy, a repository, a version, a resolved graph, is a reference into wire.schema.json beside it rather than a copy, so that the two cannot drift; a consumer resolves the references relative to this document. What is defined here is what only a route carries: a request body, a list, a token shown once, Web Authentication's own JSON forms. Every body is JSON of at most 64 KiB, or of 8 MiB for a recording of image pins and brick manifests, which carries manifests whole; it is closed to fields the route does not read, save Web Authentication's own objects, which are the browser's to extend, and a route that reads no body refuses one sent. Every refusal is {\"error\"}, with the setting of the authentication policy beside it where one is the reason, and a namespace or a workflow the caller cannot see is refused as one that does not exist, so that no name can be learnt by asking."
+    "summary": "The identity and access routes of /api/v1: signing in and out, a password and a TOTP generator beside it, the authentication policy, the caller, users, groups, service accounts, namespaces and their quotas, grants and API tokens; the workflow repositories; the runs listed; and the statistics the console's charts read.",
+    "description": "One description of the access routes of /api/v1 for the three clients that speak them, agk, the console and the Terraform provider, so that none of them learns the API from another's code. It describes the access routes of v0.3.0, the workflow repository routes of v0.4.0, and the runs listing and the statistics routes of v0.6.0, and no other yet; tools/check.py holds its routes to the table at https://agentiik.github.io/docs#api and names every route of the table this document does not describe. Every record the API shares with the rest of the contract, a user, a grant, a token, a namespace, the policy, a repository, a version, a resolved graph, is a reference into wire.schema.json beside it rather than a copy, so that the two cannot drift; a consumer resolves the references relative to this document. What is defined here is what only a route carries: a request body, a list, a token shown once, Web Authentication's own JSON forms. Every body is JSON of at most 64 KiB, or of 8 MiB for a recording of image pins and brick manifests, which carries manifests whole; it is closed to fields the route does not read, save Web Authentication's own objects, which are the browser's to extend, and a route that reads no body refuses one sent. Every refusal is {\"error\"}, with the setting of the authentication policy beside it where one is the reason, and a namespace or a workflow the caller cannot see is refused as one that does not exist, so that no name can be learnt by asking."
   },
   "externalDocs": {
     "description": "The documentation, which decides what the API does: this document follows it.",
@@ -63,6 +63,10 @@
     {
       "name": "workflows",
       "description": "Workflow repositories, created, read, renamed, moved, protected and deleted, the tree at a ref, and the image pins and brick manifests a push is judged against. Git itself is spoken at /{ns}/{name}.git, with an API token as the password, and is git's own protocol rather than this document's."
+    },
+    {
+      "name": "runs",
+      "description": "Runs, listed across the namespaces the caller reads. From v0.6.0 in this document, served since v0.2.0."
     },
     {
       "name": "statistics",
@@ -5006,6 +5010,111 @@
         }
       }
     },
+    "/api/v1/runs": {
+      "get": {
+        "operationId": "listRuns",
+        "tags": [
+          "runs"
+        ],
+        "summary": "List runs",
+        "description": "The runs of every workflow the caller holds run:read on, over its namespace or itself, newest first, each with its namespace, its trigger_kind and its triggered_by: where the console's runs view and a phone open. Every workflow it could list is asked about as one question, a namespace the caller holds nothing in included, so that a listing is no way of learning which namespaces and workflows exist, by what it answers or by how long it takes. Also served within one namespace as GET /api/v1/{ns}/runs, which reads the namespace from its path and no namespace from its query.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#api"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/runsNamespace"
+          },
+          {
+            "$ref": "#/components/parameters/runsWorkflow"
+          },
+          {
+            "$ref": "#/components/parameters/runsState"
+          },
+          {
+            "$ref": "#/components/parameters/runsSince"
+          },
+          {
+            "$ref": "#/components/parameters/runsUntil"
+          },
+          {
+            "$ref": "#/components/parameters/runsLimit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/runList"
+                },
+                "examples": {
+                  "runs": {
+                    "summary": "a failed run and a running one",
+                    "value": {
+                      "runs": [
+                        {
+                          "namespace": "finance",
+                          "run": "01JMZ8V1P9C4XQ7K2N4D6F8H0A",
+                          "workflow": "monthly-invoicing",
+                          "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                          "state": "failed",
+                          "trigger_kind": "manual",
+                          "triggered_by": "alice",
+                          "created_at": "2026-10-01T05:41:03Z",
+                          "started_at": "2026-10-01T05:41:03Z",
+                          "finished_at": "2026-10-01T05:42:55Z"
+                        },
+                        {
+                          "namespace": "finance",
+                          "run": "01JMZ8S3H6X8QK2N4D6F8H0A2C",
+                          "workflow": "ledger-export",
+                          "commit": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                          "state": "running",
+                          "trigger_kind": "webhook",
+                          "triggered_by": "finance/agentiik",
+                          "created_at": "2026-10-01T05:28:44Z",
+                          "started_at": "2026-10-01T05:28:45Z"
+                        }
+                      ]
+                    }
+                  },
+                  "nothing": {
+                    "summary": "a namespace the caller cannot read, or one with no run",
+                    "value": {
+                      "runs": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A state that is no run state, or a since or an until that is no time.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "state": {
+                    "summary": "a state misspelt",
+                    "value": {
+                      "error": "\"failing\" is not a run state"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          }
+        }
+      }
+    },
     "/api/v1/{ns}/stats/runs": {
       "parameters": [
         {
@@ -5175,7 +5284,7 @@
                     }
                   },
                   "compared": {
-                    "summary": "with the day before and a histogram",
+                    "summary": "with the two hours before and a histogram",
                     "value": {
                       "from": "2026-09-30T06:00:00Z",
                       "to": "2026-09-30T08:00:00Z",
@@ -5259,12 +5368,12 @@
                         }
                       ],
                       "previous": {
-                        "from": "2026-09-29T06:00:00Z",
-                        "to": "2026-09-29T08:00:00Z",
+                        "from": "2026-09-30T04:00:00Z",
+                        "to": "2026-09-30T06:00:00Z",
                         "buckets": [
                           {
-                            "since": "2026-09-29T06:00:00Z",
-                            "until": "2026-09-29T06:59:59.999999999Z",
+                            "since": "2026-09-30T04:00:00Z",
+                            "until": "2026-09-30T04:59:59.999999999Z",
                             "runs": {
                               "queued": 0,
                               "running": 0,
@@ -5287,8 +5396,8 @@
                             "retries": []
                           },
                           {
-                            "since": "2026-09-29T07:00:00Z",
-                            "until": "2026-09-29T07:59:59.999999999Z",
+                            "since": "2026-09-30T05:00:00Z",
+                            "until": "2026-09-30T05:59:59.999999999Z",
                             "runs": {
                               "queued": 0,
                               "running": 0,
@@ -5347,11 +5456,7 @@
           },
           "403": {
             "$ref": "#/components/responses/forbidden",
-            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
-          },
-          "404": {
-            "$ref": "#/components/responses/notFound",
-            "description": "No such namespace, one the caller holds nothing in and does not administer, or a workflow named that it does not hold run:read on."
+            "description": "Only for a session that may only enrol. Nothing else is refused: a namespace or a workflow the caller cannot read counts nothing, which is what one that does not exist counts, so that a series is no way of learning which exist."
           }
         }
       }
@@ -5537,7 +5642,7 @@
               "text/csv": {
                 "schema": {
                   "type": "string",
-                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a step and a bucket; with by=hour, one a step, a weekday and an hour, under weekday, hour and duration_p50_ms. Exit codes are not in the CSV.",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a step and a bucket, every step's buckets in turn; with by=hour, one a step, a weekday and an hour, under period, step, weekday, hour and duration_p50_ms. Exit codes are not in the CSV.",
                   "examples": [
                     "period,step,since,until,attempts,duration_p50_ms,duration_p95_ms,duration_p99_ms,items_per_minute\r\ncurrent,normalize,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,12,1200,1900,2100,\r\ncurrent,invoice,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,15,178000,240000,251000,74.5\r\n"
                   ]
@@ -5675,7 +5780,7 @@
               "text/csv": {
                 "schema": {
                   "type": "string",
-                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a step, a port and a bucket.",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a step, a port and a bucket, in that order: every bucket of a port in turn, the ports of a step in the order it declares them.",
                   "examples": [
                     "period,step,port,since,until,items\r\ncurrent,normalize,ok,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,2502\r\ncurrent,normalize,rejected,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,38\r\n"
                   ]
@@ -5965,7 +6070,7 @@
               "text/csv": {
                 "schema": {
                   "type": "string",
-                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a pool or a runner and a bucket, runner empty on a pool's rows. Silences are not in the CSV, which is a table of buckets.",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure. One row a pool and a bucket, its runner empty, then a row each of its runners and a bucket. Silences are not in the CSV, which is a table of buckets.",
                   "examples": [
                     "pool,runner,since,until,slots_in_use_max,capacity\r\ndefault,,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,10,16\r\ndefault,build-01,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,6,8\r\n"
                   ]
@@ -10419,7 +10524,7 @@
           },
           "queue_wait_ms": {
             "$ref": "#/components/schemas/statsPercentiles",
-            "description": "How long the tasks of those runs waited, from the task's creation to its dispatch: the time a runner took to have room. Absent where no task was dispatched.",
+            "description": "How long the tasks of those runs waited, from when each could be handed out to its dispatch: the time a runner took to have room. A task can be handed out from its creation or, for a further attempt, from the end of its retry's backoff, which is the step's policy rather than a wait for room. A task written before v0.6.0 recorded neither and counts no wait. Absent where no task was dispatched.",
             "examples": [
               {
                 "p50": 420,
@@ -10681,16 +10786,16 @@
             "properties": {
               "from": {
                 "$ref": "wire.schema.json#/$defs/timestamp",
-                "description": "The start of the span before, included: from minus the range's length.",
+                "description": "The start of the span before, included: from minus as many buckets as the range takes, which is from minus the range's length where from and to fall on bucket boundaries.",
                 "examples": [
-                  "2026-09-29T06:00:00Z"
+                  "2026-09-30T04:00:00Z"
                 ]
               },
               "to": {
                 "$ref": "wire.schema.json#/$defs/timestamp",
-                "description": "The end of the span before, excluded: the range's from.",
+                "description": "The end of the span before, excluded: to minus as many buckets as the range takes, which is the range's from where from and to fall on bucket boundaries.",
                 "examples": [
-                  "2026-09-29T08:00:00Z"
+                  "2026-09-30T06:00:00Z"
                 ]
               },
               "buckets": {
@@ -10698,12 +10803,12 @@
                 "items": {
                   "$ref": "#/components/schemas/statsRunsBucket"
                 },
-                "description": "The buckets of the span before, in the range's own length.",
+                "description": "The buckets of the span before, as many as the range's, ending where the range's first begins.",
                 "examples": [
                   [
                     {
-                      "since": "2026-09-29T06:00:00Z",
-                      "until": "2026-09-29T06:59:59.999999999Z",
+                      "since": "2026-09-30T04:00:00Z",
+                      "until": "2026-09-30T04:59:59.999999999Z",
                       "runs": {
                         "queued": 0,
                         "running": 0,
@@ -10726,8 +10831,8 @@
                       "retries": []
                     },
                     {
-                      "since": "2026-09-29T07:00:00Z",
-                      "until": "2026-09-29T07:59:59.999999999Z",
+                      "since": "2026-09-30T05:00:00Z",
+                      "until": "2026-09-30T05:59:59.999999999Z",
                       "runs": {
                         "queued": 0,
                         "running": 0,
@@ -10832,12 +10937,12 @@
             },
             "examples": [
               {
-                "from": "2026-09-29T06:00:00Z",
-                "to": "2026-09-29T08:00:00Z",
+                "from": "2026-09-30T04:00:00Z",
+                "to": "2026-09-30T06:00:00Z",
                 "buckets": [
                   {
-                    "since": "2026-09-29T06:00:00Z",
-                    "until": "2026-09-29T06:59:59.999999999Z",
+                    "since": "2026-09-30T04:00:00Z",
+                    "until": "2026-09-30T04:59:59.999999999Z",
                     "runs": {
                       "queued": 0,
                       "running": 0,
@@ -10860,8 +10965,8 @@
                     "retries": []
                   },
                   {
-                    "since": "2026-09-29T07:00:00Z",
-                    "until": "2026-09-29T07:59:59.999999999Z",
+                    "since": "2026-09-30T05:00:00Z",
+                    "until": "2026-09-30T05:59:59.999999999Z",
                     "runs": {
                       "queued": 0,
                       "running": 0,
@@ -10891,7 +10996,7 @@
                 ]
               }
             ],
-            "description": "The same span just before the range, in the same buckets, with its histogram where one was asked for. Present where compare=previous."
+            "description": "The span just before the range, in as many buckets of the same length, with its histogram where one was asked for. Present where compare=previous."
           }
         },
         "examples": [
@@ -11089,12 +11194,12 @@
               }
             ],
             "previous": {
-              "from": "2026-09-29T06:00:00Z",
-              "to": "2026-09-29T08:00:00Z",
+              "from": "2026-09-30T04:00:00Z",
+              "to": "2026-09-30T06:00:00Z",
               "buckets": [
                 {
-                  "since": "2026-09-29T06:00:00Z",
-                  "until": "2026-09-29T06:59:59.999999999Z",
+                  "since": "2026-09-30T04:00:00Z",
+                  "until": "2026-09-30T04:59:59.999999999Z",
                   "runs": {
                     "queued": 0,
                     "running": 0,
@@ -11117,8 +11222,8 @@
                   "retries": []
                 },
                 {
-                  "since": "2026-09-29T07:00:00Z",
-                  "until": "2026-09-29T07:59:59.999999999Z",
+                  "since": "2026-09-30T05:00:00Z",
+                  "until": "2026-09-30T05:59:59.999999999Z",
                   "runs": {
                     "queued": 0,
                     "running": 0,
@@ -11178,7 +11283,7 @@
           },
           "duration_ms": {
             "$ref": "#/components/schemas/statsPercentiles",
-            "description": "How long its attempts ran, from dispatch to their end, each shard of a fan-out an attempt of its own. Absent where none ended.",
+            "description": "How long its attempts that ended ran, from their last dispatch to their end, each shard of a fan-out an attempt of its own: a lost dispatch handed out again is the same attempt. Absent where none ended.",
             "examples": [
               {
                 "p50": 1200,
@@ -11190,14 +11295,14 @@
           "attempts": {
             "type": "integer",
             "minimum": 0,
-            "description": "How many attempts it was dispatched, retries and shards included.",
+            "description": "How many attempts it was handed out, retries and shards included, one still running among them.",
             "examples": [
               12
             ]
           },
           "exit_codes": {
             "$ref": "#/components/schemas/statsExitCodes",
-            "description": "Those attempts by the exit code they ended with, 0 among them.",
+            "description": "The attempts that ended, by the exit code of their last dispatch, 0 among them: one still running is counted in attempts and not here.",
             "examples": [
               [
                 {
@@ -11210,7 +11315,7 @@
           "items_per_minute": {
             "type": "number",
             "minimum": 0,
-            "description": "For a step that fans out, the items its shards consumed a minute while any of them ran, over the bucket. Absent for any other step.",
+            "description": "For a step that fans out, the items its shards consumed a minute while any of them ran, over the runs created in the bucket: the items of the shards that succeeded, each the longest of its input ports, which is what a fan-out cuts on, over the time any dispatch of a shard ran, a minute two ran side by side counted once. Absent for any other step, and where no shard ran.",
             "examples": [
               74.5
             ]
@@ -11264,7 +11369,7 @@
           "weekday",
           "hour"
         ],
-        "description": "One cell of the heatmap: the attempts of the step dispatched on that weekday, in that hour, in UTC, over the range.",
+        "description": "One cell of the heatmap: the attempts of the step in the runs created over the range that ended, by the weekday and the hour of the day of their last dispatch, in UTC.",
         "properties": {
           "weekday": {
             "type": "integer",
@@ -11538,7 +11643,7 @@
                 }
               ]
             },
-            "description": "The steps of the workflow, in the order its latest version declares them, a step it no longer declares after them where the range reaches runs of an older version.",
+            "description": "The steps of the workflow in the order its latest version runs them, upstream first and those no edge orders by name, then, by name, a step it no longer declares where the range reaches runs of an older version. The latest version is the head of the default branch, or, for a workflow no git push has filled, the last version a tree push recorded. A graph keeps no order of declaration, so the order is the one a reader of the workflow meets its steps in.",
             "examples": [
               [
                 {
@@ -11781,7 +11886,7 @@
               "type": "integer",
               "minimum": 0
             },
-            "description": "The items published on each output port of the step, from each envelope's meta.count and never its items, so that run:read_data is never asked. Every port the step declares is named, 0 where it published nothing. The share rejected, or sent to error, is what the rejected or the error port published over what every output port of the step did, which a client works out.",
+            "description": "The items published on each output port of the step, summed over the runs created in the bucket, from the count each envelope's meta.count gives and the step's record keeps, and never from its items, so that run:read_data is never asked. Every port the latest version declares on the step is named, 0 where it published nothing, and so is a port an older version declared that a run in the range published on. The share rejected, or sent to error, is what the rejected or the error port published over what every output port of the step did, which a client works out.",
             "examples": [
               {
                 "ok": 2502,
@@ -11949,7 +12054,7 @@
                 }
               ]
             },
-            "description": "The steps of the workflow, in the order its latest version declares them.",
+            "description": "The steps of the workflow in the order its latest version runs them, upstream first and those no edge orders by name, then, by name, a step it no longer declares where the range reaches runs of an older version, as GET /api/v1/{ns}/stats/steps orders them.",
             "examples": [
               [
                 {
@@ -12091,7 +12196,7 @@
           "runs_refused": {
             "type": "integer",
             "minimum": 0,
-            "description": "The runs refused with 429 in the bucket for max_runs_per_hour.",
+            "description": "The runs refused for max_runs_per_hour in the bucket, whatever asked for them: a request answered 429, a schedule or an event firing recorded as skipped, or a call failed. A refusal is counted where it is decided, a minute at a time.",
             "examples": [
               37
             ]
@@ -12099,7 +12204,7 @@
           "tasks_in_flight_max": {
             "type": "integer",
             "minimum": 0,
-            "description": "The most tasks dispatched and not yet ended at once in the bucket, against max_concurrent_tasks.",
+            "description": "The most tasks handed out, or on their way to a runner, and not yet ended at once in the bucket, which is what max_concurrent_tasks counts: one ending as another is handed out is not two at once, and one still running is in flight until now.",
             "examples": [
               20
             ]
@@ -12107,7 +12212,7 @@
           "artifact_bytes": {
             "type": "integer",
             "minimum": 0,
-            "description": "The bytes of the namespace's live artifacts at the bucket's end, against max_artifact_bytes.",
+            "description": "The bytes max_artifact_bytes counted at the bucket's end: the namespace's artifacts written by then and neither expired nor retired, each digest once.",
             "examples": [
               48318382080
             ]
@@ -12115,7 +12220,7 @@
           "artifact_bytes_added": {
             "type": "integer",
             "minimum": 0,
-            "description": "The bytes stored in the bucket.",
+            "description": "The bytes of the artifacts written in the bucket, each digest once.",
             "examples": [
               1073741824
             ]
@@ -12233,16 +12338,16 @@
             "properties": {
               "from": {
                 "$ref": "wire.schema.json#/$defs/timestamp",
-                "description": "The start of the span before, included: from minus the range's length.",
+                "description": "The start of the span before, included: from minus as many buckets as the range takes, which is from minus the range's length where from and to fall on bucket boundaries.",
                 "examples": [
-                  "2026-09-29T06:00:00Z"
+                  "2026-09-30T04:00:00Z"
                 ]
               },
               "to": {
                 "$ref": "wire.schema.json#/$defs/timestamp",
-                "description": "The end of the span before, excluded: the range's from.",
+                "description": "The end of the span before, excluded: to minus as many buckets as the range takes, which is the range's from where from and to fall on bucket boundaries.",
                 "examples": [
-                  "2026-09-29T08:00:00Z"
+                  "2026-09-30T06:00:00Z"
                 ]
               },
               "buckets": {
@@ -12250,7 +12355,7 @@
                 "items": {
                   "$ref": "#/components/schemas/statsQuotaBucket"
                 },
-                "description": "The buckets of the span before.",
+                "description": "The buckets of the span before, as many as the range's, ending where the range's first begins.",
                 "examples": [
                   [
                     {
@@ -12268,12 +12373,12 @@
             },
             "examples": [
               {
-                "from": "2026-09-29T06:00:00Z",
-                "to": "2026-09-29T08:00:00Z",
+                "from": "2026-09-30T04:00:00Z",
+                "to": "2026-09-30T06:00:00Z",
                 "buckets": [
                   {
-                    "since": "2026-09-29T06:00:00Z",
-                    "until": "2026-09-29T06:59:59.999999999Z",
+                    "since": "2026-09-30T04:00:00Z",
+                    "until": "2026-09-30T04:59:59.999999999Z",
                     "runs_created": 412,
                     "runs_refused": 0,
                     "tasks_in_flight_max": 20,
@@ -12283,7 +12388,7 @@
                 ]
               }
             ],
-            "description": "The same span just before the range. Present where compare=previous."
+            "description": "The span just before the range, in as many buckets of the same length. Present where compare=previous."
           }
         },
         "examples": [
@@ -12367,7 +12472,7 @@
           "slots_in_use_max": {
             "type": "integer",
             "minimum": 0,
-            "description": "The most slots in use at once in the bucket, as the heartbeats reported them.",
+            "description": "The most slots in use at once in the bucket: the tasks held from when the runner redeemed each to when it ended, one ending as another is taken not two at once.",
             "examples": [
               6
             ]
@@ -12406,7 +12511,7 @@
           "bucket",
           "pools"
         ],
-        "description": "Every pool's slots and each of its runners', bucket by bucket, and every silence between a runner's heartbeats over the range. Administrator only.",
+        "description": "Every pool's slots and each of its runners', bucket by bucket, and every silence between a runner's heartbeats over the range. Administrator only. compare=previous is not taken: what a chart of the pools sets a runner against is its capacity.",
         "properties": {
           "from": {
             "$ref": "wire.schema.json#/$defs/timestamp",
@@ -12459,7 +12564,7 @@
                   "items": {
                     "$ref": "#/components/schemas/statsSlotBucket"
                   },
-                  "description": "The pool's slots, its runners' summed, every bucket of the range, oldest first.",
+                  "description": "The pool's slots, every bucket of the range, oldest first: the most its runners held at once together, and what they offered together at the bucket's end.",
                   "examples": [
                     [
                       {
@@ -12501,7 +12606,7 @@
                         "items": {
                           "$ref": "#/components/schemas/statsSlotBucket"
                         },
-                        "description": "Its slots, every bucket of the range, oldest first.",
+                        "description": "Its slots, every bucket of the range, oldest first: a task holds one from when the runner redeemed it to when it ended, or until now, and the runner offers its concurrency while it is ready and reports itself ready, nothing while it is drained, draining, unhealthy or revoked, and nothing once silent for 30 s.",
                         "examples": [
                           [
                             {
@@ -12889,6 +12994,84 @@
             ]
           }
         ]
+      },
+      "runList": {
+        "title": "Run list",
+        "type": "object",
+        "required": [
+          "runs"
+        ],
+        "additionalProperties": false,
+        "description": "Runs as the caller may read them, newest first by when they were created.",
+        "properties": {
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "wire.schema.json#/$defs/run"
+            },
+            "description": "The runs of the workflows the caller holds run:read on, narrowed as the query asks, newest first. Empty where nothing matches, a namespace or a workflow the caller cannot read included.",
+            "examples": [
+              [
+                {
+                  "namespace": "finance",
+                  "run": "01JMZ8V1P9C4XQ7K2N4D6F8H0A",
+                  "workflow": "monthly-invoicing",
+                  "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                  "state": "failed",
+                  "trigger_kind": "manual",
+                  "triggered_by": "alice",
+                  "created_at": "2026-10-01T05:41:03Z",
+                  "started_at": "2026-10-01T05:41:03Z",
+                  "finished_at": "2026-10-01T05:42:55Z"
+                },
+                {
+                  "namespace": "finance",
+                  "run": "01JMZ8S3H6X8QK2N4D6F8H0A2C",
+                  "workflow": "ledger-export",
+                  "commit": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                  "state": "running",
+                  "trigger_kind": "webhook",
+                  "triggered_by": "finance/agentiik",
+                  "created_at": "2026-10-01T05:28:44Z",
+                  "started_at": "2026-10-01T05:28:45Z"
+                }
+              ],
+              []
+            ]
+          }
+        },
+        "examples": [
+          {
+            "runs": [
+              {
+                "namespace": "finance",
+                "run": "01JMZ8V1P9C4XQ7K2N4D6F8H0A",
+                "workflow": "monthly-invoicing",
+                "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                "state": "failed",
+                "trigger_kind": "manual",
+                "triggered_by": "alice",
+                "created_at": "2026-10-01T05:41:03Z",
+                "started_at": "2026-10-01T05:41:03Z",
+                "finished_at": "2026-10-01T05:42:55Z"
+              },
+              {
+                "namespace": "finance",
+                "run": "01JMZ8S3H6X8QK2N4D6F8H0A2C",
+                "workflow": "ledger-export",
+                "commit": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                "state": "running",
+                "trigger_kind": "webhook",
+                "triggered_by": "finance/agentiik",
+                "created_at": "2026-10-01T05:28:44Z",
+                "started_at": "2026-10-01T05:28:45Z"
+              }
+            ]
+          },
+          {
+            "runs": []
+          }
+        ]
       }
     },
     "parameters": {
@@ -13232,7 +13415,7 @@
         "name": "compare",
         "in": "query",
         "required": false,
-        "description": "previous adds the same span just before the range, in the same buckets, under previous, so that a chart draws it behind and a figure shows its change. The only value.",
+        "description": "previous adds the span just before the range, in as many buckets of the same length, under previous, so that a chart draws it behind point for point and a figure shows its change. The only value.",
         "schema": {
           "type": "string",
           "enum": [
@@ -13250,7 +13433,7 @@
         "name": "workflow",
         "in": "query",
         "required": false,
-        "description": "Narrows the series to one workflow of the namespace. Answered 404, as a workflow that does not exist, where the caller does not hold run:read on it.",
+        "description": "Narrows the series to one workflow of the namespace. One the caller does not hold run:read on counts nothing, as a workflow that does not exist does, rather than being refused: GET /api/v1/runs lists nothing for it either.",
         "schema": {
           "$ref": "wire.schema.json#/$defs/identifier"
         },
@@ -13308,6 +13491,104 @@
           "hour": {
             "summary": "by weekday and hour",
             "value": "hour"
+          }
+        }
+      },
+      "runsNamespace": {
+        "name": "namespace",
+        "in": "query",
+        "required": false,
+        "description": "Narrows the listing to one namespace. One the caller cannot read lists what one that does not exist lists, nothing, rather than being refused, so that no name can be learnt by asking.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/namespace"
+        },
+        "examples": {
+          "shared": {
+            "summary": "a team's namespace",
+            "value": "finance"
+          }
+        }
+      },
+      "runsWorkflow": {
+        "name": "workflow",
+        "in": "query",
+        "required": false,
+        "description": "Narrows the listing to the workflows of that name, in the namespace given or in every one the caller reads. One the caller does not hold run:read on lists nothing, as one that does not exist does.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/identifier"
+        },
+        "examples": {
+          "one workflow": {
+            "summary": "the invoicing workflow",
+            "value": "monthly-invoicing"
+          }
+        }
+      },
+      "runsState": {
+        "name": "state",
+        "in": "query",
+        "required": false,
+        "description": "Narrows the listing to the runs in one state. A word that is no run state is refused with 400.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/runState"
+        },
+        "examples": {
+          "failed": {
+            "summary": "the runs that failed",
+            "value": "failed"
+          }
+        }
+      },
+      "runsSince": {
+        "name": "since",
+        "in": "query",
+        "required": false,
+        "description": "The runs created at this instant or after it, in RFC 3339. A value that is no such time is refused with 400.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/timestamp"
+        },
+        "examples": {
+          "a day": {
+            "summary": "from the start of a day",
+            "value": "2026-10-01T00:00:00Z"
+          }
+        }
+      },
+      "runsUntil": {
+        "name": "until",
+        "in": "query",
+        "required": false,
+        "description": "The runs created at this instant or before it, in RFC 3339, both bounds being included. A statistics bucket carries the since and until that open the runs it counts.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/timestamp"
+        },
+        "examples": {
+          "a bucket's end": {
+            "summary": "the last nanosecond of a day",
+            "value": "2026-10-01T23:59:59.999999999Z"
+          }
+        }
+      },
+      "runsLimit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "How many runs at most, newest first: 50 when left out, and at most 500. A limit outside 1 to 500, or no whole number, is read as 50 rather than refused.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500,
+          "default": 50,
+          "description": "The most runs answered.",
+          "examples": [
+            25,
+            50
+          ]
+        },
+        "examples": {
+          "a page": {
+            "summary": "a page of the console's list",
+            "value": 25
           }
         }
       }

@@ -6,6 +6,16 @@ Every repository of the project carries the same version and is tagged at the sa
 
 `0.y.z` promises nothing beyond itself: what a release here describes may be gone in the next one.
 
+## Unreleased
+
+- `openapi.json` describes the statistics routes the web console's charts read, served from v0.6.0:
+  - The routes are `GET /api/v1/{ns}/stats/runs`, `/steps`, `/ports` and `/quotas`, and `GET /api/v1/stats/pools`.
+  - Each takes `from`, `to`, `bucket` and `compare=previous`. `/runs` also takes `workflow` and `histogram`, `/steps` takes `workflow` and `by=hour`, and `/ports` takes `workflow`.
+  - Each answers JSON, or CSV to `Accept: text/csv`.
+  - Every bucket carries the `since` and the `until` that `GET /api/v1/runs` takes, the latter a nanosecond before the next bucket. A point therefore opens exactly the runs it counts.
+  - Durations are whole milliseconds.
+  - The routes are taken off `NOT_DESCRIBED_YET`.
+
 ## v0.5.0, 2026-09-30
 
 - `workflow.schema.json` holds the trigger declarations to what v0.5.0 builds. `on.schedule[].cron` is five cron fields, each `*`, a value, a range, `*` or a range stepped by `/n`, or a list of those, a month or a weekday by name, and refuses `?`, `L`, a sixth field, `@daily` and a value stepped on its own, `5/15`, which crons read two ways; `timezone` is an IANA zone name, `UTC` where absent, `Local` refused; `catch_up` makes up each missed occurrence exactly once, with the instant it was due as `trigger.scheduled_for`.

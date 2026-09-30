@@ -2087,6 +2087,13 @@ NOT_DESCRIBED_YET = (
         ("PUT /api/v1/{ns}/workflows/{name}/versions/{commit}",),
     ),
     (
+        "a workflow's triggers, served from v0.5.0: what its default branch arms, and what a webhook checks its caller against, written and never read back; no roadmap task adds them to this document yet",
+        (
+            "GET /api/v1/{ns}/workflows/{name}/triggers",
+            "PUT /api/v1/{ns}/workflows/{name}/webhooks/{method}/{path}",
+        ),
+    ),
+    (
         "runs and their data; no roadmap task adds them to this document yet",
         (
             "POST /api/v1/{ns}/workflows/{name}/runs",

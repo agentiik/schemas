@@ -532,6 +532,12 @@
           "reference": "https://agentiik.github.io/docs/#triggers"
         },
         {
+          "file": "workflow/invalid/event-trigger-empty.yaml",
+          "rule": "An event trigger naming nothing it listens for. It would start a run on every event its namespace can see, so a subscription names a type, a source or a filter.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#triggers"
+        },
+        {
           "file": "workflow/invalid/concurrency-cancel-not-boolean.yaml",
           "rule": "A concurrency policy whose cancel_in_progress is not a boolean. The arriving run either waits or cancels, and there is no third answer.",
           "refused_by": "schema",

@@ -466,7 +466,7 @@
           "reference": "https://agentiik.github.io/docs/#triggers"
         },
         {
-          "file": "workflow/invalid/cron-minute-sixty.yaml",
+          "file": "workflow/invalid/cron-value-out-of-range.yaml",
           "rule": "A cron field naming a minute past the hour's last. Each field is bounded by what it counts, and a value outside it names an occurrence that never comes.",
           "refused_by": "validator",
           "reference": "https://agentiik.github.io/docs/#triggers"
@@ -520,7 +520,7 @@
           "reference": "https://agentiik.github.io/docs/#triggers"
         },
         {
-          "file": "workflow/invalid/webhook-path-twice.yaml",
+          "file": "workflow/invalid/webhook-duplicate-path.yaml",
           "rule": "Two webhooks answering one path with one method. A request would start whichever the engine found first, so a path and a method answer one trigger.",
           "refused_by": "validator",
           "reference": "https://agentiik.github.io/docs/#triggers"

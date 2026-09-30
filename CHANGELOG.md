@@ -19,6 +19,7 @@ Every repository of the project carries the same version and is tagged at the sa
   - `/steps` lists the steps in the order the latest version runs them, upstream first, since a graph keeps no order of declaration, and says what an attempt, its exit code, its duration and a fan-out's items a minute are counted from.
   - `/ports` orders its steps as `/steps` does, and names beside the ports the latest version declares any port an older version declared that a run in the range published on.
   - `/quotas` counts as refused every run refused for max_runs_per_hour, whatever asked for it, and says what an in-flight task and the artifact bytes held and written are counted from.
+  - `/stats/pools` says what a slot held and a capacity offered are counted from, takes no `compare`, and its CSV has no `period` column.
   - The routes are taken off `NOT_DESCRIBED_YET`.
 
 ## v0.5.0, 2026-09-30

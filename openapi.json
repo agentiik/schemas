@@ -5961,7 +5961,7 @@
               "text/csv": {
                 "schema": {
                   "type": "string",
-                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a pool or a runner and a bucket, runner empty on a pool's rows. Silences are not in the CSV, which is a table of buckets.",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure. One row a pool and a bucket, its runner empty, then a row each of its runners and a bucket. Silences are not in the CSV, which is a table of buckets.",
                   "examples": [
                     "pool,runner,since,until,slots_in_use_max,capacity\r\ndefault,,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,10,16\r\ndefault,build-01,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,6,8\r\n"
                   ]
@@ -12402,7 +12402,7 @@
           "bucket",
           "pools"
         ],
-        "description": "Every pool's slots and each of its runners', bucket by bucket, and every silence between a runner's heartbeats over the range. Administrator only.",
+        "description": "Every pool's slots and each of its runners', bucket by bucket, and every silence between a runner's heartbeats over the range. Administrator only. compare=previous is not taken: what a chart of the pools sets a runner against is its capacity.",
         "properties": {
           "from": {
             "$ref": "wire.schema.json#/$defs/timestamp",
@@ -12455,7 +12455,7 @@
                   "items": {
                     "$ref": "#/components/schemas/statsSlotBucket"
                   },
-                  "description": "The pool's slots, its runners' summed, every bucket of the range, oldest first.",
+                  "description": "The pool's slots, every bucket of the range, oldest first: the most its runners held at once together, and what they offered together at the bucket's end.",
                   "examples": [
                     [
                       {
@@ -12497,7 +12497,7 @@
                         "items": {
                           "$ref": "#/components/schemas/statsSlotBucket"
                         },
-                        "description": "Its slots, every bucket of the range, oldest first.",
+                        "description": "Its slots, every bucket of the range, oldest first: a task holds one from when the runner redeemed it to when it ended, or until now, and the runner offers its concurrency while it is ready and reports itself ready, nothing while it is drained, draining, unhealthy or revoked, and nothing once silent for 30 s.",
                         "examples": [
                           [
                             {

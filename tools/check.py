@@ -109,6 +109,7 @@ SCHEMAS = {
     "repository": {"file": "wire.schema.json", "pointer": "#/$defs/repository"},
     "ref": {"file": "wire.schema.json", "pointer": "#/$defs/ref"},
     "version": {"file": "wire.schema.json", "pointer": "#/$defs/version"},
+    "run": {"file": "wire.schema.json", "pointer": "#/$defs/run"},
     "resolved-graph": {"file": "wire.schema.json", "pointer": "#/$defs/resolvedGraph"},
 }
 

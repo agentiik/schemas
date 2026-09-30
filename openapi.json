@@ -5175,7 +5175,7 @@
                     }
                   },
                   "compared": {
-                    "summary": "with the day before and a histogram",
+                    "summary": "with the two hours before and a histogram",
                     "value": {
                       "from": "2026-09-30T06:00:00Z",
                       "to": "2026-09-30T08:00:00Z",
@@ -5259,12 +5259,12 @@
                         }
                       ],
                       "previous": {
-                        "from": "2026-09-29T06:00:00Z",
-                        "to": "2026-09-29T08:00:00Z",
+                        "from": "2026-09-30T04:00:00Z",
+                        "to": "2026-09-30T06:00:00Z",
                         "buckets": [
                           {
-                            "since": "2026-09-29T06:00:00Z",
-                            "until": "2026-09-29T06:59:59.999999999Z",
+                            "since": "2026-09-30T04:00:00Z",
+                            "until": "2026-09-30T04:59:59.999999999Z",
                             "runs": {
                               "queued": 0,
                               "running": 0,
@@ -5287,8 +5287,8 @@
                             "retries": []
                           },
                           {
-                            "since": "2026-09-29T07:00:00Z",
-                            "until": "2026-09-29T07:59:59.999999999Z",
+                            "since": "2026-09-30T05:00:00Z",
+                            "until": "2026-09-30T05:59:59.999999999Z",
                             "runs": {
                               "queued": 0,
                               "running": 0,
@@ -5347,11 +5347,7 @@
           },
           "403": {
             "$ref": "#/components/responses/forbidden",
-            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
-          },
-          "404": {
-            "$ref": "#/components/responses/notFound",
-            "description": "No such namespace, one the caller holds nothing in and does not administer, or a workflow named that it does not hold run:read on."
+            "description": "Only for a session that may only enrol. Nothing else is refused: a namespace or a workflow the caller cannot read counts nothing, which is what one that does not exist counts, so that a series is no way of learning which exist."
           }
         }
       }
@@ -10419,7 +10415,7 @@
           },
           "queue_wait_ms": {
             "$ref": "#/components/schemas/statsPercentiles",
-            "description": "How long the tasks of those runs waited, from the task's creation to its dispatch: the time a runner took to have room. Absent where no task was dispatched.",
+            "description": "How long the tasks of those runs waited, from when each could be handed out to its dispatch: the time a runner took to have room. A task can be handed out from its creation or, for a further attempt, from the end of its retry's backoff, which is the step's policy rather than a wait for room. A task written before v0.6.0 recorded neither and counts no wait. Absent where no task was dispatched.",
             "examples": [
               {
                 "p50": 420,
@@ -10681,16 +10677,16 @@
             "properties": {
               "from": {
                 "$ref": "wire.schema.json#/$defs/timestamp",
-                "description": "The start of the span before, included: from minus the range's length.",
+                "description": "The start of the span before, included: from minus as many buckets as the range takes, which is from minus the range's length where from and to fall on bucket boundaries.",
                 "examples": [
-                  "2026-09-29T06:00:00Z"
+                  "2026-09-30T04:00:00Z"
                 ]
               },
               "to": {
                 "$ref": "wire.schema.json#/$defs/timestamp",
-                "description": "The end of the span before, excluded: the range's from.",
+                "description": "The end of the span before, excluded: to minus as many buckets as the range takes, which is the range's from where from and to fall on bucket boundaries.",
                 "examples": [
-                  "2026-09-29T08:00:00Z"
+                  "2026-09-30T06:00:00Z"
                 ]
               },
               "buckets": {
@@ -10698,12 +10694,12 @@
                 "items": {
                   "$ref": "#/components/schemas/statsRunsBucket"
                 },
-                "description": "The buckets of the span before, in the range's own length.",
+                "description": "The buckets of the span before, as many as the range's, ending where the range's first begins.",
                 "examples": [
                   [
                     {
-                      "since": "2026-09-29T06:00:00Z",
-                      "until": "2026-09-29T06:59:59.999999999Z",
+                      "since": "2026-09-30T04:00:00Z",
+                      "until": "2026-09-30T04:59:59.999999999Z",
                       "runs": {
                         "queued": 0,
                         "running": 0,
@@ -10726,8 +10722,8 @@
                       "retries": []
                     },
                     {
-                      "since": "2026-09-29T07:00:00Z",
-                      "until": "2026-09-29T07:59:59.999999999Z",
+                      "since": "2026-09-30T05:00:00Z",
+                      "until": "2026-09-30T05:59:59.999999999Z",
                       "runs": {
                         "queued": 0,
                         "running": 0,
@@ -10832,12 +10828,12 @@
             },
             "examples": [
               {
-                "from": "2026-09-29T06:00:00Z",
-                "to": "2026-09-29T08:00:00Z",
+                "from": "2026-09-30T04:00:00Z",
+                "to": "2026-09-30T06:00:00Z",
                 "buckets": [
                   {
-                    "since": "2026-09-29T06:00:00Z",
-                    "until": "2026-09-29T06:59:59.999999999Z",
+                    "since": "2026-09-30T04:00:00Z",
+                    "until": "2026-09-30T04:59:59.999999999Z",
                     "runs": {
                       "queued": 0,
                       "running": 0,
@@ -10860,8 +10856,8 @@
                     "retries": []
                   },
                   {
-                    "since": "2026-09-29T07:00:00Z",
-                    "until": "2026-09-29T07:59:59.999999999Z",
+                    "since": "2026-09-30T05:00:00Z",
+                    "until": "2026-09-30T05:59:59.999999999Z",
                     "runs": {
                       "queued": 0,
                       "running": 0,
@@ -10891,7 +10887,7 @@
                 ]
               }
             ],
-            "description": "The same span just before the range, in the same buckets, with its histogram where one was asked for. Present where compare=previous."
+            "description": "The span just before the range, in as many buckets of the same length, with its histogram where one was asked for. Present where compare=previous."
           }
         },
         "examples": [
@@ -11089,12 +11085,12 @@
               }
             ],
             "previous": {
-              "from": "2026-09-29T06:00:00Z",
-              "to": "2026-09-29T08:00:00Z",
+              "from": "2026-09-30T04:00:00Z",
+              "to": "2026-09-30T06:00:00Z",
               "buckets": [
                 {
-                  "since": "2026-09-29T06:00:00Z",
-                  "until": "2026-09-29T06:59:59.999999999Z",
+                  "since": "2026-09-30T04:00:00Z",
+                  "until": "2026-09-30T04:59:59.999999999Z",
                   "runs": {
                     "queued": 0,
                     "running": 0,
@@ -11117,8 +11113,8 @@
                   "retries": []
                 },
                 {
-                  "since": "2026-09-29T07:00:00Z",
-                  "until": "2026-09-29T07:59:59.999999999Z",
+                  "since": "2026-09-30T05:00:00Z",
+                  "until": "2026-09-30T05:59:59.999999999Z",
                   "runs": {
                     "queued": 0,
                     "running": 0,
@@ -12233,16 +12229,16 @@
             "properties": {
               "from": {
                 "$ref": "wire.schema.json#/$defs/timestamp",
-                "description": "The start of the span before, included: from minus the range's length.",
+                "description": "The start of the span before, included: from minus as many buckets as the range takes, which is from minus the range's length where from and to fall on bucket boundaries.",
                 "examples": [
-                  "2026-09-29T06:00:00Z"
+                  "2026-09-30T04:00:00Z"
                 ]
               },
               "to": {
                 "$ref": "wire.schema.json#/$defs/timestamp",
-                "description": "The end of the span before, excluded: the range's from.",
+                "description": "The end of the span before, excluded: to minus as many buckets as the range takes, which is the range's from where from and to fall on bucket boundaries.",
                 "examples": [
-                  "2026-09-29T08:00:00Z"
+                  "2026-09-30T06:00:00Z"
                 ]
               },
               "buckets": {
@@ -12250,7 +12246,7 @@
                 "items": {
                   "$ref": "#/components/schemas/statsQuotaBucket"
                 },
-                "description": "The buckets of the span before.",
+                "description": "The buckets of the span before, as many as the range's, ending where the range's first begins.",
                 "examples": [
                   [
                     {
@@ -12268,12 +12264,12 @@
             },
             "examples": [
               {
-                "from": "2026-09-29T06:00:00Z",
-                "to": "2026-09-29T08:00:00Z",
+                "from": "2026-09-30T04:00:00Z",
+                "to": "2026-09-30T06:00:00Z",
                 "buckets": [
                   {
-                    "since": "2026-09-29T06:00:00Z",
-                    "until": "2026-09-29T06:59:59.999999999Z",
+                    "since": "2026-09-30T04:00:00Z",
+                    "until": "2026-09-30T04:59:59.999999999Z",
                     "runs_created": 412,
                     "runs_refused": 0,
                     "tasks_in_flight_max": 20,
@@ -12283,7 +12279,7 @@
                 ]
               }
             ],
-            "description": "The same span just before the range. Present where compare=previous."
+            "description": "The span just before the range, in as many buckets of the same length. Present where compare=previous."
           }
         },
         "examples": [
@@ -13232,7 +13228,7 @@
         "name": "compare",
         "in": "query",
         "required": false,
-        "description": "previous adds the same span just before the range, in the same buckets, under previous, so that a chart draws it behind and a figure shows its change. The only value.",
+        "description": "previous adds the span just before the range, in as many buckets of the same length, under previous, so that a chart draws it behind point for point and a figure shows its change. The only value.",
         "schema": {
           "type": "string",
           "enum": [
@@ -13250,7 +13246,7 @@
         "name": "workflow",
         "in": "query",
         "required": false,
-        "description": "Narrows the series to one workflow of the namespace. Answered 404, as a workflow that does not exist, where the caller does not hold run:read on it.",
+        "description": "Narrows the series to one workflow of the namespace. One the caller does not hold run:read on counts nothing, as a workflow that does not exist does, rather than being refused: GET /api/v1/runs lists nothing for it either.",
         "schema": {
           "$ref": "wire.schema.json#/$defs/identifier"
         },

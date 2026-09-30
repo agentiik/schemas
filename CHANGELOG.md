@@ -13,7 +13,9 @@ Every repository of the project carries the same version and is tagged at the sa
   - Each takes `from`, `to`, `bucket` and `compare=previous`. `/runs` also takes `workflow` and `histogram`, `/steps` takes `workflow` and `by=hour`, and `/ports` takes `workflow`.
   - Each answers JSON, or CSV to `Accept: text/csv`.
   - Every bucket carries the `since` and the `until` that `GET /api/v1/runs` takes, the latter a nanosecond before the next bucket. A point therefore opens exactly the runs it counts.
-  - Durations are whole milliseconds.
+  - Durations are whole milliseconds. A task's queue wait runs from when it could be handed out, its creation or, for a further attempt, the end of its retry's backoff, to its dispatch.
+  - `compare=previous` adds the span just before the range in as many buckets of the same length, which ends where the range's first bucket begins; the examples show the two hours before rather than the day before.
+  - `/runs` refuses nobody it answers: a namespace or a workflow the caller cannot read counts nothing, as one that does not exist, since `GET /api/v1/runs` lists nothing for it either.
   - The routes are taken off `NOT_DESCRIBED_YET`.
 
 ## v0.5.0, 2026-09-30

@@ -2087,10 +2087,11 @@ NOT_DESCRIBED_YET = (
         ("PUT /api/v1/{ns}/workflows/{name}/versions/{commit}",),
     ),
     (
-        "a workflow's triggers, served from v0.5.0: what its default branch arms, and what a webhook checks its caller against, written and never read back; no roadmap task adds them to this document yet",
+        "the triggers, served from v0.5.0: what a workflow's default branch arms, what a webhook checks its caller against, written and never read back, and an event published into a namespace, which CloudEvents' own HTTP binding describes; no roadmap task adds them to this document yet",
         (
             "GET /api/v1/{ns}/workflows/{name}/triggers",
             "PUT /api/v1/{ns}/workflows/{name}/webhooks/{method}/{path}",
+            "POST /api/v1/{ns}/events",
         ),
     ),
     (

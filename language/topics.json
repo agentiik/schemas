@@ -35,43 +35,7 @@
         "/concurrency",
         "/concurrency/group",
         "/concurrency/cancel_in_progress",
-        "/timeout",
-        "/outputs/*/from/step",
-        "/outputs/*/from/port",
-        "/on/webhook/*/output",
-        "/on/event/*/namespace",
-        "/mcp/name",
-        "/mcp/tools/*/name",
-        "/mcp/tools/*/input/from/input",
-        "/mcp/tools/*/output/from/output",
-        "/secrets/*",
-        "/defaults/secrets/*",
-        "/steps/*/needs/*",
-        "/steps/*/needs/*/step",
-        "/steps/*/needs/*/port",
-        "/steps/*/needs/*/as",
-        "/steps/*/outputs/*",
-        "/steps/*/secrets/*",
-        "/.*/needs/*",
-        "/.*/needs/*/step",
-        "/.*/needs/*/port",
-        "/.*/needs/*/as",
-        "/.*/outputs/*",
-        "/.*/secrets/*",
-        "/outputs/*/retain",
-        "/outputs/*/retain/for",
-        "/on/schedule/*/jitter",
-        "/defaults/timeout",
-        "/defaults/retain",
-        "/defaults/retain/for",
-        "/defaults/retry/backoff/base",
-        "/defaults/retry/backoff/max",
-        "/steps/*/retry/backoff/base",
-        "/steps/*/retry/backoff/max",
-        "/steps/*/timeout",
-        "/.*/retry/backoff/base",
-        "/.*/retry/backoff/max",
-        "/.*/timeout"
+        "/timeout"
       ]
     },
     {
@@ -89,8 +53,6 @@
       "paths": [
         "/inputs",
         "/inputs/*/schema",
-        "/outputs/*/schema",
-        "/inputs/*",
         "/inputs/*/required",
         "/inputs/*/default"
       ]
@@ -115,7 +77,6 @@
       ],
       "paths": [
         "/outputs",
-        "/outputs/*",
         "/outputs/*/from",
         "/outputs/*/from/step",
         "/outputs/*/from/port",
@@ -123,7 +84,6 @@
         "/outputs/*/schema",
         "/outputs/*/retain/for",
         "/outputs/*/retain/fetches",
-        "/defaults/retain",
         "/defaults/retain/for"
       ]
     },
@@ -160,19 +120,16 @@
         "/on/schedule",
         "/on/webhook",
         "/on/event",
-        "/on/schedule/*",
         "/on/schedule/*/cron",
         "/on/schedule/*/timezone",
         "/on/schedule/*/jitter",
         "/on/schedule/*/catch_up",
-        "/on/webhook/*",
         "/on/webhook/*/path",
         "/on/webhook/*/method",
         "/on/webhook/*/auth",
         "/on/webhook/*/response",
         "/on/webhook/*/output",
         "/on/webhook/*/map",
-        "/on/event/*",
         "/on/event/*/type",
         "/on/event/*/source",
         "/on/event/*/filter",
@@ -213,8 +170,6 @@
       ],
       "paths": [
         "/steps",
-        "/steps/*",
-        "/.*",
         "/steps/*/image",
         "/.*/image",
         "/steps/*/params",
@@ -237,8 +192,6 @@
         "/.*/workflow/workflow",
         "/steps/*/workflow/ref",
         "/.*/workflow/ref",
-        "/defaults/timeout",
-        "/defaults/resources",
         "/defaults/resources/cpu",
         "/steps/*/resources/cpu",
         "/.*/resources/cpu",
@@ -248,13 +201,9 @@
         "/defaults/resources/pids",
         "/steps/*/resources/pids",
         "/.*/resources/pids",
-        "/defaults/network",
-        "/defaults/egress",
         "/defaults/egress/allow",
         "/steps/*/egress/allow",
-        "/.*/egress/allow",
-        "/defaults/runs_on",
-        "/defaults/cache"
+        "/.*/egress/allow"
       ]
     },
     {
@@ -269,15 +218,6 @@
       "paths": [
         "/steps/*/outputs",
         "/.*/outputs",
-        "/outputs/*/from/port",
-        "/on/webhook/*/output",
-        "/mcp/tools/*/output/from/output",
-        "/steps/*/needs/*/port",
-        "/steps/*/needs/*/as",
-        "/steps/*/outputs/*",
-        "/.*/needs/*/port",
-        "/.*/needs/*/as",
-        "/.*/outputs/*",
         "/steps/*/inputs",
         "/.*/inputs"
       ]
@@ -303,15 +243,12 @@
         "/.*/if",
         "/steps/*/when",
         "/.*/when",
-        "/steps/*/needs/*",
-        "/.*/needs/*",
         "/steps/*/needs/*/step",
         "/.*/needs/*/step",
         "/steps/*/needs/*/port",
         "/.*/needs/*/port",
         "/steps/*/needs/*/as",
-        "/.*/needs/*/as",
-        "/defaults/when"
+        "/.*/needs/*/as"
       ]
     },
     {
@@ -375,7 +312,6 @@
         "/$defs/idempotent"
       ],
       "paths": [
-        "/defaults/retry",
         "/steps/*/retry",
         "/.*/retry",
         "/steps/*/continue_on_error",
@@ -399,9 +335,7 @@
         "/.*/retry/backoff/base",
         "/defaults/retry/backoff/max",
         "/steps/*/retry/backoff/max",
-        "/.*/retry/backoff/max",
-        "/defaults/continue_on_error",
-        "/defaults/idempotent"
+        "/.*/retry/backoff/max"
       ]
     },
     {
@@ -411,11 +345,7 @@
       "keywords": [
         "/$defs/expression"
       ],
-      "paths": [
-        "/on/event/*/filter",
-        "/steps/*/if",
-        "/.*/if"
-      ]
+      "paths": []
     },
     {
       "name": "secrets",
@@ -430,8 +360,7 @@
       "paths": [
         "/secrets",
         "/steps/*/secrets",
-        "/.*/secrets",
-        "/defaults/secrets"
+        "/.*/secrets"
       ]
     },
     {
@@ -446,7 +375,6 @@
         "/$defs/files/items/oneOf/1/properties/mode"
       ],
       "paths": [
-        "/defaults/files",
         "/steps/*/files",
         "/.*/files",
         "/defaults/files/*/from",
@@ -482,10 +410,7 @@
         "/steps/*/after_script",
         "/.*/after_script",
         "/steps/*/shell",
-        "/.*/shell",
-        "/defaults/before_script",
-        "/defaults/after_script",
-        "/defaults/shell"
+        "/.*/shell"
       ]
     },
     {
@@ -532,16 +457,9 @@
         "/include",
         "/defaults",
         "/.*",
-        "",
-        "/vars",
-        "/secrets",
-        "/steps",
-        "/include/*",
         "/include/*/path",
         "/include/*/workflow",
         "/include/*/ref",
-        "/steps/*/workflow/workflow",
-        "/.*/workflow/workflow",
         "/defaults/timeout",
         "/defaults/retain",
         "/defaults/retry",
@@ -595,7 +513,6 @@
         "/mcp/name",
         "/mcp/description",
         "/mcp/tools",
-        "/mcp/tools/*",
         "/mcp/tools/*/name",
         "/mcp/tools/*/title",
         "/mcp/tools/*/description",

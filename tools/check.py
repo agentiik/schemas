@@ -1182,6 +1182,14 @@ def check_language_reference(documents, report):
     for pointer in orphans:
         report.fail(where, "%s#%s belongs to no topic, so no page teaches it: add its place to TOPICS in tools/language.py" % (language.WORKFLOW, pointer))
 
+    claimed = {}
+    for topic in json.loads(files["topics.json"])["topics"]:
+        for pattern in topic["paths"]:
+            claimed.setdefault(pattern, []).append(topic["name"])
+    for pattern, topics in claimed.items():
+        if len(topics) > 1:
+            report.fail(where, "%s is claimed by the %s topics, so the topic of an error there would be whichever is listed first" % (pattern or "the document", " and ".join(topics)))
+
     for name in names:
         if not any(example["topic"] == name for example in worked):
             report.fail(where, "the %s topic has no worked example: its keywords carry examples, but none is written anywhere a file writes it" % name)

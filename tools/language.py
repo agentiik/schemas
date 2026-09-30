@@ -410,17 +410,25 @@ def reference(documents):
             for path in where:
                 if pattern_of(path) not in patterns:
                     patterns.append(pattern_of(path))
-            for pattern in patterns:
-                if pattern not in topic_paths:
-                    topic_paths.append(pattern)
-            written = ", ".join("`%s`" % p for p in patterns) if patterns else "`%s#%s`" % (WORKFLOW, pointer)
-            lines.append("- %s: %s" % (written, schema.get("description", "")))
+            # A place in topics.json is claimed by the keyword written there, and so by one
+            # topic. A definition claims none: it is reached through a property that is written
+            # there and answers for it, a duration being the retry topic's inside a retry and a
+            # timeout's inside a step. Nor does a keyword of the included file, which restates
+            # at the same place a keyword of the entry point. check.py holds every place to one
+            # topic, so an error's topic never depends on the order topics are listed in.
+            definition = re.fullmatch(r"/\$defs/[^/]+", pointer) is not None
             # A definition written at several places is a grammar several keywords share, an
             # expression being an event filter in one place and a step's if in another. Its
             # examples are shown as values rather than placed at the first of those places,
             # where they would teach a filter that reads an input. A keyword written at one
             # place, or declared inside a definition, is shown where it is written.
-            shared = re.fullmatch(r"/\$defs/[^/]+", pointer) is not None and len(patterns) > 1
+            shared = definition and len(patterns) > 1
+            if not definition and not pointer.startswith("/$defs/fragment/"):
+                for pattern in patterns:
+                    if pattern not in topic_paths:
+                        topic_paths.append(pattern)
+            written = ", ".join("`%s`" % p for p in patterns) if patterns else "`%s#%s`" % (WORKFLOW, pointer)
+            lines.append("- %s: %s" % (written, schema.get("description", "")))
             for i, example in enumerate(schema.get("examples") or []):
                 if shared or not where:
                     examples.append((pointer, i, [], example))

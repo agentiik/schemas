@@ -12087,7 +12087,7 @@
           "runs_refused": {
             "type": "integer",
             "minimum": 0,
-            "description": "The runs refused with 429 in the bucket for max_runs_per_hour.",
+            "description": "The runs refused for max_runs_per_hour in the bucket, whatever asked for them: a request answered 429, a schedule or an event firing recorded as skipped, or a call failed. A refusal is counted where it is decided, a minute at a time.",
             "examples": [
               37
             ]
@@ -12095,7 +12095,7 @@
           "tasks_in_flight_max": {
             "type": "integer",
             "minimum": 0,
-            "description": "The most tasks dispatched and not yet ended at once in the bucket, against max_concurrent_tasks.",
+            "description": "The most tasks handed out, or on their way to a runner, and not yet ended at once in the bucket, which is what max_concurrent_tasks counts: one ending as another is handed out is not two at once, and one still running is in flight until now.",
             "examples": [
               20
             ]
@@ -12103,7 +12103,7 @@
           "artifact_bytes": {
             "type": "integer",
             "minimum": 0,
-            "description": "The bytes of the namespace's live artifacts at the bucket's end, against max_artifact_bytes.",
+            "description": "The bytes max_artifact_bytes counted at the bucket's end: the namespace's artifacts written by then and neither expired nor retired, each digest once.",
             "examples": [
               48318382080
             ]
@@ -12111,7 +12111,7 @@
           "artifact_bytes_added": {
             "type": "integer",
             "minimum": 0,
-            "description": "The bytes stored in the bucket.",
+            "description": "The bytes of the artifacts written in the bucket, each digest once.",
             "examples": [
               1073741824
             ]

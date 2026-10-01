@@ -2072,12 +2072,8 @@ NOT_DESCRIBED_YET = (
         ),
     ),
     (
-        "secrets and the catalog; no roadmap task adds them to this document yet",
+        "the brick catalog; no roadmap task adds it to this document yet",
         (
-            "GET /api/v1/{ns}/secrets",
-            "GET /api/v1/{ns}/secrets/{name}",
-            "PUT /api/v1/{ns}/secrets/{name}",
-            "DELETE /api/v1/{ns}/secrets/{name}",
             "GET /api/v1/bricks",
             "GET /api/v1/bricks/{name}",
         ),

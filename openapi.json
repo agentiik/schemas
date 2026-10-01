@@ -8859,7 +8859,7 @@
           },
           "413": {
             "$ref": "#/components/responses/tooLarge",
-            "description": "A value past 64 KiB as the API writes it back, workflows past 1,024 names, or a body past 512 KiB."
+            "description": "A value past 64 KiB written as compact JSON, workflows past 1,024 names, or a body past 512 KiB."
           }
         }
       },
@@ -19073,7 +19073,7 @@
         "description": "What a PUT writes: the whole variable, its value, its visibility and for selected its workflows, each written every time, so that a PUT changing only the value never leaves the visibility to a default that could widen a variable selected for one workflow to every workflow of the namespace.",
         "properties": {
           "value": {
-            "description": "Any JSON value, null among them, at most 64 KiB as the API writes it back. A number is held as a run's inputs are: one no 64-bit float holds, or written past 340 digits from the point, is refused, and one written with an exponent is written out with a point, 1e3 as 1000.0, so that it reads back a double. U+0000 in a string or a name is refused, since PostgreSQL does not keep it in JSON.",
+            "description": "Any JSON value, null among them, at most 64 KiB written as compact JSON. A number is held as a run's inputs are: one no 64-bit float holds, or written past 340 digits from the point, is refused, and one written with an exponent is written out with a point, 1e3 as 1000.0, so that it reads back a double. U+0000 in a string or a name is refused, since PostgreSQL does not keep it in JSON.",
             "examples": [
               "https://ledger.example.com/api",
               [

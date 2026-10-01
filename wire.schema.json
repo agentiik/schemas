@@ -4581,7 +4581,7 @@
           ]
         },
         "value": {
-          "description": "Any JSON value, as a workflow file's vars holds any value YAML writes, at most 64 KiB as the API writes it back. A number keeps the way it was written: one with no fraction and no exponent is an int in an expression, and any other a double, as a number of the file or of a run's inputs is, an exponent written out with a point.",
+          "description": "Any JSON value, as a workflow file's vars holds any value YAML writes, at most 64 KiB written as compact JSON. A number keeps the way it was written: one with no fraction and no exponent is an int in an expression, and any other a double, as a number of the file or of a run's inputs is, an exponent written out with a point.",
           "examples": [
             "https://ledger.example.com/api",
             30,

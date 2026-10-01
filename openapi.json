@@ -6312,7 +6312,7 @@
           "runs"
         ],
         "summary": "Replay a run",
-        "description": "Starts a new run of the commit the run pinned, over the inputs it was started with as they were bound and with what fired it as it was frozen, attributed to the caller as a manual run. From a step, the steps above it are reused and every other step runs; from the start, nothing is reused. Requires workflow:run on the run's workflow. Refused while the run is not over, and from a step where the run is replayable from the start only, or a step above never ended or was cancelled with its run.",
+        "description": "Starts a new run of the commit the run pinned, over the inputs it was started with as they were bound and with what fired it as it was frozen, and with the namespace variables it read, however they changed since, attributed to the caller as a manual run. From a step, the steps above it are reused and every other step runs; from the start, nothing is reused. Requires workflow:run on the run's workflow. Refused while the run is not over, and from a step where the run is replayable from the start only, or a step above never ended or was cancelled with its run.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#memoisation-and-replay"

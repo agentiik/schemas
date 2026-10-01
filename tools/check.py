@@ -2097,7 +2097,6 @@ NOT_DESCRIBED_YET = (
     (
         "runs and their data beyond their listing, which the console's run inspector adds to this document as it reads them",
         (
-            "POST /api/v1/{ns}/workflows/{name}/runs",
             "POST /api/v1/runs/{id}/approve",
             "POST /api/v1/runs/{id}/reject",
         ),

@@ -2055,16 +2055,14 @@ NOT_DESCRIBED_YET = (
         ),
     ),
     (
-        "the runners, their pools and the bus, served since v0.2.0 and exchanged in the shapes wire.schema.json describes; no roadmap task adds them to this document yet",
+        "what a runner exchanges with the API and the bus, served since v0.2.0 in the shapes wire.schema.json describes, and what an administrator writes to a pool or orders of a runner; no roadmap task adds them to this document yet",
         (
             "POST /api/v1/runners",
-            "GET /api/v1/runners",
             "POST /api/v1/runners/{runner}/drain",
             "POST /api/v1/runners/{runner}/revoke",
             "POST /api/v1/runners/rotate",
             "POST /api/v1/runners/heartbeat",
             "POST /api/v1/bus/token",
-            "GET /api/v1/runner-pools",
             "POST /api/v1/runner-pools",
             "POST /api/v1/runner-pools/{pool}/join-tokens",
             "POST /api/v1/tasks/redeem",

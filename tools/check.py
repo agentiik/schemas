@@ -1359,6 +1359,17 @@ ONE_GRAMMAR = (
         (
             ("wire.schema.json", "#/$defs/namespace/maxLength"),
             ("workflow.schema.json", "#/$defs/namespace/maxLength"),
+            ("wire.schema.json", "#/$defs/namespaceRecord/properties/former_names/items/maxLength"),
+        ),
+    ),
+    # A name a namespace left at a rename is written on the grammar its name is, without the
+    # reserved words, since a namespace made under one before it was reserved may have left it:
+    # the pattern is copied rather than referred to, and held to the name's here.
+    (
+        "a namespace's name, a former one among them",
+        (
+            ("wire.schema.json", "#/$defs/namespace/pattern"),
+            ("wire.schema.json", "#/$defs/namespaceRecord/properties/former_names/items/pattern"),
         ),
     ),
 )

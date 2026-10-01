@@ -2158,16 +2158,14 @@ NOT_DESCRIBED_YET = (
         ),
     ),
     (
-        "the runners, their pools and the bus, served since v0.2.0 and exchanged in the shapes wire.schema.json describes; no roadmap task adds them to this document yet",
+        "what a runner exchanges with the API and the bus, served since v0.2.0 in the shapes wire.schema.json describes, and what an administrator writes to a pool or orders of a runner; no roadmap task adds them to this document yet",
         (
             "POST /api/v1/runners",
-            "GET /api/v1/runners",
             "POST /api/v1/runners/{runner}/drain",
             "POST /api/v1/runners/{runner}/revoke",
             "POST /api/v1/runners/rotate",
             "POST /api/v1/runners/heartbeat",
             "POST /api/v1/bus/token",
-            "GET /api/v1/runner-pools",
             "POST /api/v1/runner-pools",
             "POST /api/v1/runner-pools/{pool}/join-tokens",
             "POST /api/v1/tasks/redeem",
@@ -2175,12 +2173,8 @@ NOT_DESCRIBED_YET = (
         ),
     ),
     (
-        "secrets and the catalog; no roadmap task adds them to this document yet",
+        "the brick catalog; no roadmap task adds it to this document yet",
         (
-            "GET /api/v1/{ns}/secrets",
-            "GET /api/v1/{ns}/secrets/{name}",
-            "PUT /api/v1/{ns}/secrets/{name}",
-            "DELETE /api/v1/{ns}/secrets/{name}",
             "GET /api/v1/bricks",
             "GET /api/v1/bricks/{name}",
         ),
@@ -2200,11 +2194,8 @@ NOT_DESCRIBED_YET = (
     (
         "runs and their data beyond their listing, which the console's run inspector adds to this document as it reads them",
         (
-            "POST /api/v1/{ns}/workflows/{name}/runs",
             "POST /api/v1/runs/{id}/approve",
             "POST /api/v1/runs/{id}/reject",
-            "GET /api/v1/runs/{id}/outputs/{name}",
-            "GET /api/v1/artifacts/{uri}",
         ),
     ),
     (

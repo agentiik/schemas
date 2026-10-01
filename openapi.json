@@ -61,6 +61,14 @@
       "description": "Sharing: grants and denies at namespace and workflow scope."
     },
     {
+      "name": "secrets",
+      "description": "Where a namespace's secrets are kept, and never what they are: one declaration per secret, a value written to the built-in store and never read back."
+    },
+    {
+      "name": "runners",
+      "description": "The fleet as an administrator reads it: the runners and their pools, to write a namespace's allowed_runner_pools against. Never a host."
+    },
+    {
       "name": "workflows",
       "description": "Workflow repositories, created, read, renamed, moved, protected and deleted, the tree at a ref, and the image pins and brick manifests a push is judged against. Git itself is spoken at /{ns}/{name}.git, with an API token as the password, and is git's own protocol rather than this document's."
     },
@@ -4674,6 +4682,251 @@
         }
       }
     },
+    "/api/v1/{ns}/workflows/{name}/runs": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        },
+        {
+          "$ref": "#/components/parameters/workflow"
+        }
+      ],
+      "post": {
+        "operationId": "startRun",
+        "tags": [
+          "runs"
+        ],
+        "summary": "Start a run of a workflow",
+        "description": "The manual trigger: a run of the commit the request names, or reaches through a ref, or of the default branch's head, or while it is unborn the latest version a tree push recorded, with the workflow inputs bound against that version's declaration as agk run --local binds them and recorded as bound. Attributed to the caller, trigger_kind manual. The run is pinned to its commit whatever the ref or the branch does next. Counted against the namespace's max_runs_per_hour before it is written. Requires workflow:run.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#api"
+        },
+        "requestBody": {
+          "required": true,
+          "description": "The commit or the ref, and the inputs; {} for the head with none.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/startRequest"
+              },
+              "examples": {
+                "the head": {
+                  "summary": "the default branch's head, no input",
+                  "value": {}
+                },
+                "a branch with inputs": {
+                  "summary": "a branch, resolved now, with one input",
+                  "value": {
+                    "ref": "main",
+                    "inputs": {
+                      "orders": [
+                        {
+                          "order": "ORD-0001",
+                          "amount": 120.5
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The run was written, queued. The Location header names it.",
+            "headers": {
+              "Location": {
+                "description": "The new run's address.",
+                "schema": {
+                  "type": "string",
+                  "description": "A path of the API.",
+                  "examples": [
+                    "/api/v1/finance/runs/01JMZ9A2B3C4D5E6F7G8H9J0K1"
+                  ]
+                },
+                "examples": {
+                  "the new run": {
+                    "summary": "under its namespace",
+                    "value": "/api/v1/finance/runs/01JMZ9A2B3C4D5E6F7G8H9J0K1"
+                  }
+                }
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/noStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/runStarted"
+                },
+                "examples": {
+                  "started": {
+                    "summary": "a run of the head",
+                    "value": {
+                      "run": "01JMZ9A2B3C4D5E6F7G8H9J0K1",
+                      "state": "queued",
+                      "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "A body that is not the object, no body at all, a commit and a ref together, a ref a branch and a tag both hold, or inputs that are not an object or hold more values than one envelope may carry items. A request carrying two credentials, a bearer token beside the session cookie or two session cookies, too."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal of the workflow is a 404."
+          },
+          "404": {
+            "description": "No such workflow, or not the caller's to run, which read alike; a ref naming nothing; or a workflow with no version yet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "no ref": {
+                    "summary": "a ref naming nothing",
+                    "value": {
+                      "error": "nightly names no branch, no tag and no version of the workflow"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workflow is being moved to another namespace, and nothing starts in it until the move is done.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "moving": {
+                    "summary": "a move under way",
+                    "value": {
+                      "error": "finance/monthly-invoicing is being moved to another namespace, and is frozen until the move is carried out: its pushes, runs, replays and changes are refused meanwhile, and it answers at its new place once it is done"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The inputs, with the defaults the workflow declares, weigh more than one envelope may, or the body is larger than that.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "too large": {
+                    "summary": "inputs past the envelope's weight",
+                    "value": {
+                      "error": "the inputs, with the defaults the workflow declares, are written in 9437184 bytes, and a run's inputs weigh at most 8388608, one envelope: a run's data belongs in an artifact"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An input the version's declaration refuses, answered with the input and the rule apart; or the version is a library's, which nothing runs; or its declaration is one a push now refuses, recorded before it did.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/inputRefusal"
+                    },
+                    {
+                      "$ref": "#/components/schemas/error"
+                    }
+                  ]
+                },
+                "examples": {
+                  "an input": {
+                    "summary": "a value its schema refuses",
+                    "value": {
+                      "error": "input orders: schema: /0/amount: got string, want number; run refused",
+                      "input": "orders",
+                      "rule": "schema"
+                    }
+                  },
+                  "a library": {
+                    "summary": "a fragment, which nothing runs",
+                    "value": {
+                      "error": "common at c41d9e2a7b3f5e8d1c0a9b6e4f2d8c7a5b3e1f09 is a library: its root agentiik.yaml is written as a fragment, which other workflows include and nothing runs"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The namespace has created as many runs in the last 60 minutes as its max_runs_per_hour allows. No run exists, so a client coming back after Retry-After is not asking for a second one.",
+            "headers": {
+              "Retry-After": {
+                "description": "The whole seconds until one more run fits in the hour.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "examples": {
+                  "minutes": {
+                    "summary": "four minutes",
+                    "value": 240
+                  }
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "quota": {
+                    "summary": "max_runs_per_hour reached",
+                    "value": {
+                      "error": "namespace finance has created as many runs in the last 60 minutes as its max_runs_per_hour, 120, allows, and one more fits in 240 seconds"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "An input's schema names a file of the version's tree, which is kept in the object store, and the installation has none attached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "no store": {
+                    "summary": "no object store",
+                    "value": {
+                      "error": "this installation has no object store attached, and an input's schema names a file of the version's tree, which is kept there"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/{ns}/workflows/{name}/tree/{ref}": {
       "parameters": [
         {
@@ -5017,7 +5270,7 @@
           "runs"
         ],
         "summary": "List runs",
-        "description": "The runs of every workflow the caller holds run:read on, over its namespace or itself, newest first, each with its namespace, its trigger_kind and its triggered_by: where the console's runs view and a phone open. Every workflow it could list is asked about as one question, a namespace the caller holds nothing in included, so that a listing is no way of learning which namespaces and workflows exist, by what it answers or by how long it takes. Also served within one namespace as GET /api/v1/{ns}/runs, which reads the namespace from its path and no namespace from its query.",
+        "description": "The runs of every workflow the caller holds run:read on, over its namespace or itself, newest first, each with its namespace, its trigger_kind and its triggered_by, and from v0.6.0 its steps in the order they started with their verdicts and times, which the console draws as a strip: where the console's runs view and a phone open. Every workflow it could list is asked about as one question, a namespace the caller holds nothing in included, so that a listing is no way of learning which namespaces and workflows exist, by what it answers or by how long it takes. Also served within one namespace as GET /api/v1/{ns}/runs, which reads the namespace from its path and no namespace from its query.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#api"
@@ -5065,7 +5318,21 @@
                           "triggered_by": "alice",
                           "created_at": "2026-10-01T05:41:03Z",
                           "started_at": "2026-10-01T05:41:03Z",
-                          "finished_at": "2026-10-01T05:42:55Z"
+                          "finished_at": "2026-10-01T05:42:55Z",
+                          "steps": [
+                            {
+                              "step": "normalize",
+                              "verdict": "succeeded",
+                              "started_at": "2026-09-30T05:40:12Z",
+                              "finished_at": "2026-09-30T05:41:02Z"
+                            },
+                            {
+                              "step": "invoice",
+                              "verdict": "failed",
+                              "started_at": "2026-09-30T05:41:03Z",
+                              "finished_at": "2026-09-30T05:44:10Z"
+                            }
+                          ]
                         },
                         {
                           "namespace": "finance",
@@ -5076,7 +5343,8 @@
                           "trigger_kind": "webhook",
                           "triggered_by": "finance/agentiik",
                           "created_at": "2026-10-01T05:28:44Z",
-                          "started_at": "2026-10-01T05:28:45Z"
+                          "started_at": "2026-10-01T05:28:45Z",
+                          "steps": []
                         }
                       ]
                     }
@@ -5194,7 +5462,15 @@
                               "size": 212,
                               "items": 3
                             }
-                          }
+                          },
+                          "image": "ghcr.io/acme/agk-invoice@sha256:9f2c1d4a77b0c3e51d8a6f2b4c9e0a13d5f7b82c6e04a9d31b7f5c28e6a0b7e0",
+                          "input_ports": [
+                            "orders"
+                          ],
+                          "output_ports": [
+                            "out",
+                            "error"
+                          ]
                         },
                         {
                           "step": "archive",
@@ -5234,7 +5510,8 @@
                             }
                           }
                         }
-                      ]
+                      ],
+                      "artifacts": []
                     }
                   }
                 }
@@ -5328,7 +5605,7 @@
           "runs"
         ],
         "summary": "Replay a run",
-        "description": "Starts a new run of the commit the run pinned, over the inputs it was started with as they were bound and with what fired it as it was frozen, attributed to the caller as a manual run. From a step, the steps above it are reused and every other step runs; from the start, nothing is reused. Requires workflow:run on the run's workflow. Refused while the run is not over, and from a step where the run is replayable from the start only or a step above never ended.",
+        "description": "Starts a new run of the commit the run pinned, over the inputs it was started with as they were bound and with what fired it as it was frozen, attributed to the caller as a manual run. From a step, the steps above it are reused and every other step runs; from the start, nothing is reused. Requires workflow:run on the run's workflow. Refused while the run is not over, and from a step where the run is replayable from the start only, or a step above never ended or was cancelled with its run.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#memoisation-and-replay"
@@ -5407,7 +5684,7 @@
             "$ref": "#/components/responses/notFound"
           },
           "409": {
-            "description": "The run is not over, what its steps publish being undecided; or, from a step, the run is replayable from the start only, or a step above the one named never ended.",
+            "description": "The run is not over, what its steps publish being undecided; or, from a step, the run is replayable from the start only, or a step above the one named never ended or was cancelled with its run, and published nothing to reuse.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5787,7 +6064,7 @@
           "statistics"
         ],
         "summary": "Read a namespace's runs as series",
-        "description": "Per bucket, the runs of the namespace's workflows by state, the p50, p95 and p99 of their duration and of their tasks' queue wait, and the attempts retried by exit code; with histogram, their durations over the range in bins. Counts only the workflows the caller holds run:read on, as GET /api/v1/runs lists them, and never asks run:read_data: a series carries counts, durations and exit codes, never an item. Computed from the run and task records rather than kept apart, so a range reaches back as far as the namespace keeps its runs, and no further.",
+        "description": "Per bucket, the runs of the namespace's workflows by state, the p50, p95 and p99 of their duration and of their tasks' queue wait, and the attempts retried by exit code, and the same over the whole range under overall; with histogram, their durations over the range in bins. Counts only the workflows the caller holds run:read on, as GET /api/v1/runs lists them, and never asks run:read_data: a series carries counts, durations and exit codes, never an item. Computed from the run and task records rather than kept apart, so a range reaches back as far as the namespace keeps its runs, and no further.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#console-statistics"
@@ -5887,7 +6164,36 @@
                           },
                           "retries": []
                         }
-                      ]
+                      ],
+                      "overall": {
+                        "since": "2026-09-30T06:00:00Z",
+                        "until": "2026-09-30T07:59:59.999999999Z",
+                        "runs": {
+                          "queued": 0,
+                          "running": 1,
+                          "waiting": 0,
+                          "succeeded": 20,
+                          "failed": 1,
+                          "cancelled": 0,
+                          "timed_out": 0
+                        },
+                        "duration_ms": {
+                          "p50": 215000,
+                          "p95": 298000,
+                          "p99": 308000
+                        },
+                        "queue_wait_ms": {
+                          "p50": 400,
+                          "p95": 1800,
+                          "p99": 2500
+                        },
+                        "retries": [
+                          {
+                            "exit_code": 108,
+                            "attempts": 3
+                          }
+                        ]
+                      }
                     }
                   },
                   "every workflow": {
@@ -5940,7 +6246,36 @@
                           },
                           "retries": []
                         }
-                      ]
+                      ],
+                      "overall": {
+                        "since": "2026-09-30T06:00:00Z",
+                        "until": "2026-09-30T07:59:59.999999999Z",
+                        "runs": {
+                          "queued": 0,
+                          "running": 0,
+                          "waiting": 0,
+                          "succeeded": 11,
+                          "failed": 1,
+                          "cancelled": 0,
+                          "timed_out": 0
+                        },
+                        "duration_ms": {
+                          "p50": 222000,
+                          "p95": 301000,
+                          "p99": 309000
+                        },
+                        "queue_wait_ms": {
+                          "p50": 420,
+                          "p95": 1900,
+                          "p99": 2600
+                        },
+                        "retries": [
+                          {
+                            "exit_code": 108,
+                            "attempts": 3
+                          }
+                        ]
+                      }
                     }
                   },
                   "compared": {
@@ -6005,6 +6340,35 @@
                           "retries": []
                         }
                       ],
+                      "overall": {
+                        "since": "2026-09-30T06:00:00Z",
+                        "until": "2026-09-30T07:59:59.999999999Z",
+                        "runs": {
+                          "queued": 0,
+                          "running": 1,
+                          "waiting": 0,
+                          "succeeded": 20,
+                          "failed": 1,
+                          "cancelled": 0,
+                          "timed_out": 0
+                        },
+                        "duration_ms": {
+                          "p50": 215000,
+                          "p95": 298000,
+                          "p99": 308000
+                        },
+                        "queue_wait_ms": {
+                          "p50": 400,
+                          "p95": 1800,
+                          "p99": 2500
+                        },
+                        "retries": [
+                          {
+                            "exit_code": 108,
+                            "attempts": 3
+                          }
+                        ]
+                      },
                       "histogram": [
                         {
                           "from_ms": 180000,
@@ -6084,7 +6448,36 @@
                               }
                             ]
                           }
-                        ]
+                        ],
+                        "overall": {
+                          "since": "2026-09-30T04:00:00Z",
+                          "until": "2026-09-30T05:59:59.999999999Z",
+                          "runs": {
+                            "queued": 0,
+                            "running": 0,
+                            "waiting": 0,
+                            "succeeded": 22,
+                            "failed": 0,
+                            "cancelled": 0,
+                            "timed_out": 1
+                          },
+                          "duration_ms": {
+                            "p50": 226000,
+                            "p95": 297000,
+                            "p99": 2870000
+                          },
+                          "queue_wait_ms": {
+                            "p50": 420,
+                            "p95": 2000,
+                            "p99": 2300
+                          },
+                          "retries": [
+                            {
+                              "exit_code": null,
+                              "attempts": 1
+                            }
+                          ]
+                        }
                       }
                     }
                   }
@@ -6093,15 +6486,15 @@
               "text/csv": {
                 "schema": {
                   "type": "string",
-                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. retried is the attempts retried, whatever their exit code; the histogram is not in the CSV.",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before, then overall, and previous_overall where it does, each the one row of its span taken as one bucket. retried is the attempts retried, whatever their exit code; the histogram is not in the CSV.",
                   "examples": [
-                    "period,since,until,queued,running,waiting,succeeded,failed,cancelled,timed_out,duration_p50_ms,duration_p95_ms,duration_p99_ms,queue_wait_p50_ms,queue_wait_p95_ms,queue_wait_p99_ms,retried\r\ncurrent,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,0,0,0,11,1,0,0,222000,301000,309000,420,1900,2600,3\r\ncurrent,2026-09-30T07:00:00Z,2026-09-30T07:59:59.999999999Z,0,1,0,9,0,0,0,208000,262000,266000,380,1500,1700,0\r\n"
+                    "period,since,until,queued,running,waiting,succeeded,failed,cancelled,timed_out,duration_p50_ms,duration_p95_ms,duration_p99_ms,queue_wait_p50_ms,queue_wait_p95_ms,queue_wait_p99_ms,retried\r\ncurrent,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,0,0,0,11,1,0,0,222000,301000,309000,420,1900,2600,3\r\ncurrent,2026-09-30T07:00:00Z,2026-09-30T07:59:59.999999999Z,0,1,0,9,0,0,0,208000,262000,266000,380,1500,1700,0\r\noverall,2026-09-30T06:00:00Z,2026-09-30T07:59:59.999999999Z,0,1,0,20,1,0,0,215000,298000,308000,400,1800,2500,3\r\n"
                   ]
                 },
                 "examples": {
                   "two hours": {
                     "summary": "two hours of one workflow",
-                    "value": "period,since,until,queued,running,waiting,succeeded,failed,cancelled,timed_out,duration_p50_ms,duration_p95_ms,duration_p99_ms,queue_wait_p50_ms,queue_wait_p95_ms,queue_wait_p99_ms,retried\r\ncurrent,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,0,0,0,11,1,0,0,222000,301000,309000,420,1900,2600,3\r\ncurrent,2026-09-30T07:00:00Z,2026-09-30T07:59:59.999999999Z,0,1,0,9,0,0,0,208000,262000,266000,380,1500,1700,0\r\n"
+                    "value": "period,since,until,queued,running,waiting,succeeded,failed,cancelled,timed_out,duration_p50_ms,duration_p95_ms,duration_p99_ms,queue_wait_p50_ms,queue_wait_p95_ms,queue_wait_p99_ms,retried\r\ncurrent,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,0,0,0,11,1,0,0,222000,301000,309000,420,1900,2600,3\r\ncurrent,2026-09-30T07:00:00Z,2026-09-30T07:59:59.999999999Z,0,1,0,9,0,0,0,208000,262000,266000,380,1500,1700,0\r\noverall,2026-09-30T06:00:00Z,2026-09-30T07:59:59.999999999Z,0,1,0,20,1,0,0,215000,298000,308000,400,1800,2500,3\r\n"
                   }
                 }
               }
@@ -6133,7 +6526,7 @@
           "statistics"
         ],
         "summary": "Read a workflow's steps as series",
-        "description": "Per step of one workflow, per bucket: the percentiles of its duration, its attempts and exit codes, and a fan-out's items a minute; with by=hour, its p50 by weekday and hour over the range. Requires run:read on the workflow.",
+        "description": "Per step of one workflow, per bucket: the percentiles of its duration, its attempts and exit codes, and a fan-out's items a minute, and the same over the whole range under overall; with by=hour, its p50 by weekday and hour over the range. Requires run:read on the workflow.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#console-statistics"
@@ -6215,7 +6608,23 @@
                                 }
                               ]
                             }
-                          ]
+                          ],
+                          "overall": {
+                            "since": "2026-09-30T06:00:00Z",
+                            "until": "2026-09-30T07:59:59.999999999Z",
+                            "duration_ms": {
+                              "p50": 1150,
+                              "p95": 1800,
+                              "p99": 2050
+                            },
+                            "attempts": 21,
+                            "exit_codes": [
+                              {
+                                "exit_code": 0,
+                                "attempts": 21
+                              }
+                            ]
+                          }
                         },
                         {
                           "step": "invoice",
@@ -6258,7 +6667,28 @@
                               ],
                               "items_per_minute": 81.0
                             }
-                          ]
+                          ],
+                          "overall": {
+                            "since": "2026-09-30T06:00:00Z",
+                            "until": "2026-09-30T07:59:59.999999999Z",
+                            "duration_ms": {
+                              "p50": 174000,
+                              "p95": 236000,
+                              "p99": 249000
+                            },
+                            "attempts": 24,
+                            "exit_codes": [
+                              {
+                                "exit_code": 0,
+                                "attempts": 20
+                              },
+                              {
+                                "exit_code": 108,
+                                "attempts": 4
+                              }
+                            ],
+                            "items_per_minute": 77.2
+                          }
                         }
                       ]
                     }
@@ -6302,15 +6732,15 @@
               "text/csv": {
                 "schema": {
                   "type": "string",
-                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before. One row a step and a bucket, every step's buckets in turn; with by=hour, one a step, a weekday and an hour, under period, step, weekday, hour and duration_p50_ms. Exit codes are not in the CSV.",
+                  "description": "The same numbers to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, empty where the JSON leaves a figure out, and period current or previous where compare=previous adds the span before, then overall, and previous_overall where it does, a row a step of its span taken as one bucket. One row a step and a bucket, every step's buckets in turn; with by=hour, one a step, a weekday and an hour, under period, step, weekday, hour and duration_p50_ms. Exit codes are not in the CSV.",
                   "examples": [
-                    "period,step,since,until,attempts,duration_p50_ms,duration_p95_ms,duration_p99_ms,items_per_minute\r\ncurrent,normalize,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,12,1200,1900,2100,\r\ncurrent,invoice,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,15,178000,240000,251000,74.5\r\n"
+                    "period,step,since,until,attempts,duration_p50_ms,duration_p95_ms,duration_p99_ms,items_per_minute\r\ncurrent,normalize,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,12,1200,1900,2100,\r\ncurrent,invoice,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,15,178000,240000,251000,74.5\r\noverall,normalize,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,12,1200,1900,2100,\r\noverall,invoice,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,15,178000,240000,251000,74.5\r\n"
                   ]
                 },
                 "examples": {
                   "buckets": {
                     "summary": "two steps",
-                    "value": "period,step,since,until,attempts,duration_p50_ms,duration_p95_ms,duration_p99_ms,items_per_minute\r\ncurrent,normalize,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,12,1200,1900,2100,\r\ncurrent,invoice,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,15,178000,240000,251000,74.5\r\n"
+                    "value": "period,step,since,until,attempts,duration_p50_ms,duration_p95_ms,duration_p99_ms,items_per_minute\r\ncurrent,normalize,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,12,1200,1900,2100,\r\ncurrent,invoice,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,15,178000,240000,251000,74.5\r\noverall,normalize,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,12,1200,1900,2100,\r\noverall,invoice,2026-09-30T06:00:00Z,2026-09-30T06:59:59.999999999Z,15,178000,240000,251000,74.5\r\n"
                   }
                 }
               }
@@ -6754,6 +7184,753 @@
           "403": {
             "$ref": "#/components/responses/forbidden",
             "description": "A caller who is not an administrator, or a session that may only enrol."
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{id}/outputs/{name}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/runId"
+        },
+        {
+          "$ref": "#/components/parameters/outputName"
+        }
+      ],
+      "get": {
+        "operationId": "getRunOutput",
+        "tags": [
+          "runs"
+        ],
+        "summary": "Read a workflow output of a run",
+        "description": "The envelope a workflow output names: the one its step published on the port the output is a view of, read back from the object store and held to its digest. Recorded once the run has ended with every output it declares published, and a name the workflow does not declare is answered as an output there is nothing of yet. The envelope lives by the run's defaults.retain, so it may still be read after an output declaring a short retain or a fetch budget has lost its files, which then answer 410. Envelope contents, so it requires run:read_data on the run's workflow.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#artifact-expiry"
+        },
+        "responses": {
+          "200": {
+            "description": "The envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "envelope.schema.json"
+                },
+                "examples": {
+                  "archived": {
+                    "summary": "an output whose item carries a file",
+                    "value": {
+                      "meta": {
+                        "run_id": "01JMZ8V1P9C4XQ7K2N4D6F8H0A",
+                        "step": "archive",
+                        "port": "out",
+                        "attempt": 1,
+                        "count": 1,
+                        "produced_at": "2026-09-30T05:44:10.512Z"
+                      },
+                      "items": [
+                        {
+                          "id": "01JMZ8V1PB2C3D4E5F6G7H8J9K",
+                          "data": {
+                            "invoices": 211
+                          },
+                          "files": [
+                            {
+                              "name": "invoices.zip",
+                              "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/archive/out/invoices.zip",
+                              "media_type": "application/zip",
+                              "size": 481233,
+                              "sha256": "c1f4a91dd87852afdeab8ce3212cb8fd034a63f37cc523c8fa6d9ead34c1d02b"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "404": {
+            "description": "No such run, or not the caller's; or no output of that name recorded, a run's outputs being recorded when it ends with every one of them published.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "absent": {
+                    "summary": "no such output yet",
+                    "value": {
+                      "error": "the run records no output of that name: a run's outputs are recorded when it ends with every one of them published"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "The output's envelope existed and its bytes were purged with the run's retention: the run still shows its digest.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "purged": {
+                    "summary": "past the retention",
+                    "value": {
+                      "error": "the envelope of the output archived was purged at 2026-10-31T05:44:10Z with the run's other envelopes, past the retention its workflow declared, and its digest is all that is kept"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/artifacts/{uri}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/artifactUri"
+        }
+      ],
+      "get": {
+        "operationId": "getArtifact",
+        "tags": [
+          "runs"
+        ],
+        "summary": "Fetch an artifact",
+        "description": "Fetches one artifact by the URI an envelope names it with: a redirect to a presigned URL good for 5 minutes where it has no fetch budget, so that the bytes never touch the control plane; the bytes themselves where it has one, since a redirect would spend a fetch on a client that never arrived. A fetch counts when the transfer completes, is held while it goes and given back where it does not; one held while every fetch left is being served is answered 409. Expired, or with its budget spent, it is 410 rather than 404, so that a client tells this existed and is finished from this never existed, and the run detail keeps showing it. A HEAD is answered what a GET would be, bytes aside, and spends nothing. A Range is not honoured. Requires run:read_data on the workflow of the run that published it, a run of another namespace answered as one that does not exist.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#artifact-expiry"
+        },
+        "responses": {
+          "200": {
+            "description": "The bytes of an artifact with a fetch budget, as an attachment, with nosniff; the fetch spent once they have all gone and matched their digest.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "examples": {
+                  "bytes": {
+                    "summary": "the file, whole",
+                    "value": "PK..."
+                  }
+                }
+              }
+            }
+          },
+          "302": {
+            "description": "Where an artifact with no fetch budget is read: a presigned URL of the object store, good for 5 minutes, which no cache may keep.",
+            "headers": {
+              "Location": {
+                "description": "The presigned URL.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "examples": {
+                  "presigned": {
+                    "summary": "a presigned URL on the installation's object store",
+                    "value": "https://agentiik.example.com/objects/finance/sha256/c1f4a91dd87852afdeab8ce3212cb8fd034a63f37cc523c8fa6d9ead34c1d02b?expires=1790815800&run=01JMZ8V1P9C4XQ7K2N4D6F8H0A&sig=4f2a"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "404": {
+            "description": "No such artifact, never written or in a run the caller may not read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "absent": {
+                    "summary": "never written",
+                    "value": {
+                      "error": "no such thing, or not yours"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Every fetch its budget has left is being served right now; one comes back where its transfer does not complete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "held": {
+                    "summary": "every fetch being served",
+                    "value": {
+                      "error": "every fetch left of that artifact is being served to somebody else, and one comes back if its transfer does not complete: ask again later"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "It existed and is finished: past its retain, or its fetches spent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "gone": {
+                    "summary": "its fetches spent",
+                    "value": {
+                      "error": "that artifact has expired or its fetches are spent: it existed, and is finished"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/{ns}/secrets": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        }
+      ],
+      "get": {
+        "operationId": "listSecrets",
+        "tags": [
+          "secrets"
+        ],
+        "summary": "List a namespace's secret declarations",
+        "description": "Every secret the namespace declares, each with its name, its store and the path in it where it has one, where a step is given it, and who declared it when; never a value, which no route reads. Requires workflow:read at namespace scope, which reading the workflows that name these secrets already takes; a grant on one workflow shows none.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#secrets"
+        },
+        "responses": {
+          "200": {
+            "description": "The declarations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/secretList"
+                },
+                "examples": {
+                  "secrets": {
+                    "summary": "a namespace's secrets",
+                    "value": {
+                      "secrets": [
+                        {
+                          "name": "stripe-key",
+                          "provider": "builtin",
+                          "mount": "/agk/secrets/stripe-key",
+                          "declared_by": "alice",
+                          "declared_at": "2026-09-29T14:02:11Z"
+                        },
+                        {
+                          "name": "smtp-password",
+                          "provider": "env",
+                          "path": "AGK_DEV_FINANCE_SMTP_PASSWORD",
+                          "mount": "/agk/secrets/smtp-password",
+                          "declared_by": "alice",
+                          "declared_at": "2026-09-29T14:05:40Z"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such namespace, or one where the caller does not hold workflow:read at namespace scope: the same answer."
+          }
+        }
+      }
+    },
+    "/api/v1/{ns}/secrets/{name}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        },
+        {
+          "$ref": "#/components/parameters/secret"
+        }
+      ],
+      "get": {
+        "operationId": "readSecret",
+        "tags": [
+          "secrets"
+        ],
+        "summary": "Read one secret declaration",
+        "description": "One declaration, as the list gives it, never its value. Requires workflow:read at namespace scope.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#secrets"
+        },
+        "responses": {
+          "200": {
+            "description": "The declaration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/secretDeclaration"
+                },
+                "examples": {
+                  "builtin": {
+                    "summary": "kept in the built-in store",
+                    "value": {
+                      "name": "stripe-key",
+                      "provider": "builtin",
+                      "mount": "/agk/secrets/stripe-key",
+                      "declared_by": "alice",
+                      "declared_at": "2026-09-29T14:02:11Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such declaration, no such namespace, or one where the caller does not hold workflow:read: the same answer."
+          }
+        }
+      },
+      "put": {
+        "operationId": "declareSecret",
+        "tags": [
+          "secrets"
+        ],
+        "summary": "Declare, change or rotate one secret",
+        "description": "Declares the secret, or changes where its value is kept, and for builtin writes the value, sealed in the declaration's own transaction so that a store refusing it leaves the declaration as it was. One secret per request, so that two Terraform applies each declaring their own never drop each other's change. A value goes one way: no answer returns it, and rotating is writing again. env is taken only where the installation gives the namespace a prefix and the path begins with it; vault is refused until its provider arrives. Requires secret:write at namespace scope, and is audited as secret.write with the store, the path and whether a value was written, never the value.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#secrets"
+        },
+        "requestBody": {
+          "description": "The store, the path, and for builtin the value.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/secretDeclare"
+              },
+              "examples": {
+                "write": {
+                  "summary": "a value written to the built-in store",
+                  "value": {
+                    "provider": "builtin",
+                    "value": "sk_live_51H..."
+                  }
+                },
+                "keep": {
+                  "summary": "the declaration changed, the value kept",
+                  "value": {
+                    "provider": "builtin"
+                  }
+                },
+                "env": {
+                  "summary": "read from the API's environment, for development",
+                  "value": {
+                    "provider": "env",
+                    "path": "AGK_DEV_FINANCE_SMTP_PASSWORD"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Changed: the declaration as it now stands, never the value.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/secretDeclaration"
+                },
+                "examples": {
+                  "builtin": {
+                    "summary": "kept in the built-in store",
+                    "value": {
+                      "name": "stripe-key",
+                      "provider": "builtin",
+                      "mount": "/agk/secrets/stripe-key",
+                      "declared_by": "alice",
+                      "declared_at": "2026-09-29T14:02:11Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Declared: the declaration, never the value, and Location naming it.",
+            "headers": {
+              "Location": {
+                "description": "Where the declaration is read.",
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "secret": {
+                    "summary": "the new declaration",
+                    "value": "/api/v1/finance/secrets/stripe-key"
+                  }
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/secretDeclaration"
+                },
+                "examples": {
+                  "builtin": {
+                    "summary": "kept in the built-in store",
+                    "value": {
+                      "name": "stripe-key",
+                      "provider": "builtin",
+                      "mount": "/agk/secrets/stripe-key",
+                      "declared_by": "alice",
+                      "declared_at": "2026-09-29T14:02:11Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "A name the workflow file could not write, a store that is not one of the three or that this installation does not read for the namespace, a path builtin does not take or env needs, a value for a store other than builtin, an empty value, an encoding that is not utf-8 or base64, or two credentials."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such namespace, or one where the caller does not hold secret:write at namespace scope: the same answer."
+          },
+          "413": {
+            "$ref": "#/components/responses/tooLarge",
+            "description": "A value larger than 1 MiB once decoded, or a body larger than 2 MiB."
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable",
+            "description": "A value sent to an installation with no built-in store attached: nothing was written."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeSecret",
+        "tags": [
+          "secrets"
+        ],
+        "summary": "Remove one secret declaration",
+        "description": "Removes the declaration and, where the built-in store keeps one, its value, so that declaring the name again later does not bring back a credential somebody meant to be gone. Requires secret:write at namespace scope, and is audited as secret.delete.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#secrets"
+        },
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such declaration, no such namespace, or one where the caller does not hold secret:write: the same answer."
+          }
+        }
+      }
+    },
+    "/api/v1/runners": {
+      "get": {
+        "operationId": "listRunners",
+        "tags": [
+          "runners"
+        ],
+        "summary": "List the runners",
+        "description": "The runner inventory: each runner's pool and labels, what its host has, the state the installation gives it and the one it last reported, its concurrency and last heartbeat, who drained or revoked it and when, and the end of a revocation's grace. Never a host's name or address, which the installation does not hold, nor its key. Administrator only, since a user learns of a runner its identifier alone.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#registering-a-runner"
+        },
+        "responses": {
+          "200": {
+            "description": "The inventory.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/runnerList"
+                },
+                "examples": {
+                  "fleet": {
+                    "summary": "a runner at work, one draining and one revoked",
+                    "value": {
+                      "runners": [
+                        {
+                          "runner": "01jmz8x2d5f8qx7t2n5r8wd3hk",
+                          "pool": "dmz",
+                          "labels": [
+                            "zone=dmz",
+                            "arch=amd64"
+                          ],
+                          "cpu": 8,
+                          "memory_bytes": 34359738368,
+                          "disk_bytes": 214748364800,
+                          "architecture": "amd64",
+                          "agent_version": "0.6.0",
+                          "containment": {
+                            "runtime": "runc",
+                            "userns_remap": true
+                          },
+                          "state": "ready",
+                          "reported_state": "ready",
+                          "concurrency": 4,
+                          "joined_at": "2026-09-20T08:14:02Z",
+                          "last_seen_at": "2026-10-01T06:41:57Z",
+                          "rotate_by": "2026-10-21T08:14:02Z"
+                        },
+                        {
+                          "runner": "01jmz8x9t4m2ke6v0c3b7n1a5q",
+                          "pool": "dmz",
+                          "labels": [
+                            "zone=dmz",
+                            "arch=amd64"
+                          ],
+                          "cpu": 8,
+                          "memory_bytes": 34359738368,
+                          "disk_bytes": 214748364800,
+                          "architecture": "amd64",
+                          "agent_version": "0.6.0",
+                          "containment": {
+                            "runtime": "runc",
+                            "userns_remap": true
+                          },
+                          "state": "draining",
+                          "drain_reason": "kernel update",
+                          "drained_by": "dana",
+                          "drained_at": "2026-10-01T06:02:18Z",
+                          "reported_state": "draining",
+                          "concurrency": 4,
+                          "joined_at": "2026-09-20T08:16:40Z",
+                          "last_seen_at": "2026-10-01T06:41:55Z",
+                          "rotate_by": "2026-10-21T08:16:40Z"
+                        },
+                        {
+                          "runner": "01jmyq3c8w5h0r2f6t9k4p7x1d",
+                          "pool": "gpu",
+                          "labels": [
+                            "gpu=true"
+                          ],
+                          "cpu": 16,
+                          "memory_bytes": 68719476736,
+                          "disk_bytes": 1099511627776,
+                          "architecture": "amd64",
+                          "agent_version": "0.5.2",
+                          "namespaces": [
+                            "research"
+                          ],
+                          "state": "revoked",
+                          "drain_reason": "disk replaced",
+                          "revoked_by": "dana",
+                          "revoked_at": "2026-09-25T09:30:00Z",
+                          "results_accepted_until": "2026-09-25T10:30:00Z",
+                          "reported_state": "draining",
+                          "concurrency": 1,
+                          "joined_at": "2026-09-02T11:00:12Z",
+                          "last_seen_at": "2026-09-25T10:12:31Z",
+                          "rotate_by": "2026-10-02T11:00:12Z"
+                        }
+                      ]
+                    }
+                  },
+                  "none": {
+                    "summary": "an installation no runner has joined yet",
+                    "value": {
+                      "runners": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds a session that may only enrol."
+          }
+        }
+      }
+    },
+    "/api/v1/runner-pools": {
+      "get": {
+        "operationId": "listRunnerPools",
+        "tags": [
+          "runners"
+        ],
+        "summary": "List the runner pools",
+        "description": "Every pool with its labels, the namespaces it accepts, its resource ceilings and its containment tier: what a namespace's allowed_runner_pools is written against. Administrator only.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#registering-a-runner"
+        },
+        "responses": {
+          "200": {
+            "description": "The pools.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/runnerPoolList"
+                },
+                "examples": {
+                  "pools": {
+                    "summary": "a default pool, one for a zone and one for a kind of host",
+                    "value": {
+                      "runner_pools": [
+                        {
+                          "pool": {
+                            "name": "default",
+                            "labels": [],
+                            "namespaces": [],
+                            "resource_ceilings": {},
+                            "containment": "hardened"
+                          }
+                        },
+                        {
+                          "pool": {
+                            "name": "dmz",
+                            "labels": [
+                              "zone=dmz",
+                              "arch=amd64"
+                            ],
+                            "namespaces": [
+                              "finance",
+                              "team-ops"
+                            ],
+                            "resource_ceilings": {
+                              "cpu": "4",
+                              "memory": "8Gi"
+                            },
+                            "containment": "hardened"
+                          }
+                        },
+                        {
+                          "pool": {
+                            "name": "gpu",
+                            "labels": [
+                              "gpu=true"
+                            ],
+                            "namespaces": [
+                              "research"
+                            ],
+                            "resource_ceilings": {
+                              "cpu": "16",
+                              "memory": "64Gi",
+                              "pids": 4096
+                            },
+                            "containment": "sandboxed"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "first": {
+                    "summary": "the pool an installation starts with",
+                    "value": {
+                      "runner_pools": [
+                        {
+                          "pool": {
+                            "name": "default",
+                            "labels": [],
+                            "namespaces": [],
+                            "resource_ceilings": {},
+                            "containment": "hardened"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds a session that may only enrol."
           }
         }
       }
@@ -11261,7 +12438,8 @@
           "from",
           "to",
           "bucket",
-          "buckets"
+          "buckets",
+          "overall"
         ],
         "description": "The runs of a namespace's workflows, bucket by bucket, over the range: only the workflows the caller holds run:read on, as GET /api/v1/runs lists them, so that a chart shows nothing a list would not.",
         "properties": {
@@ -11363,6 +12541,41 @@
               ]
             ]
           },
+          "overall": {
+            "$ref": "#/components/schemas/statsRunsBucket",
+            "description": "The range as one bucket, from the first bucket's since to the last one's until: what its runs came to together, which a figure beside the charts reads. Its counts are the buckets' summed, and its percentiles are taken over the whole range rather than combined from the buckets', which percentiles do not combine into, so a client could not work them out.",
+            "examples": [
+              {
+                "since": "2026-09-30T06:00:00Z",
+                "until": "2026-09-30T07:59:59.999999999Z",
+                "runs": {
+                  "queued": 0,
+                  "running": 1,
+                  "waiting": 0,
+                  "succeeded": 20,
+                  "failed": 1,
+                  "cancelled": 0,
+                  "timed_out": 0
+                },
+                "duration_ms": {
+                  "p50": 215000,
+                  "p95": 298000,
+                  "p99": 308000
+                },
+                "queue_wait_ms": {
+                  "p50": 400,
+                  "p95": 1800,
+                  "p99": 2500
+                },
+                "retries": [
+                  {
+                    "exit_code": 108,
+                    "attempts": 3
+                  }
+                ]
+              }
+            ]
+          },
           "histogram": {
             "type": "array",
             "items": {
@@ -11441,7 +12654,8 @@
             "required": [
               "from",
               "to",
-              "buckets"
+              "buckets",
+              "overall"
             ],
             "properties": {
               "from": {
@@ -11520,6 +12734,41 @@
                       ]
                     }
                   ]
+                ]
+              },
+              "overall": {
+                "$ref": "#/components/schemas/statsRunsBucket",
+                "description": "The span before as one bucket, as overall is the range's: what a figure's change is worked out against.",
+                "examples": [
+                  {
+                    "since": "2026-09-30T04:00:00Z",
+                    "until": "2026-09-30T05:59:59.999999999Z",
+                    "runs": {
+                      "queued": 0,
+                      "running": 0,
+                      "waiting": 0,
+                      "succeeded": 22,
+                      "failed": 0,
+                      "cancelled": 0,
+                      "timed_out": 1
+                    },
+                    "duration_ms": {
+                      "p50": 226000,
+                      "p95": 297000,
+                      "p99": 2870000
+                    },
+                    "queue_wait_ms": {
+                      "p50": 420,
+                      "p95": 2000,
+                      "p99": 2300
+                    },
+                    "retries": [
+                      {
+                        "exit_code": null,
+                        "attempts": 1
+                      }
+                    ]
+                  }
                 ]
               },
               "histogram": {
@@ -11653,7 +12902,36 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "overall": {
+                  "since": "2026-09-30T04:00:00Z",
+                  "until": "2026-09-30T05:59:59.999999999Z",
+                  "runs": {
+                    "queued": 0,
+                    "running": 0,
+                    "waiting": 0,
+                    "succeeded": 22,
+                    "failed": 0,
+                    "cancelled": 0,
+                    "timed_out": 1
+                  },
+                  "duration_ms": {
+                    "p50": 226000,
+                    "p95": 297000,
+                    "p99": 2870000
+                  },
+                  "queue_wait_ms": {
+                    "p50": 420,
+                    "p95": 2000,
+                    "p99": 2300
+                  },
+                  "retries": [
+                    {
+                      "exit_code": null,
+                      "attempts": 1
+                    }
+                  ]
+                }
               }
             ],
             "description": "The span just before the range, in as many buckets of the same length, with its histogram where one was asked for. Present where compare=previous."
@@ -11719,7 +12997,36 @@
                 },
                 "retries": []
               }
-            ]
+            ],
+            "overall": {
+              "since": "2026-09-30T06:00:00Z",
+              "until": "2026-09-30T07:59:59.999999999Z",
+              "runs": {
+                "queued": 0,
+                "running": 1,
+                "waiting": 0,
+                "succeeded": 20,
+                "failed": 1,
+                "cancelled": 0,
+                "timed_out": 0
+              },
+              "duration_ms": {
+                "p50": 215000,
+                "p95": 298000,
+                "p99": 308000
+              },
+              "queue_wait_ms": {
+                "p50": 400,
+                "p95": 1800,
+                "p99": 2500
+              },
+              "retries": [
+                {
+                  "exit_code": 108,
+                  "attempts": 3
+                }
+              ]
+            }
           },
           {
             "from": "2026-09-30T06:00:00Z",
@@ -11769,7 +13076,36 @@
                 },
                 "retries": []
               }
-            ]
+            ],
+            "overall": {
+              "since": "2026-09-30T06:00:00Z",
+              "until": "2026-09-30T07:59:59.999999999Z",
+              "runs": {
+                "queued": 0,
+                "running": 0,
+                "waiting": 0,
+                "succeeded": 11,
+                "failed": 1,
+                "cancelled": 0,
+                "timed_out": 0
+              },
+              "duration_ms": {
+                "p50": 222000,
+                "p95": 301000,
+                "p99": 309000
+              },
+              "queue_wait_ms": {
+                "p50": 420,
+                "p95": 1900,
+                "p99": 2600
+              },
+              "retries": [
+                {
+                  "exit_code": 108,
+                  "attempts": 3
+                }
+              ]
+            }
           },
           {
             "from": "2026-09-30T06:00:00Z",
@@ -11831,6 +13167,35 @@
                 "retries": []
               }
             ],
+            "overall": {
+              "since": "2026-09-30T06:00:00Z",
+              "until": "2026-09-30T07:59:59.999999999Z",
+              "runs": {
+                "queued": 0,
+                "running": 1,
+                "waiting": 0,
+                "succeeded": 20,
+                "failed": 1,
+                "cancelled": 0,
+                "timed_out": 0
+              },
+              "duration_ms": {
+                "p50": 215000,
+                "p95": 298000,
+                "p99": 308000
+              },
+              "queue_wait_ms": {
+                "p50": 400,
+                "p95": 1800,
+                "p99": 2500
+              },
+              "retries": [
+                {
+                  "exit_code": 108,
+                  "attempts": 3
+                }
+              ]
+            },
             "histogram": [
               {
                 "from_ms": 180000,
@@ -11910,7 +13275,36 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "overall": {
+                "since": "2026-09-30T04:00:00Z",
+                "until": "2026-09-30T05:59:59.999999999Z",
+                "runs": {
+                  "queued": 0,
+                  "running": 0,
+                  "waiting": 0,
+                  "succeeded": 22,
+                  "failed": 0,
+                  "cancelled": 0,
+                  "timed_out": 1
+                },
+                "duration_ms": {
+                  "p50": 226000,
+                  "p95": 297000,
+                  "p99": 2870000
+                },
+                "queue_wait_ms": {
+                  "p50": 420,
+                  "p95": 2000,
+                  "p99": 2300
+                },
+                "retries": [
+                  {
+                    "exit_code": null,
+                    "attempts": 1
+                  }
+                ]
+              }
             }
           }
         ]
@@ -12206,6 +13600,33 @@
                     ]
                   ]
                 },
+                "overall": {
+                  "$ref": "#/components/schemas/statsStepBucket",
+                  "description": "The range as one bucket, from the first bucket's since to the last one's until: what the step came to over the whole range, which a figure beside the charts reads. Its attempts and exit codes are the buckets' summed, and its percentiles and its items a minute are taken over the whole range, since neither combines from the buckets'. Absent with by=hour.",
+                  "examples": [
+                    {
+                      "since": "2026-09-30T06:00:00Z",
+                      "until": "2026-09-30T07:59:59.999999999Z",
+                      "duration_ms": {
+                        "p50": 174000,
+                        "p95": 236000,
+                        "p99": 249000
+                      },
+                      "attempts": 24,
+                      "exit_codes": [
+                        {
+                          "exit_code": 0,
+                          "attempts": 20
+                        },
+                        {
+                          "exit_code": 108,
+                          "attempts": 4
+                        }
+                      ],
+                      "items_per_minute": 77.2
+                    }
+                  ]
+                },
                 "hours": {
                   "type": "array",
                   "items": {
@@ -12261,6 +13682,29 @@
                       }
                     ]
                   ]
+                },
+                "previous_overall": {
+                  "$ref": "#/components/schemas/statsStepBucket",
+                  "description": "The span before as one bucket, as overall is the range's: what a figure's change is worked out against. Present where compare=previous.",
+                  "examples": [
+                    {
+                      "since": "2026-09-30T04:00:00Z",
+                      "until": "2026-09-30T05:59:59.999999999Z",
+                      "duration_ms": {
+                        "p50": 181000,
+                        "p95": 244000,
+                        "p99": 260000
+                      },
+                      "attempts": 22,
+                      "exit_codes": [
+                        {
+                          "exit_code": 0,
+                          "attempts": 22
+                        }
+                      ],
+                      "items_per_minute": 70.4
+                    }
+                  ]
                 }
               },
               "examples": [
@@ -12299,7 +13743,23 @@
                         }
                       ]
                     }
-                  ]
+                  ],
+                  "overall": {
+                    "since": "2026-09-30T06:00:00Z",
+                    "until": "2026-09-30T07:59:59.999999999Z",
+                    "duration_ms": {
+                      "p50": 1150,
+                      "p95": 1800,
+                      "p99": 2050
+                    },
+                    "attempts": 21,
+                    "exit_codes": [
+                      {
+                        "exit_code": 0,
+                        "attempts": 21
+                      }
+                    ]
+                  }
                 }
               ]
             },
@@ -12341,7 +13801,23 @@
                         }
                       ]
                     }
-                  ]
+                  ],
+                  "overall": {
+                    "since": "2026-09-30T06:00:00Z",
+                    "until": "2026-09-30T07:59:59.999999999Z",
+                    "duration_ms": {
+                      "p50": 1150,
+                      "p95": 1800,
+                      "p99": 2050
+                    },
+                    "attempts": 21,
+                    "exit_codes": [
+                      {
+                        "exit_code": 0,
+                        "attempts": 21
+                      }
+                    ]
+                  }
                 },
                 {
                   "step": "invoice",
@@ -12384,7 +13860,28 @@
                       ],
                       "items_per_minute": 81.0
                     }
-                  ]
+                  ],
+                  "overall": {
+                    "since": "2026-09-30T06:00:00Z",
+                    "until": "2026-09-30T07:59:59.999999999Z",
+                    "duration_ms": {
+                      "p50": 174000,
+                      "p95": 236000,
+                      "p99": 249000
+                    },
+                    "attempts": 24,
+                    "exit_codes": [
+                      {
+                        "exit_code": 0,
+                        "attempts": 20
+                      },
+                      {
+                        "exit_code": 108,
+                        "attempts": 4
+                      }
+                    ],
+                    "items_per_minute": 77.2
+                  }
                 }
               ]
             ]
@@ -12432,7 +13929,23 @@
                       }
                     ]
                   }
-                ]
+                ],
+                "overall": {
+                  "since": "2026-09-30T06:00:00Z",
+                  "until": "2026-09-30T07:59:59.999999999Z",
+                  "duration_ms": {
+                    "p50": 1150,
+                    "p95": 1800,
+                    "p99": 2050
+                  },
+                  "attempts": 21,
+                  "exit_codes": [
+                    {
+                      "exit_code": 0,
+                      "attempts": 21
+                    }
+                  ]
+                }
               },
               {
                 "step": "invoice",
@@ -12475,7 +13988,28 @@
                     ],
                     "items_per_minute": 81.0
                   }
-                ]
+                ],
+                "overall": {
+                  "since": "2026-09-30T06:00:00Z",
+                  "until": "2026-09-30T07:59:59.999999999Z",
+                  "duration_ms": {
+                    "p50": 174000,
+                    "p95": 236000,
+                    "p99": 249000
+                  },
+                  "attempts": 24,
+                  "exit_codes": [
+                    {
+                      "exit_code": 0,
+                      "attempts": 20
+                    },
+                    {
+                      "exit_code": 108,
+                      "attempts": 4
+                    }
+                  ],
+                  "items_per_minute": 77.2
+                }
               }
             ]
           },
@@ -13682,7 +15216,21 @@
                   "triggered_by": "alice",
                   "created_at": "2026-10-01T05:41:03Z",
                   "started_at": "2026-10-01T05:41:03Z",
-                  "finished_at": "2026-10-01T05:42:55Z"
+                  "finished_at": "2026-10-01T05:42:55Z",
+                  "steps": [
+                    {
+                      "step": "normalize",
+                      "verdict": "succeeded",
+                      "started_at": "2026-09-30T05:40:12Z",
+                      "finished_at": "2026-09-30T05:41:02Z"
+                    },
+                    {
+                      "step": "invoice",
+                      "verdict": "failed",
+                      "started_at": "2026-09-30T05:41:03Z",
+                      "finished_at": "2026-09-30T05:44:10Z"
+                    }
+                  ]
                 },
                 {
                   "namespace": "finance",
@@ -13693,7 +15241,8 @@
                   "trigger_kind": "webhook",
                   "triggered_by": "finance/agentiik",
                   "created_at": "2026-10-01T05:28:44Z",
-                  "started_at": "2026-10-01T05:28:45Z"
+                  "started_at": "2026-10-01T05:28:45Z",
+                  "steps": []
                 }
               ],
               []
@@ -13713,7 +15262,21 @@
                 "triggered_by": "alice",
                 "created_at": "2026-10-01T05:41:03Z",
                 "started_at": "2026-10-01T05:41:03Z",
-                "finished_at": "2026-10-01T05:42:55Z"
+                "finished_at": "2026-10-01T05:42:55Z",
+                "steps": [
+                  {
+                    "step": "normalize",
+                    "verdict": "succeeded",
+                    "started_at": "2026-09-30T05:40:12Z",
+                    "finished_at": "2026-09-30T05:41:02Z"
+                  },
+                  {
+                    "step": "invoice",
+                    "verdict": "failed",
+                    "started_at": "2026-09-30T05:41:03Z",
+                    "finished_at": "2026-09-30T05:44:10Z"
+                  }
+                ]
               },
               {
                 "namespace": "finance",
@@ -13724,7 +15287,8 @@
                 "trigger_kind": "webhook",
                 "triggered_by": "finance/agentiik",
                 "created_at": "2026-10-01T05:28:44Z",
-                "started_at": "2026-10-01T05:28:45Z"
+                "started_at": "2026-10-01T05:28:45Z",
+                "steps": []
               }
             ]
           },
@@ -13839,7 +15403,7 @@
               "skipped",
               "cancelled"
             ],
-            "description": "Where the step stands: pending before it starts, or while it waits for another attempt; running while a shard of it is in flight; succeeded once it published its ports; failed, which continue_on_error does not change; skipped where its if was false; cancelled with its run.",
+            "description": "Where the step stands: pending before it starts, or while it waits for another attempt; running while a shard of it is in flight; succeeded once it published its ports; failed, which continue_on_error does not change; skipped where its if was false; cancelled with its run, where it was under way when the run was cancelled or timed out, a step nobody reached staying pending.",
             "examples": [
               "succeeded",
               "failed"
@@ -13885,6 +15449,42 @@
                   "items": 211
                 }
               }
+            ]
+          },
+          "image": {
+            "$ref": "wire.schema.json#/$defs/imageRef",
+            "description": "The image the step runs, by digest, as the version the run pinned resolved it: an image the file named by a tag is the digest the tag was resolved to when the version was pushed. Absent for a workflow step, which runs no container, and where the version can no longer be read.",
+            "examples": [
+              "ghcr.io/acme/agk-invoice@sha256:9f2c1d4a77b0c3e51d8a6f2b4c9e0a13d5f7b82c6e04a9d31b7f5c28e6a0b7e0"
+            ]
+          },
+          "input_ports": {
+            "type": "array",
+            "items": {
+              "$ref": "wire.schema.json#/$defs/identifier"
+            },
+            "description": "The input ports the step declares, by name, sorted: those its edges feed and those its inputs keyword feeds, each handed to a task as an envelope, empty ones included. Absent for a step that reads nothing.",
+            "examples": [
+              [
+                "orders"
+              ],
+              [
+                "customers",
+                "orders"
+              ]
+            ]
+          },
+          "output_ports": {
+            "type": "array",
+            "items": {
+              "$ref": "wire.schema.json#/$defs/identifier"
+            },
+            "description": "The output ports the step declares, in the order the file writes them: each is published once, when the step ends, an empty envelope where nothing was written to it, which is what ports carries from then on.",
+            "examples": [
+              [
+                "out",
+                "error"
+              ]
             ]
           }
         }
@@ -14037,6 +15637,18 @@
                 }
               }
             ]
+          },
+          "params": {
+            "type": "object",
+            "description": "The parameters the task was dispatched with, resolved: every expression evaluated and the matrix combination in, as the container read them from /agk/params.json, a secret written as {\"secret\": name} and never as its value. An expression may carry envelope contents into them, so they are answered only to a caller holding run:read_data on the run's workflow, and otherwise left out; absent for a task never dispatched, a cache hit and a call.",
+            "examples": [
+              {
+                "currency": "EUR",
+                "vat_api_key": {
+                  "secret": "vat-api"
+                }
+              }
+            ]
           }
         }
       },
@@ -14054,7 +15666,8 @@
           "created_at",
           "replay_from_start_only",
           "steps",
-          "tasks"
+          "tasks",
+          "artifacts"
         ],
         "description": "One run whole: the record the listing gives, then what became of every part of it, its steps and each of their tasks, the envelopes they published and were handed by digest, and why it ended where nothing in its workflow ended it. Its inputs are envelope contents, answered only to a caller holding run:read_data on the run's workflow.",
         "examples": [
@@ -14109,7 +15722,15 @@
                     "size": 212,
                     "items": 3
                   }
-                }
+                },
+                "image": "ghcr.io/acme/agk-invoice@sha256:9f2c1d4a77b0c3e51d8a6f2b4c9e0a13d5f7b82c6e04a9d31b7f5c28e6a0b7e0",
+                "input_ports": [
+                  "orders"
+                ],
+                "output_ports": [
+                  "out",
+                  "error"
+                ]
               },
               {
                 "step": "archive",
@@ -14148,6 +15769,19 @@
                     "items": 27
                   }
                 }
+              }
+            ],
+            "artifacts": [
+              {
+                "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/archive/out/invoices.zip",
+                "step": "archive",
+                "port": "out",
+                "name": "invoices.zip",
+                "media_type": "application/zip",
+                "size": 481233,
+                "sha256": "c1f4a91dd87852afdeab8ce3212cb8fd034a63f37cc523c8fa6d9ead34c1d02b",
+                "status": "live",
+                "expires_at": "2026-12-29T05:44:10Z"
               }
             ]
           }
@@ -14476,6 +16110,42 @@
                 }
               ]
             ]
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/runArtifact"
+            },
+            "description": "The files the run's steps published, live or retired, by step, port and name: what each envelope's files name, with where each stands in its retention. Empty for a run that published none.",
+            "examples": [
+              [
+                {
+                  "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/archive/out/invoices.zip",
+                  "step": "archive",
+                  "port": "out",
+                  "name": "invoices.zip",
+                  "media_type": "application/zip",
+                  "size": 481233,
+                  "sha256": "c1f4a91dd87852afdeab8ce3212cb8fd034a63f37cc523c8fa6d9ead34c1d02b",
+                  "status": "live",
+                  "expires_at": "2026-12-29T05:44:10Z"
+                },
+                {
+                  "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/render/out/payslips.pdf",
+                  "step": "render",
+                  "port": "out",
+                  "name": "payslips.pdf",
+                  "media_type": "application/pdf",
+                  "size": 88412,
+                  "sha256": "9f2c1d4a77b0c3e51d8a6f2b4c9e0a13d5f7b82c6e04a9d31b7f5c28e6a0b7e0",
+                  "status": "collected",
+                  "expires_at": "2026-10-02T05:44:10Z",
+                  "retired_at": "2026-10-01T09:12:00Z",
+                  "fetches_left": 0
+                }
+              ],
+              []
+            ]
           }
         }
       },
@@ -14578,6 +16248,979 @@
             "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
             "replay_of": "01JMZ8V1P9C4XQ7K2N4D6F8H0A",
             "replay_from": "invoice"
+          }
+        ]
+      },
+      "runArtifact": {
+        "title": "Run artifact",
+        "type": "object",
+        "required": [
+          "uri",
+          "step",
+          "port",
+          "name",
+          "media_type",
+          "size",
+          "sha256",
+          "status",
+          "expires_at"
+        ],
+        "additionalProperties": false,
+        "description": "One file a step of the run published on a port, as its reference holds it: what the envelope's file names, and where it stands in its retention. The reference outlives the bytes, so that a file fetched past its retention answers 410 rather than 404 and the run keeps showing its name, size and digest with its collection recorded.",
+        "examples": [
+          {
+            "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/archive/out/invoices.zip",
+            "step": "archive",
+            "port": "out",
+            "name": "invoices.zip",
+            "media_type": "application/zip",
+            "size": 481233,
+            "sha256": "c1f4a91dd87852afdeab8ce3212cb8fd034a63f37cc523c8fa6d9ead34c1d02b",
+            "status": "live",
+            "expires_at": "2026-12-29T05:44:10Z"
+          },
+          {
+            "uri": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/render/out/payslips.pdf",
+            "step": "render",
+            "port": "out",
+            "name": "payslips.pdf",
+            "media_type": "application/pdf",
+            "size": 88412,
+            "sha256": "9f2c1d4a77b0c3e51d8a6f2b4c9e0a13d5f7b82c6e04a9d31b7f5c28e6a0b7e0",
+            "status": "collected",
+            "expires_at": "2026-10-02T05:44:10Z",
+            "retired_at": "2026-10-01T09:12:00Z",
+            "fetches_left": 0
+          }
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "envelope.schema.json#/$defs/file/properties/uri",
+            "description": "The URI the envelope names it by, which GET /api/v1/artifacts/{uri} fetches it with.",
+            "examples": [
+              "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/archive/out/invoices.zip"
+            ]
+          },
+          "step": {
+            "$ref": "wire.schema.json#/$defs/identifier",
+            "description": "The step that published it.",
+            "examples": [
+              "archive"
+            ]
+          },
+          "port": {
+            "$ref": "wire.schema.json#/$defs/identifier",
+            "description": "The port it was published on.",
+            "examples": [
+              "out"
+            ]
+          },
+          "name": {
+            "$ref": "envelope.schema.json#/$defs/file/properties/name",
+            "description": "Its name on that port, the last segment of its URI.",
+            "examples": [
+              "invoices.zip"
+            ]
+          },
+          "media_type": {
+            "$ref": "envelope.schema.json#/$defs/file/properties/media_type",
+            "description": "What the bytes are.",
+            "examples": [
+              "application/zip"
+            ]
+          },
+          "size": {
+            "$ref": "envelope.schema.json#/$defs/file/properties/size",
+            "description": "How many bytes it holds, kept once the bytes are gone.",
+            "examples": [
+              481233
+            ]
+          },
+          "sha256": {
+            "$ref": "envelope.schema.json#/$defs/file/properties/sha256",
+            "description": "The SHA-256 digest of its bytes, kept once the bytes are gone.",
+            "examples": [
+              "c1f4a91dd87852afdeab8ce3212cb8fd034a63f37cc523c8fa6d9ead34c1d02b"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "live",
+              "expired",
+              "collected"
+            ],
+            "description": "live while it may be fetched; expired once its duration ran out; collected once the fetches its budget allowed were spent. A retired reference is kept rather than deleted, which is what the run detail reads.",
+            "examples": [
+              "live",
+              "collected"
+            ]
+          },
+          "expires_at": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "When it stops being fetchable, its retain capped by the namespace's max_retention_days when it was written: an output's own retain where it declares one, defaults.retain otherwise.",
+            "examples": [
+              "2026-12-29T05:44:10Z"
+            ]
+          },
+          "retired_at": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "When it stopped being live. Absent while it is.",
+            "examples": [
+              "2026-10-01T09:12:00Z"
+            ]
+          },
+          "fetches_left": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What remains of a fetch budget, which only a workflow output declaring retain with fetches carries. Absent where there is none.",
+            "examples": [
+              1,
+              0
+            ]
+          }
+        }
+      },
+      "startRequest": {
+        "title": "Start request",
+        "type": "object",
+        "additionalProperties": false,
+        "description": "What a run is asked for: the commit it runs, named or reached through a ref, or neither for the default branch's head, and the workflow inputs it is started with, bound against that version's declaration as agk run --local binds them. {} asks for the head with no input. A commit and a ref together are refused, since a run is of one commit.",
+        "properties": {
+          "commit": {
+            "$ref": "wire.schema.json#/$defs/commit",
+            "description": "A commit that is a version of the workflow.",
+            "examples": [
+              "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A branch or a tag by its short name or in full, or a whole commit that is a version, resolved once, when the run is asked for: the run is pinned to the commit it names then, whatever the ref does next.",
+            "examples": [
+              "main",
+              "refs/tags/v2.1.0"
+            ]
+          },
+          "inputs": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true,
+            "description": "The workflow inputs by name, each held to its JSON Schema, a default filling one left out, and recorded as bound. At most as many values as one envelope may carry items, and as many bytes as one envelope may weigh: a run's data belongs in an artifact. null is read as none.",
+            "examples": [
+              {
+                "orders": [
+                  {
+                    "order": "ORD-0001",
+                    "amount": 120.5
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "examples": [
+          {},
+          {
+            "ref": "main",
+            "inputs": {
+              "orders": [
+                {
+                  "order": "ORD-0001",
+                  "amount": 120.5
+                }
+              ]
+            }
+          },
+          {
+            "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f"
+          }
+        ]
+      },
+      "runStarted": {
+        "title": "Run started",
+        "type": "object",
+        "required": [
+          "run",
+          "state",
+          "commit"
+        ],
+        "additionalProperties": false,
+        "description": "The run a request started, attributed to the caller as a manual run, written and not yet begun: what happens to it is the controller's.",
+        "properties": {
+          "run": {
+            "$ref": "wire.schema.json#/$defs/ulid",
+            "description": "The new run.",
+            "examples": [
+              "01JMZ9A2B3C4D5E6F7G8H9J0K1"
+            ]
+          },
+          "state": {
+            "const": "queued",
+            "description": "Where it stands as it is written.",
+            "examples": [
+              "queued"
+            ]
+          },
+          "commit": {
+            "$ref": "wire.schema.json#/$defs/commit",
+            "description": "The commit it is pinned to, which a caller naming a ref, or none, did not name.",
+            "examples": [
+              "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f"
+            ]
+          }
+        },
+        "examples": [
+          {
+            "run": "01JMZ9A2B3C4D5E6F7G8H9J0K1",
+            "state": "queued",
+            "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f"
+          }
+        ]
+      },
+      "inputRefusal": {
+        "title": "Input refused",
+        "type": "object",
+        "required": [
+          "error",
+          "input",
+          "rule"
+        ],
+        "additionalProperties": false,
+        "description": "An input the request gets wrong: the sentence agk run --local prints for it, and the input and the rule apart, so that a form can point at its field without reading the sentence.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Why, in a sentence.",
+            "examples": [
+              "input orders: schema: /0/amount: got string, want number; run refused"
+            ]
+          },
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The input, by the name the request or the declaration gives it.",
+            "examples": [
+              "orders"
+            ]
+          },
+          "rule": {
+            "enum": [
+              "required",
+              "schema",
+              "undeclared"
+            ],
+            "description": "The key a person finds in the workflow file: required for an input left out with no default, schema for a value its JSON Schema refuses, undeclared for a name the workflow does not declare.",
+            "examples": [
+              "schema"
+            ]
+          }
+        },
+        "examples": [
+          {
+            "error": "input orders: schema: /0/amount: got string, want number; run refused",
+            "input": "orders",
+            "rule": "schema"
+          },
+          {
+            "error": "input orders: required: no value supplied and the input declares no default; run refused",
+            "input": "orders",
+            "rule": "required"
+          }
+        ]
+      },
+      "secretDeclaration": {
+        "title": "Secret declaration",
+        "type": "object",
+        "required": [
+          "name",
+          "provider",
+          "mount",
+          "declared_by",
+          "declared_at"
+        ],
+        "additionalProperties": false,
+        "description": "One secret as the routes answer it: its name, the store its value is kept in and where in it, and where a step is given it. Never its value, which no route reads.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+            "maxLength": 255,
+            "description": "The secret's name, as the workflow file names it.",
+            "examples": [
+              "stripe-key"
+            ]
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "builtin",
+              "env",
+              "vault"
+            ],
+            "description": "The store its value is kept in: builtin, the encrypted store, which keeps it sealed under the namespace and the name; env, the API's own environment, for development, where the installation has opted the namespace in; or vault, which no installation reads from until its provider arrives.",
+            "examples": [
+              "builtin",
+              "env"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "maxLength": 1024,
+            "description": "Where the value sits inside its store: an environment variable's name for env, beginning with the prefix the installation gives the namespace. Absent for builtin, which keeps a value under the namespace and the name and takes no path.",
+            "examples": [
+              "AGK_DEV_FINANCE_STRIPE_KEY"
+            ]
+          },
+          "mount": {
+            "type": "string",
+            "description": "Where a step is given the value, as a file on tmpfs, where its brick's manifest names no mount of its own: /agk/secrets/<name>. Answered rather than stored, since it follows from the name, and answered at all because the file a brick reads is what a person looking at a declaration is usually trying to find.",
+            "examples": [
+              "/agk/secrets/stripe-key"
+            ]
+          },
+          "declared_by": {
+            "$ref": "wire.schema.json#/$defs/accessGrant/properties/granted_by",
+            "description": "Who wrote the declaration last.",
+            "examples": [
+              "alice"
+            ]
+          },
+          "declared_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it was written last.",
+            "examples": [
+              "2026-09-29T14:02:11Z"
+            ]
+          }
+        },
+        "examples": [
+          {
+            "name": "stripe-key",
+            "provider": "builtin",
+            "mount": "/agk/secrets/stripe-key",
+            "declared_by": "alice",
+            "declared_at": "2026-09-29T14:02:11Z"
+          },
+          {
+            "name": "smtp-password",
+            "provider": "env",
+            "path": "AGK_DEV_FINANCE_SMTP_PASSWORD",
+            "mount": "/agk/secrets/smtp-password",
+            "declared_by": "alice",
+            "declared_at": "2026-09-29T14:05:40Z"
+          }
+        ]
+      },
+      "secretList": {
+        "title": "Secret list",
+        "type": "object",
+        "required": [
+          "secrets"
+        ],
+        "additionalProperties": false,
+        "description": "A namespace's secret declarations, by name.",
+        "properties": {
+          "secrets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/secretDeclaration"
+            },
+            "description": "Every declaration of the namespace, never a value.",
+            "examples": [
+              [
+                {
+                  "name": "stripe-key",
+                  "provider": "builtin",
+                  "mount": "/agk/secrets/stripe-key",
+                  "declared_by": "alice",
+                  "declared_at": "2026-09-29T14:02:11Z"
+                }
+              ]
+            ]
+          }
+        },
+        "examples": [
+          {
+            "secrets": [
+              {
+                "name": "stripe-key",
+                "provider": "builtin",
+                "mount": "/agk/secrets/stripe-key",
+                "declared_by": "alice",
+                "declared_at": "2026-09-29T14:02:11Z"
+              },
+              {
+                "name": "smtp-password",
+                "provider": "env",
+                "path": "AGK_DEV_FINANCE_SMTP_PASSWORD",
+                "mount": "/agk/secrets/smtp-password",
+                "declared_by": "alice",
+                "declared_at": "2026-09-29T14:05:40Z"
+              }
+            ]
+          }
+        ]
+      },
+      "secretDeclare": {
+        "title": "Secret declaration written",
+        "type": "object",
+        "required": [
+          "provider"
+        ],
+        "additionalProperties": false,
+        "description": "What a PUT writes: the store a value is kept in, where in it, and for builtin the value itself, written once and returned by no answer. A PUT naming builtin without a value keeps the value stored; rotating is sending one again, never reading one first. A secret moved out of builtin, or removed, takes its stored value with it.",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "builtin",
+              "env",
+              "vault"
+            ],
+            "description": "The store: builtin, env where the installation has opted the namespace in, or vault, refused until its provider arrives, since nothing gives a namespace its prefix in Vault before then.",
+            "examples": [
+              "builtin"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "maxLength": 1024,
+            "description": "For env, the variable the value is read from, which begins with the prefix the installation gives the namespace. Refused for builtin, which takes none.",
+            "examples": [
+              "AGK_DEV_FINANCE_SMTP_PASSWORD"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "description": "The value, for builtin alone, at most 1 MiB once decoded. No answer carries it, now or later, and an empty one is refused rather than taken for a PUT that keeps the old one.",
+            "examples": [
+              "sk_live_51H..."
+            ]
+          },
+          "encoding": {
+            "type": "string",
+            "enum": [
+              "utf-8",
+              "base64"
+            ],
+            "description": "How value is written: utf-8 where absent, or base64 for a value that is not text, a keystore for instance, since JSON carries no arbitrary bytes.",
+            "examples": [
+              "base64"
+            ]
+          }
+        },
+        "examples": [
+          {
+            "provider": "builtin",
+            "value": "sk_live_51H..."
+          },
+          {
+            "provider": "builtin"
+          },
+          {
+            "provider": "env",
+            "path": "AGK_DEV_FINANCE_SMTP_PASSWORD"
+          }
+        ]
+      },
+      "runner": {
+        "title": "Runner",
+        "type": "object",
+        "required": [
+          "runner",
+          "pool",
+          "labels",
+          "cpu",
+          "memory_bytes",
+          "disk_bytes",
+          "architecture",
+          "agent_version",
+          "state",
+          "joined_at"
+        ],
+        "additionalProperties": false,
+        "description": "One runner as the inventory holds it: its identifier, pool and labels, what the host has, what the installation and the runner each say of its state, and who took it out of service and when. Never the host it runs on, nor the key it joined with, which proves it rather than lists it: a runner is a name, a pool and labels, so that a host can be reimaged or moved while what is written against the fleet stays true.",
+        "properties": {
+          "runner": {
+            "$ref": "wire.schema.json#/$defs/runnerRegistration/properties/response/properties/runner",
+            "description": "The identifier the API minted at the join, a lowercase ULID: the name a run gives the runner of each task, and the only one.",
+            "examples": [
+              "01jmz8x2d5f8qx7t2n5r8wd3hk"
+            ]
+          },
+          "pool": {
+            "$ref": "wire.schema.json#/$defs/runnerPool/properties/pool/properties/name",
+            "description": "The pool it joined, the one its join token was issued from.",
+            "examples": [
+              "dmz",
+              "default"
+            ]
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "$ref": "wire.schema.json#/$defs/label"
+            },
+            "description": "The labels it joined with, each one its pool carries and its join token permitted: what a step's runs_on selects it by. Empty for a runner that claimed none.",
+            "examples": [
+              [
+                "zone=dmz",
+                "arch=amd64"
+              ],
+              []
+            ]
+          },
+          "cpu": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The host's virtual cores, as the agent measured them at the join.",
+            "examples": [
+              8,
+              64
+            ]
+          },
+          "memory_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The host's memory in bytes, as the agent measured it at the join.",
+            "examples": [
+              34359738368
+            ]
+          },
+          "disk_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The disk its working directory may use, in bytes, as the agent measured it at the join.",
+            "examples": [
+              214748364800
+            ]
+          },
+          "architecture": {
+            "$ref": "wire.schema.json#/$defs/runnerRegistration/properties/request/properties/architecture",
+            "description": "What the host runs, as the agent reported it at the join.",
+            "examples": [
+              "amd64",
+              "arm64"
+            ]
+          },
+          "agent_version": {
+            "$ref": "wire.schema.json#/$defs/runnerRegistration/properties/request/properties/agent_version",
+            "description": "The agent's version, as it last reported it: at the join, then at each heartbeat, since an agent upgraded in place is the same runner.",
+            "examples": [
+              "0.6.0"
+            ]
+          },
+          "namespaces": {
+            "type": "array",
+            "items": {
+              "$ref": "wire.schema.json#/$defs/namespace"
+            },
+            "minItems": 1,
+            "description": "The namespaces the host's own policy accepts, where it narrows its pool's; absent where it narrows nothing, which is the ordinary case.",
+            "examples": [
+              [
+                "research"
+              ]
+            ]
+          },
+          "containment": {
+            "$ref": "wire.schema.json#/$defs/runnerRegistration/properties/request/properties/containment",
+            "description": "What the host reported at the join about how a container is contained on it; absent where it reported nothing.",
+            "examples": [
+              {
+                "runtime": "runc",
+                "userns_remap": true
+              }
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "draining",
+              "revoked"
+            ],
+            "description": "The installation's word on the runner, which is the one obeyed: ready, draining once an administrator drained it, revoked once one revoked it. What the runner says of itself is reported_state.",
+            "examples": [
+              "ready",
+              "draining",
+              "revoked"
+            ]
+          },
+          "reported_state": {
+            "$ref": "wire.schema.json#/$defs/runnerHeartbeat/properties/request/properties/state",
+            "description": "What the runner said of itself at its last heartbeat: ready, draining, or unhealthy where it took itself out of service. Recorded and never obeyed. Absent until its first heartbeat.",
+            "examples": [
+              "ready",
+              "unhealthy"
+            ]
+          },
+          "concurrency": {
+            "$ref": "wire.schema.json#/$defs/runnerHeartbeat/properties/request/properties/concurrency",
+            "description": "The most tasks it runs at once, as it reported it at its last heartbeat. Absent until its first heartbeat.",
+            "examples": [
+              4
+            ]
+          },
+          "drain_reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Why it was taken out of service, in the order's words, one line: a drain's, or a revocation's, which replaces it.",
+            "examples": [
+              "kernel update",
+              "disk replaced"
+            ]
+          },
+          "drained_by": {
+            "$ref": "wire.schema.json#/$defs/actor",
+            "description": "Who ordered the drain, present with drained_at once one was ordered. An order given twice keeps the first.",
+            "examples": [
+              "dana"
+            ]
+          },
+          "drained_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the drain was ordered.",
+            "examples": [
+              "2026-10-01T06:02:18Z"
+            ]
+          },
+          "revoked_by": {
+            "$ref": "wire.schema.json#/$defs/actor",
+            "description": "Who revoked it, present with revoked_at once it is revoked.",
+            "examples": [
+              "dana"
+            ]
+          },
+          "revoked_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it was revoked.",
+            "examples": [
+              "2026-09-25T09:30:00Z"
+            ]
+          },
+          "results_accepted_until": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The end of a revocation's grace, fixed at the revocation: the results of the tasks it still holds are taken until then, and it is refused everywhere after. Present only for a revoked runner.",
+            "examples": [
+              "2026-09-25T10:30:00Z"
+            ]
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it joined.",
+            "examples": [
+              "2026-09-20T08:14:02Z"
+            ]
+          },
+          "last_seen_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Its last heartbeat, by the installation's clock. Absent until its first; three intervals with none move its tasks to lost.",
+            "examples": [
+              "2026-10-01T06:41:57Z"
+            ]
+          },
+          "rotate_by": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When its credential has to have been rotated by; past it, the credential is refused.",
+            "examples": [
+              "2026-10-21T08:14:02Z"
+            ]
+          }
+        },
+        "examples": [
+          {
+            "runner": "01jmz8x2d5f8qx7t2n5r8wd3hk",
+            "pool": "dmz",
+            "labels": [
+              "zone=dmz",
+              "arch=amd64"
+            ],
+            "cpu": 8,
+            "memory_bytes": 34359738368,
+            "disk_bytes": 214748364800,
+            "architecture": "amd64",
+            "agent_version": "0.6.0",
+            "containment": {
+              "runtime": "runc",
+              "userns_remap": true
+            },
+            "state": "ready",
+            "reported_state": "ready",
+            "concurrency": 4,
+            "joined_at": "2026-09-20T08:14:02Z",
+            "last_seen_at": "2026-10-01T06:41:57Z",
+            "rotate_by": "2026-10-21T08:14:02Z"
+          },
+          {
+            "runner": "01jmz8x9t4m2ke6v0c3b7n1a5q",
+            "pool": "dmz",
+            "labels": [
+              "zone=dmz",
+              "arch=amd64"
+            ],
+            "cpu": 8,
+            "memory_bytes": 34359738368,
+            "disk_bytes": 214748364800,
+            "architecture": "amd64",
+            "agent_version": "0.6.0",
+            "containment": {
+              "runtime": "runc",
+              "userns_remap": true
+            },
+            "state": "draining",
+            "drain_reason": "kernel update",
+            "drained_by": "dana",
+            "drained_at": "2026-10-01T06:02:18Z",
+            "reported_state": "draining",
+            "concurrency": 4,
+            "joined_at": "2026-09-20T08:16:40Z",
+            "last_seen_at": "2026-10-01T06:41:55Z",
+            "rotate_by": "2026-10-21T08:16:40Z"
+          },
+          {
+            "runner": "01jmyq3c8w5h0r2f6t9k4p7x1d",
+            "pool": "gpu",
+            "labels": [
+              "gpu=true"
+            ],
+            "cpu": 16,
+            "memory_bytes": 68719476736,
+            "disk_bytes": 1099511627776,
+            "architecture": "amd64",
+            "agent_version": "0.5.2",
+            "namespaces": [
+              "research"
+            ],
+            "state": "revoked",
+            "drain_reason": "disk replaced",
+            "revoked_by": "dana",
+            "revoked_at": "2026-09-25T09:30:00Z",
+            "results_accepted_until": "2026-09-25T10:30:00Z",
+            "reported_state": "draining",
+            "concurrency": 1,
+            "joined_at": "2026-09-02T11:00:12Z",
+            "last_seen_at": "2026-09-25T10:12:31Z",
+            "rotate_by": "2026-10-02T11:00:12Z"
+          }
+        ]
+      },
+      "runnerList": {
+        "title": "Runner inventory",
+        "type": "object",
+        "required": [
+          "runners"
+        ],
+        "additionalProperties": false,
+        "description": "Every runner of the installation, revoked ones included, by pool and then by identifier.",
+        "properties": {
+          "runners": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/runner"
+            },
+            "description": "The runners, in the order of their pool's name and then their identifier.",
+            "examples": [
+              [
+                {
+                  "runner": "01jmz8x2d5f8qx7t2n5r8wd3hk",
+                  "pool": "dmz",
+                  "labels": [
+                    "zone=dmz",
+                    "arch=amd64"
+                  ],
+                  "cpu": 8,
+                  "memory_bytes": 34359738368,
+                  "disk_bytes": 214748364800,
+                  "architecture": "amd64",
+                  "agent_version": "0.6.0",
+                  "containment": {
+                    "runtime": "runc",
+                    "userns_remap": true
+                  },
+                  "state": "ready",
+                  "reported_state": "ready",
+                  "concurrency": 4,
+                  "joined_at": "2026-09-20T08:14:02Z",
+                  "last_seen_at": "2026-10-01T06:41:57Z",
+                  "rotate_by": "2026-10-21T08:14:02Z"
+                }
+              ]
+            ]
+          }
+        },
+        "examples": [
+          {
+            "runners": [
+              {
+                "runner": "01jmz8x2d5f8qx7t2n5r8wd3hk",
+                "pool": "dmz",
+                "labels": [
+                  "zone=dmz",
+                  "arch=amd64"
+                ],
+                "cpu": 8,
+                "memory_bytes": 34359738368,
+                "disk_bytes": 214748364800,
+                "architecture": "amd64",
+                "agent_version": "0.6.0",
+                "containment": {
+                  "runtime": "runc",
+                  "userns_remap": true
+                },
+                "state": "ready",
+                "reported_state": "ready",
+                "concurrency": 4,
+                "joined_at": "2026-09-20T08:14:02Z",
+                "last_seen_at": "2026-10-01T06:41:57Z",
+                "rotate_by": "2026-10-21T08:14:02Z"
+              },
+              {
+                "runner": "01jmz8x9t4m2ke6v0c3b7n1a5q",
+                "pool": "dmz",
+                "labels": [
+                  "zone=dmz",
+                  "arch=amd64"
+                ],
+                "cpu": 8,
+                "memory_bytes": 34359738368,
+                "disk_bytes": 214748364800,
+                "architecture": "amd64",
+                "agent_version": "0.6.0",
+                "containment": {
+                  "runtime": "runc",
+                  "userns_remap": true
+                },
+                "state": "draining",
+                "drain_reason": "kernel update",
+                "drained_by": "dana",
+                "drained_at": "2026-10-01T06:02:18Z",
+                "reported_state": "draining",
+                "concurrency": 4,
+                "joined_at": "2026-09-20T08:16:40Z",
+                "last_seen_at": "2026-10-01T06:41:55Z",
+                "rotate_by": "2026-10-21T08:16:40Z"
+              },
+              {
+                "runner": "01jmyq3c8w5h0r2f6t9k4p7x1d",
+                "pool": "gpu",
+                "labels": [
+                  "gpu=true"
+                ],
+                "cpu": 16,
+                "memory_bytes": 68719476736,
+                "disk_bytes": 1099511627776,
+                "architecture": "amd64",
+                "agent_version": "0.5.2",
+                "namespaces": [
+                  "research"
+                ],
+                "state": "revoked",
+                "drain_reason": "disk replaced",
+                "revoked_by": "dana",
+                "revoked_at": "2026-09-25T09:30:00Z",
+                "results_accepted_until": "2026-09-25T10:30:00Z",
+                "reported_state": "draining",
+                "concurrency": 1,
+                "joined_at": "2026-09-02T11:00:12Z",
+                "last_seen_at": "2026-09-25T10:12:31Z",
+                "rotate_by": "2026-10-02T11:00:12Z"
+              }
+            ]
+          }
+        ]
+      },
+      "runnerPoolList": {
+        "title": "Runner pool list",
+        "type": "object",
+        "required": [
+          "runner_pools"
+        ],
+        "additionalProperties": false,
+        "description": "Every runner pool of the installation, by name.",
+        "properties": {
+          "runner_pools": {
+            "type": "array",
+            "items": {
+              "$ref": "wire.schema.json#/$defs/runnerPool"
+            },
+            "description": "The pools, each as the wire writes one with its token half absent, since a listing issues no join token. Every field is written, containment included, so that nobody reading a pool has to know a default.",
+            "examples": [
+              [
+                {
+                  "pool": {
+                    "name": "default",
+                    "labels": [],
+                    "namespaces": [],
+                    "resource_ceilings": {},
+                    "containment": "hardened"
+                  }
+                }
+              ]
+            ]
+          }
+        },
+        "examples": [
+          {
+            "runner_pools": [
+              {
+                "pool": {
+                  "name": "default",
+                  "labels": [],
+                  "namespaces": [],
+                  "resource_ceilings": {},
+                  "containment": "hardened"
+                }
+              },
+              {
+                "pool": {
+                  "name": "dmz",
+                  "labels": [
+                    "zone=dmz",
+                    "arch=amd64"
+                  ],
+                  "namespaces": [
+                    "finance",
+                    "team-ops"
+                  ],
+                  "resource_ceilings": {
+                    "cpu": "4",
+                    "memory": "8Gi"
+                  },
+                  "containment": "hardened"
+                }
+              },
+              {
+                "pool": {
+                  "name": "gpu",
+                  "labels": [
+                    "gpu=true"
+                  ],
+                  "namespaces": [
+                    "research"
+                  ],
+                  "resource_ceilings": {
+                    "cpu": "16",
+                    "memory": "64Gi",
+                    "pids": 4096
+                  },
+                  "containment": "sandboxed"
+                }
+              }
+            ]
           }
         ]
       }
@@ -15202,6 +17845,54 @@
           "a line": {
             "summary": "resuming after a line",
             "value": "01JMZ8V1P9C4XQ7K2N4D6F8H0A.invoice.2.3/0/12"
+          }
+        }
+      },
+      "outputName": {
+        "name": "name",
+        "in": "path",
+        "required": true,
+        "description": "A workflow output, by the name the workflow's outputs block gives it.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/identifier"
+        },
+        "examples": {
+          "archived": {
+            "summary": "the output the archive step's port feeds",
+            "value": "archived"
+          }
+        }
+      },
+      "artifactUri": {
+        "name": "uri",
+        "in": "path",
+        "required": true,
+        "description": "The artifact's agk:// URI, as an envelope's file names it, percent-encoded as one path segment, so that a proxy in front passes %2F undecoded.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "examples": {
+          "invoices": {
+            "summary": "agk://run/01JMZ8V1P9C4XQ7K2N4D6F8H0A/archive/out/invoices.zip",
+            "value": "agk%3A%2F%2Frun%2F01JMZ8V1P9C4XQ7K2N4D6F8H0A%2Farchive%2Fout%2Finvoices.zip"
+          }
+        }
+      },
+      "secret": {
+        "name": "name",
+        "in": "path",
+        "required": true,
+        "description": "The secret's name, as the workflow file names it and as a step is given it at /agk/secrets/<name>: letters, digits, hyphens and underscores beginning with a letter or a digit, at most 255 characters.",
+        "schema": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+          "maxLength": 255
+        },
+        "examples": {
+          "secret": {
+            "summary": "a secret",
+            "value": "stripe-key"
           }
         }
       }

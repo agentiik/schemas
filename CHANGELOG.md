@@ -8,6 +8,8 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+- `wire.schema.json`'s `user` carries what a user says of themself, answered from v0.6.0 wherever a user is: `given_name`, `family_name`, `title`, `location`, `timezone` and `bio`, each one line holding no control character and the empty string where it is unsaid, so that a client reads one spelling of nothing; and `avatar_updated_at`, null where the user holds no photo, which a client adds to the photo's address so that a photo set again is never taken from a cache. The fixtures pin a user with a profile, and refuse a bio of two lines and a title of 129 characters.
+- `openapi.json` describes the routes a user writes their profile and photo with, served from v0.6.0: `PATCH /api/v1/me`, answering the `me` document, by the user alone; `GET`, `PUT` and `DELETE /api/v1/me/avatar`, a PNG or a JPEG of at most 1 MiB and 2048 by 2048 pixels stored encoded again as a PNG of at most 512 by 512, so that nothing of the file but its pixels is kept, Exif and a location among it; and `GET` and `DELETE /api/v1/users/{login}/avatar`, an administrator's, since which users an installation has is not another user's to ask.
 - `openapi.json` describes the statistics routes the web console's charts read, served from v0.6.0:
   - The routes are `GET /api/v1/{ns}/stats/runs`, `/steps`, `/ports` and `/quotas`, and `GET /api/v1/stats/pools`.
   - Each takes `from`, `to`, `bucket` and `compare=previous`. `/runs` also takes `workflow` and `histogram`, `/steps` takes `workflow` and `by=hour`, and `/ports` takes `workflow`.

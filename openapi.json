@@ -34,7 +34,7 @@
     },
     {
       "name": "me",
-      "description": "The caller: who it is, what it may do, its own credentials, its password and the TOTP generator beside it, and what the installation tells it."
+      "description": "The caller: who it is, what it may do, what it says of itself and its photo, its own credentials, its password and the TOTP generator beside it, and what the installation tells it."
     },
     {
       "name": "tokens",
@@ -42,7 +42,7 @@
     },
     {
       "name": "users",
-      "description": "Local accounts, the links that enrol their first credential, and the recovery codes that replace a lost one."
+      "description": "Local accounts and their photos, which an administrator reads and removes; the links that enrol their first credential, and the recovery codes that replace a lost one."
     },
     {
       "name": "groups",
@@ -2188,7 +2188,7 @@
           "me"
         ],
         "summary": "Who the caller is",
-        "description": "The caller: its principal as written, whether it administers the installation through the credential it presented, the user or service account record behind it, neither for the bootstrap token, and its groups; its effective permissions keyed by scope, each namespace where it holds anything and each workflow where a grant, a deny or the token's scope makes them other than its namespace's, narrowed by that scope, leaving out a workflow where it holds nothing, as one it cannot read; and its notifications, newest first: admin_access_widened, an administrator having written a grant in a namespace by the installation's power, put a user in a group holding a role there, or widened their own access there, told to its owners and, where the namespace had nobody to tell before, the other administrators as well, each saying the act and who did it; passkey_counter_refused, a sign-in refused for a passkey's signature counter, told to its user; and break_glass_recovery, a recovery code agentiik-api recover issued an administrator, naming the account, told to every administrator. A notification past its 90 days is removed as the list is read. A token narrowed by a scope reads no notification, since reading what the installation tells a principal is none of the nine, so that a script holding one neither reads that an administrator widened their access nor makes the notice go away before its owner reads it. What agk whoami prints, and what the console reads to hide what the caller does not hold rather than disable it.",
+        "description": "The caller: its principal as written, whether it administers the installation through the credential it presented, the user or service account record behind it, neither for the bootstrap token, a user's carrying what they say of themself and when their photo was last set, and its groups; its effective permissions keyed by scope, each namespace where it holds anything and each workflow where a grant, a deny or the token's scope makes them other than its namespace's, narrowed by that scope, leaving out a workflow where it holds nothing, as one it cannot read; and its notifications, newest first: admin_access_widened, an administrator having written a grant in a namespace by the installation's power, put a user in a group holding a role there, or widened their own access there, told to its owners and, where the namespace had nobody to tell before, the other administrators as well, each saying the act and who did it; passkey_counter_refused, a sign-in refused for a passkey's signature counter, told to its user; and break_glass_recovery, a recovery code agentiik-api recover issued an administrator, naming the account, told to every administrator. A notification past its 90 days is removed as the list is read. A token narrowed by a scope reads no notification, since reading what the installation tells a principal is none of the nine, so that a script holding one neither reads that an administrator widened their access nor makes the notice go away before its owner reads it. What agk whoami prints, and what the console reads to hide what the caller does not hold rather than disable it.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#administrators"
@@ -2213,6 +2213,13 @@
                         "display_name": "Alice Martin",
                         "admin": true,
                         "suspended": false,
+                        "given_name": "Alice",
+                        "family_name": "Martin",
+                        "title": "Technical lead",
+                        "location": "Lyon, France",
+                        "timezone": "Europe/Paris",
+                        "bio": "Writes the invoicing workflows, and reviews what touches payroll.",
+                        "avatar_updated_at": "2026-09-28T10:15:00Z",
                         "created_at": "2026-09-27T08:50:00Z"
                       },
                       "groups": [
@@ -2283,6 +2290,13 @@
                         "display_name": "Bob Martin",
                         "admin": true,
                         "suspended": false,
+                        "given_name": "",
+                        "family_name": "",
+                        "title": "",
+                        "location": "",
+                        "timezone": "",
+                        "bio": "",
+                        "avatar_updated_at": null,
                         "created_at": "2026-09-27T09:20:00Z",
                         "last_sign_in_at": "2026-09-27T16:45:00Z"
                       },
@@ -2343,6 +2357,123 @@
             "description": "A session that may only enrol, which registers passkeys and sets its password, and nothing else."
           }
         }
+      },
+      "patch": {
+        "operationId": "updateMe",
+        "tags": [
+          "me"
+        ],
+        "summary": "Change what the caller says of themself",
+        "description": "Changes the caller's display name and profile as the body names them: given_name, family_name, title, location, timezone and bio, each set to what the body holds, the empty string clearing it, and each the body leaves out kept. The display name is never cleared, since a user always has one. Set by the user alone, and by no administrator: a profile is what a person tells the people they work with about themself, and one somebody else could rewrite would put words in their mouth. The bootstrap token and a service account have no profile, and are refused saying so; a token narrowed by a scope keeps only the permissions it names, and saying who its holder is to everybody who reads their name is none of them. Each field is one line holding no control character, since it is shown in a console and printed at a terminal: at most 128 characters, the display name 256 and the bio 280. timezone is a name of the IANA database, which a client turns an instant into the user's own hours with; Local, the server's own zone, names no place and is refused. The user's row is held while the change is merged into it, so that two changes at once each keep what the other wrote. Answers who the caller is, as GET /api/v1/me does. Audited as user.profile with the names of the fields that changed and never what they hold, since the log is kept for good and what a person wrote about themself is theirs to take back; unchanged where none did.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#principals"
+        },
+        "requestBody": {
+          "description": "What changes.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/profileUpdate"
+              },
+              "examples": {
+                "profile": {
+                  "summary": "a profile written",
+                  "value": {
+                    "given_name": "Alice",
+                    "family_name": "Martin",
+                    "title": "Technical lead",
+                    "location": "Lyon, France",
+                    "timezone": "Europe/Paris",
+                    "bio": "Writes the invoicing workflows, and reviews what touches payroll."
+                  }
+                },
+                "cleared": {
+                  "summary": "two fields cleared, the rest kept",
+                  "value": {
+                    "bio": "",
+                    "location": ""
+                  }
+                },
+                "display name": {
+                  "summary": "the display name alone",
+                  "value": {
+                    "display_name": "Alice Martin"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Written: who the caller is, as GET /api/v1/me answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/me"
+                },
+                "examples": {
+                  "written": {
+                    "summary": "alice once her profile is written",
+                    "value": {
+                      "principal": "alice",
+                      "admin": false,
+                      "user": {
+                        "kind": "user",
+                        "login": "alice",
+                        "display_name": "Alice Martin",
+                        "admin": false,
+                        "suspended": false,
+                        "given_name": "Alice",
+                        "family_name": "Martin",
+                        "title": "Technical lead",
+                        "location": "Lyon, France",
+                        "timezone": "Europe/Paris",
+                        "bio": "Writes the invoicing workflows, and reviews what touches payroll.",
+                        "avatar_updated_at": "2026-09-28T10:15:00Z",
+                        "created_at": "2026-09-27T08:50:00Z"
+                      },
+                      "groups": [
+                        "group:team-finance"
+                      ],
+                      "permissions": {
+                        "alice": [
+                          "workflow:read",
+                          "workflow:run",
+                          "workflow:write",
+                          "workflow:delete",
+                          "run:read",
+                          "run:read_data",
+                          "secret:use",
+                          "secret:write",
+                          "grant:manage"
+                        ]
+                      },
+                      "notifications": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The body is refused: empty, naming nothing to change, a field the route does not read, a field null, written twice or not a string, a field past its length or holding a line break or another control character, an empty display name, or a time zone the IANA database does not hold, named, or Local. Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised",
+            "description": "No credential, or one that opens nothing, a user removed since their credential was read among them."
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The bootstrap token or a service account, which have no profile or photo, or a token narrowed by a scope, which changes neither, each refused saying so; a session that may only enrol; or a request carrying a session from another origin than the public URL's, refused before the session is looked up."
+          },
+          "413": {
+            "$ref": "#/components/responses/tooLarge"
+          }
+        }
       }
     },
     "/api/v1/me/notifications/{id}": {
@@ -2380,6 +2511,291 @@
           "404": {
             "$ref": "#/components/responses/notFound",
             "description": "No notification of the caller's by that identifier: dismissed already, past its 90 days, or never the caller's; and any through a token narrowed by a scope, or the bootstrap token, which are told nothing."
+          }
+        }
+      }
+    },
+    "/api/v1/me/avatar": {
+      "get": {
+        "operationId": "getMyAvatar",
+        "tags": [
+          "me"
+        ],
+        "summary": "Read the caller's photo",
+        "description": "The caller's photo, the PNG PUT /api/v1/me/avatar stored, at most 512 by 512 pixels. Kept a day by the browser that asked and by no shared cache, since a photo is shown to its owner and to administrators alone; a client asks for it with v, the user's avatar_updated_at, so that a photo set again is asked for at another address, and revalidates past the day by its tag. nosniff, so that a browser shows it as the PNG it is declared as. A token narrowed by a scope reads its holder's, as it reads who they are. The bootstrap token and a service account hold none.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#principals"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/avatarVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The photo.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/privateDay"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/avatarTag"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/noSniff"
+              }
+            },
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "contentMediaType": "image/png"
+                },
+                "examples": {
+                  "photo": {
+                    "summary": "a PNG of at most 512 by 512 pixels",
+                    "value": "PNG\r\n\u001a\n..."
+                  }
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The photo is the one the If-None-Match tag names: the client's copy is still the photo.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/avatarTag"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "A session that may only enrol."
+          },
+          "404": {
+            "description": "The caller holds no photo: one never set or removed, and always for the bootstrap token and a service account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "none": {
+                    "summary": "no photo",
+                    "value": {
+                      "error": "you hold no photo"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "setMyAvatar",
+        "tags": [
+          "me"
+        ],
+        "summary": "Set the caller's photo",
+        "description": "Sets the caller's photo in place of any before it: the body a PNG or a JPEG of at most 1 MiB, its Content-Type image/png or image/jpeg. Its size in pixels is read from its header before anything is decoded, and one past 2048 by 2048 is refused, since a few kilobytes of PNG can announce a picture that takes gigabytes to hold. It is then decoded and encoded again as a PNG, scaled down to 512 by 512 at most keeping its aspect, and turned upright where a JPEG's Exif says it was taken on its side, so that what is stored carries nothing of the file but its pixels: no Exif, and no location a phone wrote into it, which a photo shown to colleagues would hand them. The Content-Type says the body is one of the two and the bytes say which, since a browser names a file's type by its extension. Set by the user alone, as the profile is: the bootstrap token, a service account and a token narrowed by a scope are refused saying so. avatar_updated_at says when it was set, which a client adds to the photo's address. Audited as user.avatar with the size it was stored at, and never the photo.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#principals"
+        },
+        "requestBody": {
+          "description": "The photo, a PNG or a JPEG of at most 1 MiB and 2048 by 2048 pixels.",
+          "required": true,
+          "content": {
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "contentMediaType": "image/png"
+              },
+              "examples": {
+                "png": {
+                  "summary": "a PNG",
+                  "value": "PNG\r\n\u001a\n..."
+                }
+              }
+            },
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "contentMediaType": "image/jpeg"
+              },
+              "examples": {
+                "jpeg": {
+                  "summary": "a JPEG, its Exif among it",
+                  "value": "ÿØÿá...Exif..."
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Stored, as GET /api/v1/me/avatar answers it from now on."
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "An empty body. Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised",
+            "description": "No credential, or one that opens nothing, a user removed since their credential was read among them."
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The bootstrap token or a service account, which have no profile or photo, or a token narrowed by a scope, which changes neither, each refused saying so; a session that may only enrol; or a request carrying a session from another origin than the public URL's, refused before the session is looked up."
+          },
+          "413": {
+            "description": "A photo past 1 MiB, refused before it is decoded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "too large": {
+                    "summary": "past a mebibyte",
+                    "value": {
+                      "error": "a photo is at most 1048576 bytes, a mebibyte, and this one is more: send it smaller, since it is stored at 512 by 512 pixels at most"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "A Content-Type other than image/png and image/jpeg, refused before the body is read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "type": {
+                    "summary": "a photo sent as something else",
+                    "value": {
+                      "error": "a photo is sent as image/png or image/jpeg, and this request's Content-Type is \"image/gif\""
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The body is not a PNG or a JPEG that can be read, or its header announces more than 2048 pixels a side, saying how many.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "too many pixels": {
+                    "summary": "past 2048 by 2048",
+                    "value": {
+                      "error": "the photo is 4096 by 3072 pixels, and one is at most 2048 by 2048: it is stored at 512 by 512 at most, and a larger one takes more to decode than it gives"
+                    }
+                  },
+                  "unreadable": {
+                    "summary": "not a photo",
+                    "value": {
+                      "error": "the body is not a PNG or a JPEG that can be read, and a photo is one of the two"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeMyAvatar",
+        "tags": [
+          "me"
+        ],
+        "summary": "Remove the caller's photo",
+        "description": "Removes the caller's photo, which a client draws as their initials from then on, avatar_updated_at null. Removing none is the same answer, so that a client that lost the first answer asks again with nothing to sort out. Set and removed by the user alone: the bootstrap token, a service account and a token narrowed by a scope are refused saying so. Audited as user.avatar with removed, and as unchanged where there was none. No body is read, and one sent is refused.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#principals"
+        },
+        "responses": {
+          "204": {
+            "description": "Removed, or there was none."
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "A body, which this route does not read. Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised",
+            "description": "No credential, or one that opens nothing, a user removed since their credential was read among them."
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The bootstrap token or a service account, which have no profile or photo, or a token narrowed by a scope, which changes neither, each refused saying so; a session that may only enrol; or a request carrying a session from another origin than the public URL's, refused before the session is looked up."
+          },
+          "413": {
+            "$ref": "#/components/responses/tooLarge"
+          }
+        }
+      }
+    },
+    "/api/v1/me/live": {
+      "get": {
+        "operationId": "openLiveConnection",
+        "tags": [
+          "me"
+        ],
+        "summary": "Be told what changed, over a WebSocket",
+        "description": "A WebSocket, RFC 6455, telling its caller as it happens what changed among what it may read, so that a console reads again what it shows when it changes rather than on a clock. Each message is a text frame holding one liveChange: a run created or moved on, or one of whose steps or tasks did, sent where the caller holds run:read on that run's workflow; the caller's notifications, told or dismissed; the runners, to an administrator, for a runner or a pool changed, a heartbeat included; and all, where a change may have been missed, which reads everything again. What changed within a quarter of a second is sent once. A message holds an identifier and never a record, and what it names is read through the route that answers it, under that route's permissions. The client sends nothing but the protocol's own frames, a message from it closing the connection with 1008, and the API pings every 15 seconds. A session's handshake carries the installation's Origin, since a page of another site sharing its domain could otherwise open one with the cookie. A permission revoked stops its messages within 30 seconds, when it is asked again; a credential that no longer identifies its caller closes the connection with 1008, and the API stopping closes it with 1001, after which a client connects again and reads again what it shows. Under /api/v1/me, a word already reserved, since what it tells is the caller's own. Any authenticated principal.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#api"
+        },
+        "responses": {
+          "101": {
+            "description": "Switching Protocols: the connection is a WebSocket from then on, whose text frames each hold one liveChange."
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "A handshake RFC 6455 refuses: a version other than 13, or not one Sec-WebSocket-Key of 16 bytes in base64. Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "A session's handshake carrying another Origin than the public URL's, or none; or a session that may only enrol."
+          },
+          "426": {
+            "description": "A request that asks for no WebSocket, with Upgrade: websocket in the answer, as RFC 9110 has it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "no upgrade": {
+                    "summary": "a plain GET",
+                    "value": {
+                      "error": "GET /api/v1/me/live is a WebSocket: the request asks for the connection to be upgraded, with Upgrade: websocket and Connection: Upgrade"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2840,7 +3256,7 @@
           "users"
         ],
         "summary": "List users",
-        "description": "Every user of the installation, by login, with whether each is an administrator, whether it is suspended and, where the policy suspended it, why, and when each was created and last signed in; never a credential. Administrator only.",
+        "description": "Every user of the installation, by login, with whether each is an administrator, whether it is suspended and, where the policy suspended it, why, when each was created and last signed in, and what each says of themself and when their photo was last set; never a credential, and never a photo. Administrator only.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#principals"
@@ -2864,6 +3280,13 @@
                           "display_name": "Alice Martin",
                           "admin": true,
                           "suspended": false,
+                          "given_name": "",
+                          "family_name": "",
+                          "title": "",
+                          "location": "",
+                          "timezone": "",
+                          "bio": "",
+                          "avatar_updated_at": null,
                           "created_at": "2026-09-27T08:50:00Z"
                         },
                         {
@@ -2872,6 +3295,13 @@
                           "display_name": "Bob Martin",
                           "admin": false,
                           "suspended": false,
+                          "given_name": "",
+                          "family_name": "",
+                          "title": "",
+                          "location": "",
+                          "timezone": "",
+                          "bio": "",
+                          "avatar_updated_at": null,
                           "created_at": "2026-09-27T09:20:00Z"
                         }
                       ]
@@ -2888,6 +3318,13 @@
                           "admin": false,
                           "suspended": true,
                           "suspended_for": "no_passkey",
+                          "given_name": "",
+                          "family_name": "",
+                          "title": "",
+                          "location": "",
+                          "timezone": "",
+                          "bio": "",
+                          "avatar_updated_at": null,
                           "created_at": "2026-09-27T09:30:00Z",
                           "last_sign_in_at": "2026-09-27T11:00:00Z"
                         }
@@ -2979,6 +3416,13 @@
                         "display_name": "Alice Martin",
                         "admin": true,
                         "suspended": false,
+                        "given_name": "",
+                        "family_name": "",
+                        "title": "",
+                        "location": "",
+                        "timezone": "",
+                        "bio": "",
+                        "avatar_updated_at": null,
                         "created_at": "2026-09-27T08:50:00Z"
                       },
                       "enrolment": {
@@ -3013,6 +3457,13 @@
                         "display_name": "Alice Martin",
                         "admin": true,
                         "suspended": false,
+                        "given_name": "",
+                        "family_name": "",
+                        "title": "",
+                        "location": "",
+                        "timezone": "",
+                        "bio": "",
+                        "avatar_updated_at": null,
                         "created_at": "2026-09-27T08:50:00Z"
                       },
                       "enrolment": {
@@ -3030,6 +3481,13 @@
                         "display_name": "carol",
                         "admin": false,
                         "suspended": false,
+                        "given_name": "",
+                        "family_name": "",
+                        "title": "",
+                        "location": "",
+                        "timezone": "",
+                        "bio": "",
+                        "avatar_updated_at": null,
                         "created_at": "2026-09-27T10:05:00Z"
                       },
                       "enrolment": {
@@ -3075,7 +3533,7 @@
           "users"
         ],
         "summary": "Read a user",
-        "description": "One user: login, display name, whether an administrator, whether suspended and, where the policy suspended them, suspended_for, when created and when last signed in; never a credential. Administrator only. What the Terraform provider refreshes and imports a user with.",
+        "description": "One user: login, display name, whether an administrator, whether suspended and, where the policy suspended them, suspended_for, when created and when last signed in, what they say of themself and when their photo was last set; never a credential, and never the photo, which is read on its own. Administrator only. What the Terraform provider refreshes and imports a user with.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#principals"
@@ -3097,6 +3555,13 @@
                       "display_name": "Bob Martin",
                       "admin": false,
                       "suspended": false,
+                      "given_name": "Bob",
+                      "family_name": "Martin",
+                      "title": "Platform engineer",
+                      "location": "",
+                      "timezone": "Europe/Paris",
+                      "bio": "",
+                      "avatar_updated_at": "2026-09-28T08:40:00Z",
                       "created_at": "2026-09-27T09:20:00Z",
                       "last_sign_in_at": "2026-09-27T12:30:00Z"
                     }
@@ -3110,6 +3575,13 @@
                       "admin": false,
                       "suspended": true,
                       "suspended_for": "no_passkey",
+                      "given_name": "",
+                      "family_name": "",
+                      "title": "",
+                      "location": "",
+                      "timezone": "",
+                      "bio": "",
+                      "avatar_updated_at": null,
                       "created_at": "2026-09-27T09:30:00Z",
                       "last_sign_in_at": "2026-09-27T11:00:00Z"
                     }
@@ -3168,6 +3640,146 @@
           "409": {
             "$ref": "#/components/responses/conflict",
             "description": "Another namespace's record names the user as owner, the error naming it; their personal namespace holds something, saying what; or they are the last administrator who can sign in."
+          },
+          "413": {
+            "$ref": "#/components/responses/tooLarge"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{login}/avatar": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/login"
+        }
+      ],
+      "get": {
+        "operationId": "getUserAvatar",
+        "tags": [
+          "users"
+        ],
+        "summary": "Read a user's photo",
+        "description": "A user's photo, read by an administrator as the user's record is, with what GET /api/v1/me/avatar answers it with. Administrator only, as every route about a user: which users an installation has is not something another user may ask it, and a photo read by login would answer that, a picture or a 404, for every login somebody tried. No user, a login no user can have and a user holding no photo are one 404.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#principals"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/avatarVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The photo.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/privateDay"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/avatarTag"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/noSniff"
+              }
+            },
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "contentMediaType": "image/png"
+                },
+                "examples": {
+                  "photo": {
+                    "summary": "a PNG of at most 512 by 512 pixels",
+                    "value": "PNG\r\n\u001a\n..."
+                  }
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The photo is the one the If-None-Match tag names: the client's copy is still the photo.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/avatarTag"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds a session that may only enrol."
+          },
+          "404": {
+            "description": "No user by that login, a login no user can have, or a user holding no photo: one answer for the three.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "none": {
+                    "summary": "no user, or no photo",
+                    "value": {
+                      "error": "no user by that login, or they hold no photo"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeUserAvatar",
+        "tags": [
+          "users"
+        ],
+        "summary": "Remove a user's photo",
+        "description": "Removes a user's photo, one that should not be shown to the people they work with; they may set another, and nothing else of them changes. Administrator only, and the bootstrap token's until the first administrator has signed in, as every route about a user. No user, a login no user can have and a user holding no photo are one 404, as the photo is read. Audited as user.avatar, by the administrator, with removed. No body is read, and one sent is refused.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#principals"
+        },
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "A body, which this route does not read. Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds a session that may only enrol. A request carrying a session from another origin than the public URL's is refused as well, before the session is looked up."
+          },
+          "404": {
+            "description": "No user by that login, a login no user can have, or a user holding no photo: one answer for the three.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "none": {
+                    "summary": "no user, or no photo",
+                    "value": {
+                      "error": "no user by that login, or they hold no photo"
+                    }
+                  }
+                }
+              }
+            }
           },
           "413": {
             "$ref": "#/components/responses/tooLarge"
@@ -4923,6 +5535,97 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/{ns}/workflows/{name}/refs": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        },
+        {
+          "$ref": "#/components/parameters/workflow"
+        }
+      ],
+      "get": {
+        "operationId": "listWorkflowRefs",
+        "tags": [
+          "workflows"
+        ],
+        "summary": "List a workflow's branches and tags",
+        "description": "The branches and tags the workflow's repository holds, for the console's ref switcher, which could otherwise offer only the default branch and the versions of its history: git's advertisement lists them, and git's routes take an API token and never a session. Each ref is named in full, in git's order, byte by byte, with the commit it points at, an annotated tag peeled to its commit, and null for the default branch while it is unborn; whether it is protected; and who last moved it and when, absent while it is unborn. Every commit a ref points at is a version, which the tree route reads at it. Listed whole and not paged, since the advertisement lists every ref to whoever may clone, which is whoever may read. Requires workflow:read.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#api"
+        },
+        "responses": {
+          "200": {
+            "description": "Every branch and tag of the repository.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/refs"
+                },
+                "examples": {
+                  "held": {
+                    "summary": "the default branch, a branch holding a slash and a tag",
+                    "value": {
+                      "refs": [
+                        {
+                          "name": "refs/heads/feature/vat-rounding",
+                          "commit": "9c2e4a6b8d0f1e3c5a7b9d1f3e5c7a9b1d3f5e7c",
+                          "protected": false,
+                          "moved_by": "chloe",
+                          "moved_at": "2026-09-30T15:02:00Z"
+                        },
+                        {
+                          "name": "refs/heads/main",
+                          "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                          "protected": true,
+                          "moved_by": "alice",
+                          "moved_at": "2026-09-28T10:12:00Z"
+                        },
+                        {
+                          "name": "refs/tags/v2.1.0",
+                          "commit": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                          "protected": false,
+                          "moved_by": "bob",
+                          "moved_at": "2026-09-20T16:40:00Z"
+                        }
+                      ]
+                    }
+                  },
+                  "unborn": {
+                    "summary": "a repository nothing was pushed to yet",
+                    "value": {
+                      "refs": [
+                        {
+                          "name": "refs/heads/main",
+                          "commit": null,
+                          "protected": true
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "Only for a session that may only enrol. Every other refusal here is a 404."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such workflow, or one the caller cannot read: the same answer."
           }
         }
       }
@@ -7039,6 +7742,129 @@
         }
       }
     },
+    "/api/v1/stats/activity": {
+      "get": {
+        "operationId": "getActivityStatistics",
+        "tags": [
+          "statistics"
+        ],
+        "summary": "Read what the installation is doing",
+        "description": "Every namespace together, per bucket: the runs created by the state each is in now, and the most tasks in flight at once. Under now, as the request is answered: the runs queued, running and waiting, the tasks in flight, the slots the runners ready and heard from in the last 30 s offer, and those runners against the runners not revoked. Counts only, naming no run, workflow or namespace, so that an administrator who reads no namespace's runs sees how busy the installation is and not what it runs. Administrator only. Served at this path alone, so that a namespace named stats made before v0.3.0 reserved the word keeps every route it has.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#console-statistics"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/statsFrom"
+          },
+          {
+            "$ref": "#/components/parameters/statsTo"
+          },
+          {
+            "$ref": "#/components/parameters/statsBucket"
+          },
+          {
+            "$ref": "#/components/parameters/statsCompare"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The series, and what is running now.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/noStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/statsActivity"
+                },
+                "examples": {
+                  "two minutes": {
+                    "summary": "the last two minutes of a busy installation",
+                    "value": {
+                      "from": "2026-10-01T10:41:00Z",
+                      "to": "2026-10-01T10:43:00Z",
+                      "bucket": "1m",
+                      "buckets": [
+                        {
+                          "since": "2026-10-01T10:41:00Z",
+                          "until": "2026-10-01T10:41:59.999999999Z",
+                          "runs": {
+                            "queued": 0,
+                            "running": 0,
+                            "waiting": 0,
+                            "succeeded": 7,
+                            "failed": 1,
+                            "cancelled": 0,
+                            "timed_out": 0
+                          },
+                          "tasks_in_flight_max": 14
+                        },
+                        {
+                          "since": "2026-10-01T10:42:00Z",
+                          "until": "2026-10-01T10:42:59.999999999Z",
+                          "runs": {
+                            "queued": 1,
+                            "running": 3,
+                            "waiting": 1,
+                            "succeeded": 2,
+                            "failed": 0,
+                            "cancelled": 0,
+                            "timed_out": 0
+                          },
+                          "tasks_in_flight_max": 19
+                        }
+                      ],
+                      "now": {
+                        "at": "2026-10-01T10:42:31Z",
+                        "runs": {
+                          "queued": 1,
+                          "running": 3,
+                          "waiting": 1
+                        },
+                        "tasks_in_flight": 17,
+                        "slots": 24,
+                        "runners_ready": 3,
+                        "runners": 4
+                      }
+                    }
+                  }
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "description": "The buckets to Accept: text/csv, RFC 4180 with a header row, one row a bucket and a column a figure, the runs a column a state. What is running now is not in the CSV, which is a table of buckets.",
+                  "examples": [
+                    "since,until,queued,running,waiting,succeeded,failed,cancelled,timed_out,tasks_in_flight_max\r\n2026-10-01T10:41:00Z,2026-10-01T10:41:59.999999999Z,0,0,0,7,1,0,0,14\r\n2026-10-01T10:42:00Z,2026-10-01T10:42:59.999999999Z,1,3,1,2,0,0,0,19\r\n"
+                  ]
+                },
+                "examples": {
+                  "two minutes": {
+                    "summary": "two buckets",
+                    "value": "since,until,queued,running,waiting,succeeded,failed,cancelled,timed_out,tasks_in_flight_max\r\n2026-10-01T10:41:00Z,2026-10-01T10:41:59.999999999Z,0,0,0,7,1,0,0,14\r\n2026-10-01T10:42:00Z,2026-10-01T10:42:59.999999999Z,1,3,1,2,0,0,0,19\r\n"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The query is refused: from or to not in RFC 3339, from not before to, a bucket or a compare the route does not know, or a range that would take more than 1,000 buckets. A request carrying two credentials, a bearer token beside the session cookie or two session cookies, too."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "A caller who is not an administrator, or a session that may only enrol."
+          }
+        }
+      }
+    },
     "/api/v1/stats/pools": {
       "get": {
         "operationId": "getPoolStatistics",
@@ -7829,6 +8655,209 @@
         }
       }
     },
+    "/api/v1/runners/{runner}/drain": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/runner"
+        }
+      ],
+      "post": {
+        "operationId": "drainRunner",
+        "tags": [
+          "runners"
+        ],
+        "summary": "Drain a runner",
+        "description": "Orders a runner to take nothing new and finish what it holds, from its next heartbeat, which answers drain: true with the reason; its results are accepted as usual and it stays up, so that a host can be taken down for maintenance without losing work. A runner already draining is answered as it stands, the order recorded as having changed nothing. Requires grant:manage at installation scope, audited as runner.drain with the reason, in the transaction of the order.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#registering-a-runner"
+        },
+        "requestBody": {
+          "description": "Why, handed to the runner at its next heartbeat.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/runnerOrder"
+              },
+              "examples": {
+                "reason": {
+                  "summary": "an order with its reason",
+                  "value": {
+                    "reason": "kernel update"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The runner as GET /api/v1/runners lists it, with the order it now carries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/runner"
+                },
+                "examples": {
+                  "draining": {
+                    "summary": "a runner draining",
+                    "value": {
+                      "runner": "01jmz8x2d5f8qx7t2n5r8wd3hk",
+                      "pool": "dmz",
+                      "labels": [
+                        "zone=dmz",
+                        "arch=amd64"
+                      ],
+                      "cpu": 8,
+                      "memory_bytes": 34359738368,
+                      "disk_bytes": 214748364800,
+                      "architecture": "amd64",
+                      "agent_version": "0.6.0",
+                      "containment": {
+                        "runtime": "runc",
+                        "userns_remap": true
+                      },
+                      "reported_state": "ready",
+                      "concurrency": 4,
+                      "joined_at": "2026-09-20T08:14:02Z",
+                      "last_seen_at": "2026-10-01T06:41:57Z",
+                      "rotate_by": "2026-10-21T08:14:02Z",
+                      "state": "draining",
+                      "drain_reason": "kernel update",
+                      "drained_by": "dana",
+                      "drained_at": "2026-10-01T06:42:10Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The reason is refused: none, longer than 256 characters, or holding a line break or another control character. A request carrying two credentials is refused as well."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds a session that may only enrol."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No runner of that identifier: the caller is an administrator already, so this names the runner rather than hiding the route."
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict",
+            "description": "The runner is revoked, which already takes nothing new: a drain would only undo part of that, and a revocation is not undone."
+          },
+          "413": {
+            "$ref": "#/components/responses/tooLarge"
+          }
+        }
+      }
+    },
+    "/api/v1/runners/{runner}/revoke": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/runner"
+        }
+      ],
+      "post": {
+        "operationId": "revokeRunner",
+        "tags": [
+          "runners"
+        ],
+        "summary": "Revoke a runner",
+        "description": "Orders a runner out: it takes nothing new from its next heartbeat, its results are accepted until the end of its grace, revocation_grace after the order, and its credential is refused everywhere after that, so that revoking a credential never destroys work already done. Its record stays for the audit log, and a host it ran on joins again as a new runner. A runner already revoked is answered as it stands, so that revoking it again gives it no more time. Requires grant:manage at installation scope, audited as runner.revoke with the reason and the end of the grace, in the transaction of the order.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#registering-a-runner"
+        },
+        "requestBody": {
+          "description": "Why, handed to the runner at its next heartbeat.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/runnerOrder"
+              },
+              "examples": {
+                "reason": {
+                  "summary": "an order with its reason",
+                  "value": {
+                    "reason": "kernel update"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The runner as GET /api/v1/runners lists it, with the order it now carries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/runner"
+                },
+                "examples": {
+                  "revoked": {
+                    "summary": "a runner revoked, in its grace",
+                    "value": {
+                      "runner": "01jmz8x2d5f8qx7t2n5r8wd3hk",
+                      "pool": "dmz",
+                      "labels": [
+                        "zone=dmz",
+                        "arch=amd64"
+                      ],
+                      "cpu": 8,
+                      "memory_bytes": 34359738368,
+                      "disk_bytes": 214748364800,
+                      "architecture": "amd64",
+                      "agent_version": "0.6.0",
+                      "containment": {
+                        "runtime": "runc",
+                        "userns_remap": true
+                      },
+                      "reported_state": "draining",
+                      "concurrency": 4,
+                      "joined_at": "2026-09-20T08:14:02Z",
+                      "last_seen_at": "2026-10-01T06:41:57Z",
+                      "rotate_by": "2026-10-21T08:14:02Z",
+                      "state": "revoked",
+                      "drain_reason": "disk replaced",
+                      "revoked_by": "dana",
+                      "revoked_at": "2026-10-01T06:42:10Z",
+                      "results_accepted_until": "2026-10-01T07:42:10Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The reason is refused: none, longer than 256 characters, or holding a line break or another control character. A request carrying two credentials is refused as well."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds a session that may only enrol."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No runner of that identifier: the caller is an administrator already, so this names the runner rather than hiding the route."
+          },
+          "413": {
+            "$ref": "#/components/responses/tooLarge"
+          }
+        }
+      }
+    },
     "/api/v1/runner-pools": {
       "get": {
         "operationId": "listRunnerPools",
@@ -7933,6 +8962,231 @@
             "description": "The caller is not an administrator, or holds a session that may only enrol."
           }
         }
+      },
+      "post": {
+        "operationId": "createRunnerPool",
+        "tags": [
+          "runners"
+        ],
+        "summary": "Create a runner pool",
+        "description": "A pool with its labels, the namespaces it accepts and the ceilings of one task on it, the first thing an administrator writes before any machine can join. Its labels, namespaces and resource_ceilings are written even when empty, each then meaning the widest thing, so that a pool open to every namespace is one somebody said so of; containment left out is hardened, the one tier this release gives. The pool's consumer on the bus is created in the same step, and a bus that refuses it answers 503 with no pool created, so that a pool never exists with nowhere for its runners to pull from. Administrator only, audited as runner_pool.create with the pool as it was created.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#registering-a-runner"
+        },
+        "requestBody": {
+          "description": "The pool, without a join token, which is issued from a pool that exists.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "wire.schema.json#/$defs/runnerPool"
+              },
+              "examples": {
+                "dmz": {
+                  "summary": "a pool for a zone, accepting one namespace, capping a task",
+                  "value": {
+                    "pool": {
+                      "name": "dmz",
+                      "labels": [
+                        "zone=dmz",
+                        "arch=amd64"
+                      ],
+                      "namespaces": [
+                        "finance"
+                      ],
+                      "resource_ceilings": {
+                        "cpu": "4",
+                        "memory": "8Gi",
+                        "pids": 512
+                      }
+                    }
+                  }
+                },
+                "lab": {
+                  "summary": "a pool accepting every namespace and capping nothing",
+                  "value": {
+                    "pool": {
+                      "name": "lab",
+                      "labels": [
+                        "zone=lab"
+                      ],
+                      "namespaces": [],
+                      "resource_ceilings": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The pool as it was created, its tier written.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "wire.schema.json#/$defs/runnerPool"
+                },
+                "examples": {
+                  "dmz": {
+                    "summary": "the pool created",
+                    "value": {
+                      "pool": {
+                        "name": "dmz",
+                        "labels": [
+                          "zone=dmz",
+                          "arch=amd64"
+                        ],
+                        "namespaces": [
+                          "finance"
+                        ],
+                        "resource_ceilings": {
+                          "cpu": "4",
+                          "memory": "8Gi",
+                          "pids": 512
+                        },
+                        "containment": "hardened"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The pool is refused: a name outside the grammar or longer than 255 characters, a label that is not key=value, a namespace outside its grammar, an entry written twice, a list or the ceilings left out, a ceiling outside its grammar or null, disk named as a ceiling, a tier other than hardened, or a join token written with it. A request carrying two credentials is refused as well."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds a session that may only enrol."
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict",
+            "description": "A pool of that name exists already, and a pool's name is its only identity."
+          },
+          "413": {
+            "$ref": "#/components/responses/tooLarge"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable",
+            "description": "The bus could not make the pool's queue ready, and no pool was created."
+          }
+        }
+      }
+    },
+    "/api/v1/runner-pools/{pool}/join-tokens": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/pool"
+        }
+      ],
+      "post": {
+        "operationId": "issueJoinToken",
+        "tags": [
+          "runners"
+        ],
+        "summary": "Issue a join token",
+        "description": "A join token of the pool: single use, an hour unless asked otherwise and never more than a day, only for labels the pool carries, and shown once, in this answer and nowhere else. A machine trades it for a runner's identity with agk-runner join, or agk-runner serve given it in AGK_RUNNER_JOIN_TOKEN. Issuing one is how a runner is added, and, with agk-runner join --replace on the same host, how a runner's labels are changed: it joins again as a new runner, and the one it replaces stays registered until it is revoked. Administrator only, audited as join_token.issue by its identifier, never by the token.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#registering-a-runner"
+        },
+        "requestBody": {
+          "description": "The labels the token permits and how long it lives, either left out.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/joinTokenRequest"
+              },
+              "examples": {
+                "dmz": {
+                  "summary": "a token for a machine claiming both of the pool's labels",
+                  "value": {
+                    "labels": [
+                      "zone=dmz",
+                      "arch=amd64"
+                    ]
+                  }
+                },
+                "default": {
+                  "summary": "a token for the pool default, which permits no label",
+                  "value": {}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The pool the token was issued from, and the token, its secret written this once.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "wire.schema.json#/$defs/runnerPool"
+                },
+                "examples": {
+                  "dmz": {
+                    "summary": "a token of dmz",
+                    "value": {
+                      "pool": {
+                        "name": "dmz",
+                        "labels": [
+                          "zone=dmz",
+                          "arch=amd64"
+                        ],
+                        "namespaces": [
+                          "finance"
+                        ],
+                        "resource_ceilings": {
+                          "cpu": "4",
+                          "memory": "8Gi",
+                          "pids": 512
+                        },
+                        "containment": "hardened"
+                      },
+                      "join_token": {
+                        "id": "01M2AAZ9G62NQXFAFCXKRPJEH5",
+                        "token": "agkjoin_N8yQ2mVr4K7dLpX0sZaHg5Tf1WbCuJeR9iOnM3vY6kQ",
+                        "pool": "dmz",
+                        "labels": [
+                          "zone=dmz",
+                          "arch=amd64"
+                        ],
+                        "single_use": true,
+                        "issued_at": "2026-09-10T06:12:00Z",
+                        "expires_at": "2026-09-10T07:12:00Z"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The request is refused: a label written twice, a label the pool does not carry, or a life longer than a day. A request carrying two credentials is refused as well."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds a session that may only enrol."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No runner pool of that name: the caller is an administrator already, so this names the pool rather than hiding the route."
+          },
+          "413": {
+            "$ref": "#/components/responses/tooLarge"
+          }
+        }
       }
     }
   },
@@ -8014,6 +9268,106 @@
         "examples": [
           "assertion",
           "registration"
+        ]
+      },
+      "liveChange": {
+        "title": "Live change",
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "additionalProperties": false,
+        "description": "One message of the live connection, GET /api/v1/me/live: what changed, named and never held.",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "run",
+              "notifications",
+              "runners",
+              "activity",
+              "all"
+            ],
+            "description": "What changed: a run, or one of its steps or tasks; the caller's notifications; the runners or their pools; to an administrator, a run anywhere, named nowhere, which GET /api/v1/stats/activity counts; or anything, where a change may have been missed.",
+            "examples": [
+              "run",
+              "activity",
+              "all"
+            ]
+          },
+          "namespace": {
+            "$ref": "wire.schema.json#/$defs/namespace",
+            "description": "The namespace of the run, for a run alone.",
+            "examples": [
+              "finance"
+            ]
+          },
+          "workflow": {
+            "$ref": "wire.schema.json#/$defs/identifier",
+            "description": "The workflow of the run, for a run alone.",
+            "examples": [
+              "monthly-invoicing"
+            ]
+          },
+          "run": {
+            "$ref": "wire.schema.json#/$defs/ulid",
+            "description": "The run, for a run alone.",
+            "examples": [
+              "01JMZ8W4K2R7AAAAAAAAAAAAAA"
+            ]
+          }
+        },
+        "if": {
+          "properties": {
+            "kind": {
+              "const": "run"
+            }
+          }
+        },
+        "then": {
+          "required": [
+            "namespace",
+            "workflow",
+            "run"
+          ]
+        },
+        "else": {
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "namespace"
+                ]
+              },
+              {
+                "required": [
+                  "workflow"
+                ]
+              },
+              {
+                "required": [
+                  "run"
+                ]
+              }
+            ]
+          }
+        },
+        "examples": [
+          {
+            "kind": "run",
+            "namespace": "finance",
+            "workflow": "monthly-invoicing",
+            "run": "01JMZ8W4K2R7AAAAAAAAAAAAAA"
+          },
+          {
+            "kind": "notifications"
+          },
+          {
+            "kind": "runners"
+          },
+          {
+            "kind": "all"
+          }
         ]
       },
       "sessionKind": {
@@ -9487,6 +10841,13 @@
                 "display_name": "Alice Martin",
                 "admin": true,
                 "suspended": false,
+                "given_name": "Alice",
+                "family_name": "Martin",
+                "title": "Technical lead",
+                "location": "Lyon, France",
+                "timezone": "Europe/Paris",
+                "bio": "Writes the invoicing workflows, and reviews what touches payroll.",
+                "avatar_updated_at": "2026-09-28T10:15:00Z",
                 "created_at": "2026-09-27T08:50:00Z"
               }
             ]
@@ -9617,6 +10978,13 @@
               "display_name": "Alice Martin",
               "admin": true,
               "suspended": false,
+              "given_name": "Alice",
+              "family_name": "Martin",
+              "title": "Technical lead",
+              "location": "Lyon, France",
+              "timezone": "Europe/Paris",
+              "bio": "Writes the invoicing workflows, and reviews what touches payroll.",
+              "avatar_updated_at": "2026-09-28T10:15:00Z",
               "created_at": "2026-09-27T08:50:00Z"
             },
             "groups": [
@@ -10188,6 +11556,13 @@
                 "display_name": "Alice Martin",
                 "admin": true,
                 "suspended": false,
+                "given_name": "",
+                "family_name": "",
+                "title": "",
+                "location": "",
+                "timezone": "",
+                "bio": "",
+                "avatar_updated_at": null,
                 "created_at": "2026-09-27T08:50:00Z"
               }
             ]
@@ -10211,6 +11586,13 @@
               "display_name": "Alice Martin",
               "admin": true,
               "suspended": false,
+              "given_name": "",
+              "family_name": "",
+              "title": "",
+              "location": "",
+              "timezone": "",
+              "bio": "",
+              "avatar_updated_at": null,
               "created_at": "2026-09-27T08:50:00Z"
             },
             "enrolment": {
@@ -10285,6 +11667,13 @@
                   "display_name": "Alice Martin",
                   "admin": true,
                   "suspended": false,
+                  "given_name": "",
+                  "family_name": "",
+                  "title": "",
+                  "location": "",
+                  "timezone": "",
+                  "bio": "",
+                  "avatar_updated_at": null,
                   "created_at": "2026-09-27T08:50:00Z"
                 },
                 {
@@ -10293,6 +11682,13 @@
                   "display_name": "Bob Martin",
                   "admin": false,
                   "suspended": false,
+                  "given_name": "",
+                  "family_name": "",
+                  "title": "",
+                  "location": "",
+                  "timezone": "",
+                  "bio": "",
+                  "avatar_updated_at": null,
                   "created_at": "2026-09-27T09:20:00Z"
                 }
               ]
@@ -10308,6 +11704,13 @@
                 "display_name": "Alice Martin",
                 "admin": true,
                 "suspended": false,
+                "given_name": "",
+                "family_name": "",
+                "title": "",
+                "location": "",
+                "timezone": "",
+                "bio": "",
+                "avatar_updated_at": null,
                 "created_at": "2026-09-27T08:50:00Z"
               },
               {
@@ -10316,6 +11719,13 @@
                 "display_name": "Bob Martin",
                 "admin": false,
                 "suspended": false,
+                "given_name": "",
+                "family_name": "",
+                "title": "",
+                "location": "",
+                "timezone": "",
+                "bio": "",
+                "avatar_updated_at": null,
                 "created_at": "2026-09-27T09:20:00Z"
               }
             ]
@@ -11759,6 +13169,93 @@
             "mode": "0755",
             "size": 1532,
             "sha256": "a7e1875aa928e8a32bed8728639b06e8f8e2e297df096da697c85caffd34075a"
+          }
+        ]
+      },
+      "refs": {
+        "title": "Refs",
+        "type": "object",
+        "required": [
+          "refs"
+        ],
+        "additionalProperties": false,
+        "description": "A workflow repository's branches and tags, as GET /api/v1/{ns}/workflows/{name}/refs answers them.",
+        "properties": {
+          "refs": {
+            "type": "array",
+            "items": {
+              "$ref": "wire.schema.json#/$defs/ref"
+            },
+            "minItems": 1,
+            "description": "Every branch and tag, in git's order, byte by byte. Never empty, since the default branch is held from the repository's creation, without a commit until something is pushed to it.",
+            "examples": [
+              [
+                {
+                  "name": "refs/heads/feature/vat-rounding",
+                  "commit": "9c2e4a6b8d0f1e3c5a7b9d1f3e5c7a9b1d3f5e7c",
+                  "protected": false,
+                  "moved_by": "chloe",
+                  "moved_at": "2026-09-30T15:02:00Z"
+                },
+                {
+                  "name": "refs/heads/main",
+                  "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                  "protected": true,
+                  "moved_by": "alice",
+                  "moved_at": "2026-09-28T10:12:00Z"
+                },
+                {
+                  "name": "refs/tags/v2.1.0",
+                  "commit": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                  "protected": false,
+                  "moved_by": "bob",
+                  "moved_at": "2026-09-20T16:40:00Z"
+                }
+              ],
+              [
+                {
+                  "name": "refs/heads/main",
+                  "commit": null,
+                  "protected": true
+                }
+              ]
+            ]
+          }
+        },
+        "examples": [
+          {
+            "refs": [
+              {
+                "name": "refs/heads/feature/vat-rounding",
+                "commit": "9c2e4a6b8d0f1e3c5a7b9d1f3e5c7a9b1d3f5e7c",
+                "protected": false,
+                "moved_by": "chloe",
+                "moved_at": "2026-09-30T15:02:00Z"
+              },
+              {
+                "name": "refs/heads/main",
+                "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                "protected": true,
+                "moved_by": "alice",
+                "moved_at": "2026-09-28T10:12:00Z"
+              },
+              {
+                "name": "refs/tags/v2.1.0",
+                "commit": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                "protected": false,
+                "moved_by": "bob",
+                "moved_at": "2026-09-20T16:40:00Z"
+              }
+            ]
+          },
+          {
+            "refs": [
+              {
+                "name": "refs/heads/main",
+                "commit": null,
+                "protected": true
+              }
+            ]
           }
         ]
       },
@@ -14637,6 +16134,415 @@
           }
         ]
       },
+      "statsActivityBucket": {
+        "title": "A bucket of the installation's activity",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "since",
+          "until",
+          "runs",
+          "tasks_in_flight_max"
+        ],
+        "description": "What every namespace together did in one bucket, in counts alone.",
+        "properties": {
+          "since": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "Where the bucket starts, included: the since GET /api/v1/runs takes.",
+            "examples": [
+              "2026-10-01T10:41:00Z"
+            ]
+          },
+          "until": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The last instant of the bucket, included, a nanosecond before the next one starts: the until GET /api/v1/runs takes.",
+            "examples": [
+              "2026-10-01T10:41:59.999999999Z"
+            ]
+          },
+          "runs": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "queued",
+              "running",
+              "waiting",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "timed_out"
+            ],
+            "description": "The runs created in the bucket in every namespace, by state: a run that has ended under its final state, one still going under where it is now. A namespace's runs count within its retention, as in every series.",
+            "properties": {
+              "queued": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in queued.",
+                "examples": [
+                  0
+                ]
+              },
+              "running": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in running.",
+                "examples": [
+                  1
+                ]
+              },
+              "waiting": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in waiting.",
+                "examples": [
+                  0
+                ]
+              },
+              "succeeded": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in succeeded.",
+                "examples": [
+                  7
+                ]
+              },
+              "failed": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in failed.",
+                "examples": [
+                  1
+                ]
+              },
+              "cancelled": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in cancelled.",
+                "examples": [
+                  0
+                ]
+              },
+              "timed_out": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in timed_out.",
+                "examples": [
+                  0
+                ]
+              }
+            },
+            "examples": [
+              {
+                "queued": 0,
+                "running": 1,
+                "waiting": 0,
+                "succeeded": 7,
+                "failed": 1,
+                "cancelled": 0,
+                "timed_out": 0
+              }
+            ]
+          },
+          "tasks_in_flight_max": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The most tasks handed out, or on their way to a runner, and not yet ended at once in the bucket, in every namespace together: one ending as another is handed out is not two at once, and one still running is in flight until now.",
+            "examples": [
+              14
+            ]
+          }
+        },
+        "examples": [
+          {
+            "since": "2026-10-01T10:41:00Z",
+            "until": "2026-10-01T10:41:59.999999999Z",
+            "runs": {
+              "queued": 0,
+              "running": 0,
+              "waiting": 0,
+              "succeeded": 7,
+              "failed": 1,
+              "cancelled": 0,
+              "timed_out": 0
+            },
+            "tasks_in_flight_max": 14
+          },
+          {
+            "since": "2026-10-01T10:42:00Z",
+            "until": "2026-10-01T10:42:59.999999999Z",
+            "runs": {
+              "queued": 1,
+              "running": 3,
+              "waiting": 1,
+              "succeeded": 2,
+              "failed": 0,
+              "cancelled": 0,
+              "timed_out": 0
+            },
+            "tasks_in_flight_max": 19
+          }
+        ]
+      },
+      "statsActivityNow": {
+        "title": "What the installation is doing now",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "at",
+          "runs",
+          "tasks_in_flight",
+          "slots",
+          "runners_ready",
+          "runners"
+        ],
+        "description": "What every namespace together is doing as the request is answered.",
+        "properties": {
+          "at": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "When it was read.",
+            "examples": [
+              "2026-10-01T10:42:31Z"
+            ]
+          },
+          "runs": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "queued",
+              "running",
+              "waiting"
+            ],
+            "description": "The runs not ended, in every namespace, by state, whenever they were created.",
+            "properties": {
+              "queued": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in queued.",
+                "examples": [
+                  1
+                ]
+              },
+              "running": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in running.",
+                "examples": [
+                  3
+                ]
+              },
+              "waiting": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The runs in waiting.",
+                "examples": [
+                  1
+                ]
+              }
+            },
+            "examples": [
+              {
+                "queued": 1,
+                "running": 3,
+                "waiting": 1
+              }
+            ]
+          },
+          "tasks_in_flight": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The tasks handed out, or on their way to a runner, and not yet ended.",
+            "examples": [
+              17
+            ]
+          },
+          "slots": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The tasks the runners counted in runners_ready offer to run at once together: what tasks_in_flight is set against.",
+            "examples": [
+              24
+            ]
+          },
+          "runners_ready": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The runners that may be handed work: ready, reporting themselves ready, and heard from within 30 s, after which a runner's tasks are declared lost.",
+            "examples": [
+              3
+            ]
+          },
+          "runners": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The runners not revoked, ready or not.",
+            "examples": [
+              4
+            ]
+          }
+        },
+        "examples": [
+          {
+            "at": "2026-10-01T10:42:31Z",
+            "runs": {
+              "queued": 1,
+              "running": 3,
+              "waiting": 1
+            },
+            "tasks_in_flight": 17,
+            "slots": 24,
+            "runners_ready": 3,
+            "runners": 4
+          }
+        ]
+      },
+      "statsActivity": {
+        "title": "The installation's activity",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "bucket",
+          "buckets",
+          "now"
+        ],
+        "description": "What every namespace together did, bucket by bucket, and what it is doing now, in counts that name no run, workflow or namespace. Administrator only. compare=previous is not taken.",
+        "properties": {
+          "from": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The start of the range, included, as the request gave it or as it was taken.",
+            "examples": [
+              "2026-10-01T10:41:00Z"
+            ]
+          },
+          "to": {
+            "$ref": "wire.schema.json#/$defs/timestamp",
+            "description": "The end of the range, excluded.",
+            "examples": [
+              "2026-10-01T10:43:00Z"
+            ]
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "1m",
+              "15m",
+              "1h",
+              "1d"
+            ],
+            "description": "How long a bucket is, as asked or as the range chose.",
+            "examples": [
+              "1m"
+            ]
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/statsActivityBucket"
+            },
+            "description": "Every bucket of the range, oldest first, those counting nothing included.",
+            "examples": [
+              [
+                {
+                  "since": "2026-10-01T10:41:00Z",
+                  "until": "2026-10-01T10:41:59.999999999Z",
+                  "runs": {
+                    "queued": 0,
+                    "running": 0,
+                    "waiting": 0,
+                    "succeeded": 7,
+                    "failed": 1,
+                    "cancelled": 0,
+                    "timed_out": 0
+                  },
+                  "tasks_in_flight_max": 14
+                },
+                {
+                  "since": "2026-10-01T10:42:00Z",
+                  "until": "2026-10-01T10:42:59.999999999Z",
+                  "runs": {
+                    "queued": 1,
+                    "running": 3,
+                    "waiting": 1,
+                    "succeeded": 2,
+                    "failed": 0,
+                    "cancelled": 0,
+                    "timed_out": 0
+                  },
+                  "tasks_in_flight_max": 19
+                }
+              ]
+            ]
+          },
+          "now": {
+            "$ref": "#/components/schemas/statsActivityNow",
+            "description": "What the installation is doing as the request is answered.",
+            "examples": [
+              {
+                "at": "2026-10-01T10:42:31Z",
+                "runs": {
+                  "queued": 1,
+                  "running": 3,
+                  "waiting": 1
+                },
+                "tasks_in_flight": 17,
+                "slots": 24,
+                "runners_ready": 3,
+                "runners": 4
+              }
+            ]
+          }
+        },
+        "examples": [
+          {
+            "from": "2026-10-01T10:41:00Z",
+            "to": "2026-10-01T10:43:00Z",
+            "bucket": "1m",
+            "buckets": [
+              {
+                "since": "2026-10-01T10:41:00Z",
+                "until": "2026-10-01T10:41:59.999999999Z",
+                "runs": {
+                  "queued": 0,
+                  "running": 0,
+                  "waiting": 0,
+                  "succeeded": 7,
+                  "failed": 1,
+                  "cancelled": 0,
+                  "timed_out": 0
+                },
+                "tasks_in_flight_max": 14
+              },
+              {
+                "since": "2026-10-01T10:42:00Z",
+                "until": "2026-10-01T10:42:59.999999999Z",
+                "runs": {
+                  "queued": 1,
+                  "running": 3,
+                  "waiting": 1,
+                  "succeeded": 2,
+                  "failed": 0,
+                  "cancelled": 0,
+                  "timed_out": 0
+                },
+                "tasks_in_flight_max": 19
+              }
+            ],
+            "now": {
+              "at": "2026-10-01T10:42:31Z",
+              "runs": {
+                "queued": 1,
+                "running": 3,
+                "waiting": 1
+              },
+              "tasks_in_flight": 17,
+              "slots": 24,
+              "runners_ready": 3,
+              "runners": 4
+            }
+          }
+        ]
+      },
       "statsSlotBucket": {
         "title": "A bucket of slots",
         "type": "object",
@@ -17223,6 +19129,164 @@
             ]
           }
         ]
+      },
+      "profileUpdate": {
+        "title": "Profile change",
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "description": "What changes of the caller's display name and profile, and nothing else: a field left out keeps what is recorded, and the empty string clears a field, the display name excepted, which a user always has. Null is refused rather than read as either, since a client could have meant both.",
+        "properties": {
+          "display_name": {
+            "$ref": "wire.schema.json#/$defs/user/properties/display_name",
+            "description": "The name people read in the console and in the sharing panel, never cleared.",
+            "examples": [
+              "Alice Martin"
+            ]
+          },
+          "given_name": {
+            "$ref": "wire.schema.json#/$defs/user/properties/given_name",
+            "description": "The name the user is called by; the empty string clears it.",
+            "examples": [
+              "Alice",
+              ""
+            ]
+          },
+          "family_name": {
+            "$ref": "wire.schema.json#/$defs/user/properties/family_name",
+            "description": "The user's family name; the empty string clears it.",
+            "examples": [
+              "Martin",
+              ""
+            ]
+          },
+          "title": {
+            "$ref": "wire.schema.json#/$defs/user/properties/title",
+            "description": "What the user does, as they put it; the empty string clears it.",
+            "examples": [
+              "Technical lead",
+              ""
+            ]
+          },
+          "location": {
+            "$ref": "wire.schema.json#/$defs/user/properties/location",
+            "description": "Where the user works, as they put it; the empty string clears it.",
+            "examples": [
+              "Lyon, France",
+              ""
+            ]
+          },
+          "timezone": {
+            "$ref": "wire.schema.json#/$defs/user/properties/timezone",
+            "description": "The time zone the user works in, a name the IANA database holds, Local refused; the empty string clears it.",
+            "examples": [
+              "Europe/Paris",
+              ""
+            ]
+          },
+          "bio": {
+            "$ref": "wire.schema.json#/$defs/user/properties/bio",
+            "description": "A line the user writes about themself, 280 characters at most; the empty string clears it.",
+            "examples": [
+              "Writes the invoicing workflows, and reviews what touches payroll.",
+              ""
+            ]
+          }
+        },
+        "examples": [
+          {
+            "given_name": "Alice",
+            "family_name": "Martin",
+            "title": "Technical lead",
+            "timezone": "Europe/Paris"
+          },
+          {
+            "bio": "",
+            "location": ""
+          },
+          {
+            "display_name": "Alice Martin"
+          }
+        ]
+      },
+      "joinTokenRequest": {
+        "title": "Join token request",
+        "type": "object",
+        "additionalProperties": false,
+        "description": "What a join token is asked for with: the labels the machine it is meant for may claim, every one of them a label its pool carries, and how long the administrator needs to get it there. Both may be left out: a token permitting no label, which is what a runner of the pool default claims, and the default life of an hour.",
+        "properties": {
+          "labels": {
+            "type": "array",
+            "items": {
+              "$ref": "wire.schema.json#/$defs/label"
+            },
+            "uniqueItems": true,
+            "maxItems": 1024,
+            "description": "The labels a runner joining with the token may claim, a subset of its pool's: a label reaches a machine only where an administrator wrote it on a pool first, and a token narrows that further to the one machine it is meant for.",
+            "examples": [
+              [
+                "zone=dmz",
+                "arch=amd64"
+              ],
+              []
+            ]
+          },
+          "expires_in_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 86400,
+            "description": "How long the token lives, at most a day, an hour where it is left out: a join token only has to survive the minutes between an administrator copying it and a machine presenting it.",
+            "examples": [
+              3600,
+              900
+            ]
+          }
+        },
+        "examples": [
+          {
+            "labels": [
+              "zone=dmz",
+              "arch=amd64"
+            ]
+          },
+          {},
+          {
+            "labels": [
+              "zone=lab"
+            ],
+            "expires_in_seconds": 900
+          }
+        ]
+      },
+      "runnerOrder": {
+        "title": "Runner order",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reason"
+        ],
+        "description": "An administrator's order to a runner, drain or revoke, and why: the reason is handed to the runner at its next heartbeat, which writes it to its own log, since whoever owns the machine is rarely whoever gave the order.",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f]+$",
+            "description": "Why, in one line of at most 256 characters: one line of a journal, which is where the runner writes it, and short enough for the console to show beside the runner.",
+            "examples": [
+              "kernel update",
+              "disk replaced"
+            ]
+          }
+        },
+        "examples": [
+          {
+            "reason": "kernel update"
+          },
+          {
+            "reason": "disk replaced"
+          }
+        ]
       }
     },
     "parameters": {
@@ -17895,6 +19959,51 @@
             "value": "stripe-key"
           }
         }
+      },
+      "avatarVersion": {
+        "name": "v",
+        "in": "query",
+        "required": false,
+        "description": "Read by nobody: the user's avatar_updated_at, which a client writes here so that the photo's address changes when the photo does, and no cache answers a photo set again with the one before it.",
+        "schema": {
+          "type": "string"
+        },
+        "examples": {
+          "set": {
+            "summary": "the instant the photo was set",
+            "value": "2026-09-28T10:15:00Z"
+          }
+        }
+      },
+      "pool": {
+        "name": "pool",
+        "in": "path",
+        "required": true,
+        "description": "The runner pool, by its name, its only identity.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/runnerPool/properties/pool/properties/name"
+        },
+        "examples": {
+          "dmz": {
+            "summary": "a pool for a zone",
+            "value": "dmz"
+          }
+        }
+      },
+      "runner": {
+        "name": "runner",
+        "in": "path",
+        "required": true,
+        "description": "The runner, by the identifier the API minted at its join.",
+        "schema": {
+          "$ref": "wire.schema.json#/$defs/runnerRegistration/properties/response/properties/runner"
+        },
+        "examples": {
+          "runner": {
+            "summary": "a runner",
+            "value": "01jmz8x2d5f8qx7t2n5r8wd3hk"
+          }
+        }
       }
     },
     "headers": {
@@ -18034,6 +20143,43 @@
           "moved": {
             "summary": "moved to ops",
             "value": "/api/v1/ops/workflows/monthly-invoicing"
+          }
+        }
+      },
+      "privateDay": {
+        "description": "private, max-age=86400: the photo is kept a day by the browser that asked and by no shared cache, since it is shown to its owner and to administrators alone. A client asks for it at an address that changes with avatar_updated_at, so that keeping it a day never shows a photo set since.",
+        "schema": {
+          "const": "private, max-age=86400"
+        },
+        "examples": {
+          "a day": {
+            "summary": "kept a day, privately",
+            "value": "private, max-age=86400"
+          }
+        }
+      },
+      "noSniff": {
+        "description": "nosniff, so that a browser takes the body for the type it is declared as, and never for anything its bytes might be taken for.",
+        "schema": {
+          "const": "nosniff"
+        },
+        "examples": {
+          "nosniff": {
+            "summary": "the declared type alone",
+            "value": "nosniff"
+          }
+        }
+      },
+      "avatarTag": {
+        "description": "The photo's tag, the instant it was set in microseconds since the epoch, in quotes, which a client keeping the photo past its day sends in If-None-Match and is answered 304 for while the photo is the same.",
+        "schema": {
+          "type": "string",
+          "pattern": "^\"[0-9]+\"$"
+        },
+        "examples": {
+          "tag": {
+            "summary": "a photo's tag",
+            "value": "\"1790590500000000\""
           }
         }
       }

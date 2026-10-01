@@ -104,6 +104,7 @@ SCHEMAS = {
     "role": {"file": "wire.schema.json", "pointer": "#/$defs/role"},
     "permission": {"file": "wire.schema.json", "pointer": "#/$defs/permission"},
     "namespace-record": {"file": "wire.schema.json", "pointer": "#/$defs/namespaceRecord"},
+    "namespace-variable": {"file": "wire.schema.json", "pointer": "#/$defs/namespaceVariable"},
     "auth-policy": {"file": "wire.schema.json", "pointer": "#/$defs/authPolicy"},
     "notification": {"file": "wire.schema.json", "pointer": "#/$defs/notification"},
     "repository": {"file": "wire.schema.json", "pointer": "#/$defs/repository"},

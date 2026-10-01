@@ -15877,6 +15877,7 @@
               "object",
               "null"
             ],
+            "additionalProperties": true,
             "description": "The workflow inputs by name, each held to its JSON Schema, a default filling one left out, and recorded as bound. At most as many values as one envelope may carry items, and as many bytes as one envelope may weigh: a run's data belongs in an artifact. null is read as none.",
             "examples": [
               {

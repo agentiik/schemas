@@ -2100,8 +2100,6 @@ NOT_DESCRIBED_YET = (
             "POST /api/v1/{ns}/workflows/{name}/runs",
             "POST /api/v1/runs/{id}/approve",
             "POST /api/v1/runs/{id}/reject",
-            "GET /api/v1/runs/{id}/outputs/{name}",
-            "GET /api/v1/artifacts/{uri}",
         ),
     ),
     (

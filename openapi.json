@@ -5328,7 +5328,7 @@
           "runs"
         ],
         "summary": "Replay a run",
-        "description": "Starts a new run of the commit the run pinned, over the inputs it was started with as they were bound and with what fired it as it was frozen, attributed to the caller as a manual run. From a step, the steps above it are reused and every other step runs; from the start, nothing is reused. Requires workflow:run on the run's workflow. Refused while the run is not over, and from a step where the run is replayable from the start only or a step above never ended.",
+        "description": "Starts a new run of the commit the run pinned, over the inputs it was started with as they were bound and with what fired it as it was frozen, attributed to the caller as a manual run. From a step, the steps above it are reused and every other step runs; from the start, nothing is reused. Requires workflow:run on the run's workflow. Refused while the run is not over, and from a step where the run is replayable from the start only, or a step above never ended or was cancelled with its run.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#memoisation-and-replay"
@@ -5407,7 +5407,7 @@
             "$ref": "#/components/responses/notFound"
           },
           "409": {
-            "description": "The run is not over, what its steps publish being undecided; or, from a step, the run is replayable from the start only, or a step above the one named never ended.",
+            "description": "The run is not over, what its steps publish being undecided; or, from a step, the run is replayable from the start only, or a step above the one named never ended or was cancelled with its run, and published nothing to reuse.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13839,7 +13839,7 @@
               "skipped",
               "cancelled"
             ],
-            "description": "Where the step stands: pending before it starts, or while it waits for another attempt; running while a shard of it is in flight; succeeded once it published its ports; failed, which continue_on_error does not change; skipped where its if was false; cancelled with its run.",
+            "description": "Where the step stands: pending before it starts, or while it waits for another attempt; running while a shard of it is in flight; succeeded once it published its ports; failed, which continue_on_error does not change; skipped where its if was false; cancelled with its run, where it was under way when the run was cancelled or timed out, a step nobody reached staying pending.",
             "examples": [
               "succeeded",
               "failed"

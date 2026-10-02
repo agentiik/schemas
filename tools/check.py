@@ -112,6 +112,7 @@ SCHEMAS = {
     "role": {"file": "wire.schema.json", "pointer": "#/$defs/role"},
     "permission": {"file": "wire.schema.json", "pointer": "#/$defs/permission"},
     "namespace-record": {"file": "wire.schema.json", "pointer": "#/$defs/namespaceRecord"},
+    "namespace-variable": {"file": "wire.schema.json", "pointer": "#/$defs/namespaceVariable"},
     "auth-policy": {"file": "wire.schema.json", "pointer": "#/$defs/authPolicy"},
     "notification": {"file": "wire.schema.json", "pointer": "#/$defs/notification"},
     "repository": {"file": "wire.schema.json", "pointer": "#/$defs/repository"},
@@ -1462,6 +1463,17 @@ ONE_GRAMMAR = (
         (
             ("wire.schema.json", "#/$defs/namespace/maxLength"),
             ("workflow.schema.json", "#/$defs/namespace/maxLength"),
+            ("wire.schema.json", "#/$defs/namespaceRecord/properties/former_names/items/maxLength"),
+        ),
+    ),
+    # A name a namespace left at a rename is written on the grammar its name is, without the
+    # reserved words, since a namespace made under one before it was reserved may have left it:
+    # the pattern is copied rather than referred to, and held to the name's here.
+    (
+        "a namespace's name, a former one among them",
+        (
+            ("wire.schema.json", "#/$defs/namespace/pattern"),
+            ("wire.schema.json", "#/$defs/namespaceRecord/properties/former_names/items/pattern"),
         ),
     ),
 )

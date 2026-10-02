@@ -6,7 +6,7 @@ Every repository of the project carries the same version and is tagged at the sa
 
 `0.y.z` promises nothing beyond itself: what a release here describes may be gone in the next one.
 
-## Unreleased
+## v0.6.0, 2026-10-02
 
 - `openapi.json` describes `GET /api/v1/{ns}/workflows`, `listWorkflows`, served from v0.6.0 under `run:read` asked of each workflow: the namespace's workflows whose runs the caller reads, by name, each with its `name`, `created_at` and `latest`, its newest run's `run`, `state`, `trigger_kind`, `created_at` and `finished_at` (`workflowList`, `listedWorkflow`, `latestRun`), and nothing of its repository or its file.
 - `openapi.json` describes `GET /api/v1/{ns}/workflows/{name}/inputs`, `getRunInputs`, served from v0.6.0 under `workflow:run`: what a manual run takes, the `commit` a `ref` resolves to, the default branch's head where none is named, each declared input with its `schema`, `required` and `default` (`declaredInput`), and the `files` of the version's tree those schemas reach by `$ref`, in `runInputs`, so that whoever may run a workflow without reading it, an `operator`, is asked for what a run takes.
@@ -50,6 +50,8 @@ Every repository of the project carries the same version and is tagged at the sa
 - `openapi.json` describes `POST /api/v1/{ns}/workflows/{name}/runs`, served since v0.2.0, which the web console's run form calls: a `commit` or a `ref`, or neither for the default branch's head, and the `inputs`, answered `202` with the run, `queued`, and the commit it is pinned to, and refused `422` for an input with the input and the rule apart, `required`, `schema` or `undeclared`, so that a form points at its field, and `429` with `Retry-After` past `max_runs_per_hour`. The route is taken off `NOT_DESCRIBED_YET`.
 - `openapi.json` describes the secret declaration routes, served since v0.3.0, which the web console's secrets reads and writes: `GET /api/v1/{ns}/secrets`, and `GET`, `PUT` and `DELETE /api/v1/{ns}/secrets/{name}`, with `secretDeclaration`, `secretList` and `secretDeclare`. A declaration names its store, `builtin`, `env` or `vault`, the path in it where it has one, and the mount a step is given it at, never a value; a `PUT` writes a value for `builtin` only, once, returned by no answer. `tools/check.py` no longer lists them as not described yet, and keeps the brick catalog's two routes there.
 - `openapi.json` describes the two routes an administrator reads the fleet by, served since v0.2.0, which the web console's runners view reads: `GET /api/v1/runners`, with `runner` and `runnerList`, each runner's pool, labels, capacity, the state the installation gives it and the one it last reported, its concurrency and last heartbeat, and who drained or revoked it and when, never its host or its key; and `GET /api/v1/runner-pools`, with `runnerPoolList`, each pool as `wire.schema.json`'s `runnerPool` writes it with no join token. `tools/check.py` no longer lists them as not described yet.
+- `openapi.json` and `fixtures/index.json` name `0.6.0`, and the document's summary and description say what it describes now: every route the web console reads and acts with, its secrets, variables, runners and audit log among them.
+- `CLAUDE.md` is the copy of `agentiik/.github`'s as it stands at v0.6.0: twelve repositories, the web console part of `agentiik`, and the roadmap at 685 tasks in sixty-three groups.
 
 ## v0.5.0, 2026-09-30
 

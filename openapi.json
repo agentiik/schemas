@@ -933,6 +933,108 @@
         }
       }
     },
+    "/api/v1/auth/audit": {
+      "get": {
+        "operationId": "getAuditLog",
+        "tags": [
+          "audit"
+        ],
+        "summary": "Read the audit log",
+        "description": "The audit log, the newest entries first, each as the export writes it, narrowed by who did what, where, to what and when, and a page at a time with before. Beside the page, head and verified say where the chain stands. Administrator only: the log is every namespace's and the installation's at once. Under auth, reserved since v0.2, rather than a word of its own, which would have to be reserved a release before the route is served. Reading is not recorded.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#audit-log"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/auditLimit"
+          },
+          {
+            "$ref": "#/components/parameters/auditBefore"
+          },
+          {
+            "$ref": "#/components/parameters/auditActor"
+          },
+          {
+            "$ref": "#/components/parameters/auditAction"
+          },
+          {
+            "$ref": "#/components/parameters/auditNamespace"
+          },
+          {
+            "$ref": "#/components/parameters/auditTarget"
+          },
+          {
+            "$ref": "#/components/parameters/auditSince"
+          },
+          {
+            "$ref": "#/components/parameters/auditUntil"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of the log.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/noStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auditPage"
+                },
+                "examples": {
+                  "latest": {
+                    "summary": "the two latest entries",
+                    "value": {
+                      "entries": [
+                        {
+                          "seq": 4183,
+                          "at": "2026-10-02T09:15:44.008112Z",
+                          "actor": "dana",
+                          "action": "runner.drain",
+                          "target": "01M2AAZ9G62NQXFAFCXKRPJEH5",
+                          "result": "unchanged",
+                          "detail": "{\"reason\":\"kernel update\"}",
+                          "prev_hash": "9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c",
+                          "hash": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0"
+                        },
+                        {
+                          "seq": 4182,
+                          "at": "2026-10-02T09:14:07.512903Z",
+                          "actor": "carol",
+                          "action": "namespace.update",
+                          "namespace": "finance",
+                          "target": "finance",
+                          "result": "done",
+                          "detail": "{\"quotas\":{\"max_concurrent_tasks\":7}}",
+                          "prev_hash": "5e2a1c0b9f8d7e6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a",
+                          "hash": "9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c"
+                        }
+                      ],
+                      "head": 4183,
+                      "verified": 4182
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "The query is refused: a limit outside 1 to 200, a before that is not a whole number from 1, an action that is not a thing and a verb, a since or an until not in RFC 3339, or since after until. A request carrying two credentials, a bearer token beside the session cookie or two session cookies, too."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "A caller who is not an administrator, or a session that may only enrol."
+          }
+        }
+      }
+    },
     "/api/v1/{ns}/auth/policy": {
       "parameters": [
         {
@@ -10073,108 +10175,6 @@
           },
           "413": {
             "$ref": "#/components/responses/tooLarge"
-          }
-        }
-      }
-    },
-    "/api/v1/audit": {
-      "get": {
-        "operationId": "getAuditLog",
-        "tags": [
-          "audit"
-        ],
-        "summary": "Read the audit log",
-        "description": "The audit log, the newest entries first, each as the export writes it, narrowed by who did what, where, to what and when, and a page at a time with before. Beside the page, head and verified say where the chain stands. Administrator only: the log is every namespace's and the installation's at once. Served at this path alone, so that a namespace named audit made before v0.6.0 reserved the word keeps every route it has. Reading is not recorded.",
-        "externalDocs": {
-          "description": "Where the documentation specifies it.",
-          "url": "https://agentiik.github.io/docs#audit-log"
-        },
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/auditLimit"
-          },
-          {
-            "$ref": "#/components/parameters/auditBefore"
-          },
-          {
-            "$ref": "#/components/parameters/auditActor"
-          },
-          {
-            "$ref": "#/components/parameters/auditAction"
-          },
-          {
-            "$ref": "#/components/parameters/auditNamespace"
-          },
-          {
-            "$ref": "#/components/parameters/auditTarget"
-          },
-          {
-            "$ref": "#/components/parameters/auditSince"
-          },
-          {
-            "$ref": "#/components/parameters/auditUntil"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "A page of the log.",
-            "headers": {
-              "Cache-Control": {
-                "$ref": "#/components/headers/noStore"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/auditPage"
-                },
-                "examples": {
-                  "latest": {
-                    "summary": "the two latest entries",
-                    "value": {
-                      "entries": [
-                        {
-                          "seq": 4183,
-                          "at": "2026-10-02T09:15:44.008112Z",
-                          "actor": "dana",
-                          "action": "runner.drain",
-                          "target": "01M2AAZ9G62NQXFAFCXKRPJEH5",
-                          "result": "unchanged",
-                          "detail": "{\"reason\":\"kernel update\"}",
-                          "prev_hash": "9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c",
-                          "hash": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0"
-                        },
-                        {
-                          "seq": 4182,
-                          "at": "2026-10-02T09:14:07.512903Z",
-                          "actor": "carol",
-                          "action": "namespace.update",
-                          "namespace": "finance",
-                          "target": "finance",
-                          "result": "done",
-                          "detail": "{\"quotas\":{\"max_concurrent_tasks\":7}}",
-                          "prev_hash": "5e2a1c0b9f8d7e6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a",
-                          "hash": "9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c"
-                        }
-                      ],
-                      "head": 4183,
-                      "verified": 4182
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/badRequest",
-            "description": "The query is refused: a limit outside 1 to 200, a before that is not a whole number from 1, an action that is not a thing and a verb, a since or an until not in RFC 3339, or since after until. A request carrying two credentials, a bearer token beside the session cookie or two session cookies, too."
-          },
-          "401": {
-            "$ref": "#/components/responses/unauthorised"
-          },
-          "403": {
-            "$ref": "#/components/responses/forbidden",
-            "description": "A caller who is not an administrator, or a session that may only enrol."
           }
         }
       }

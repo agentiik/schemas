@@ -1,6 +1,4 @@
-# invalid: A published tool with no description. The description is the field
-#   a model acts on, so a tool without one is exactly the tool a model has no
-#   way to decide to call.
+# invalid: A tool name that is not an identifier. Clients hold the name and send it back in every call, so it is kept to letters, digits, hyphens and underscores.
 # refused by: the schema
 # reference: https://agentiik.github.io/docs/#publishing-tools
 
@@ -17,9 +15,8 @@ inputs:
     required: true
 
 mcp:
-  name: create_invoice
-  title: Create an invoice
-  mode: sync
+  name: create invoice
+  description: Issue one invoice for a customer.
 
 steps:
   normalize:

@@ -1,6 +1,4 @@
-# invalid: A published tool with no description. The description is the field
-#   a model acts on, so a tool without one is exactly the tool a model has no
-#   way to decide to call.
+# invalid: A tool mode other than sync and async. A call either waits for the run or returns its identifier at once, and there is no third way for a call to end.
 # refused by: the schema
 # reference: https://agentiik.github.io/docs/#publishing-tools
 
@@ -18,8 +16,8 @@ inputs:
 
 mcp:
   name: create_invoice
-  title: Create an invoice
-  mode: sync
+  description: Issue one invoice for a customer.
+  mode: stream
 
 steps:
   normalize:

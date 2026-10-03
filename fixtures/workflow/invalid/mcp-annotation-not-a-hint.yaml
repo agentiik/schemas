@@ -1,6 +1,4 @@
-# invalid: A published tool with no description. The description is the field
-#   a model acts on, so a tool without one is exactly the tool a model has no
-#   way to decide to call.
+# invalid: An annotation other than the four hints the protocol defines. They are passed through to a client unchanged, so a key the protocol does not define is one no client reads, and a grant is never written here.
 # refused by: the schema
 # reference: https://agentiik.github.io/docs/#publishing-tools
 
@@ -18,8 +16,10 @@ inputs:
 
 mcp:
   name: create_invoice
-  title: Create an invoice
-  mode: sync
+  description: Issue one invoice for a customer.
+  annotations:
+    readOnlyHint: false
+    requiresApproval: true
 
 steps:
   normalize:

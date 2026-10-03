@@ -28,6 +28,8 @@ states it; where it is silent, the schema takes the reading that cannot contradi
 Beside them, [`fixtures/`](fixtures) holds the documents that pin what the schemas accept
 and what they refuse, and [`tools/check.py`](tools/check.py) is the check the build runs.
 
+[`language/`](language) is the language reference, generated from `workflow.schema.json` by [`tools/language.py`](tools/language.py) and never edited by hand. It is what `workflow.language` answers with, and the pages the site renders: see [The language reference](#the-language-reference).
+
 ## Running the check
 
 ```sh
@@ -39,7 +41,7 @@ No arguments, from anywhere in the repository. It is the same command [`.github/
 
 The route check reads the documentation of main from <https://agentiik.github.io/docs/v/main/>, because this repository's main follows it. Where the two change together, or offline, point it at a checkout instead: `python tools/check.py --docs ../agentiik.github.io`. The documentation's pull request merges first, since it is the authority, and this repository's build is green against the site from then on.
 
-Ten things fail the build:
+Eleven things fail the build:
 
 1. a schema that is not a legal JSON Schema 2020-12 document, that does not carry the
    `$id` it is published under, or that holds a `$ref` leading nowhere;
@@ -60,7 +62,8 @@ Ten things fail the build:
 7. an em dash, anywhere in any text file;
 8. an `openapi.json` a generator cannot rely on: not OpenAPI 3.1, a field a reader needs missing, a path parameter declared and not in its path or the other way round, an `operationId` used twice, a status that is not one, a schema the 2020-12 metaschema refuses or one writing `nullable` or `example`, which 2020-12 ignores, or a `$ref` leading nowhere, inside it or into a schema beside it;
 9. an operation, a parameter, a request body, a response, a header or a schema keyword of it without a description or without examples, or an example that does not validate against what it illustrates, a reference into the wire resolved as a consumer resolves it;
-10. a route the documentation's table lists and `openapi.json` does not describe, or the other way round, or an operation whose `externalDocs` points at an anchor the page does not carry. A route deliberately not described yet is named in `NOT_DESCRIBED_YET` in `tools/check.py` with the reason, and the list is held exact: a route on it that is now described, or gone from the table, fails too. A read of the page that comes back partial, no page, no `#api` section, no table or a row that cannot be read, fails rather than agreeing with nothing.
+10. a route the documentation's table lists and `openapi.json` does not describe, or the other way round, or an operation whose `externalDocs` points at an anchor the page does not carry. A route deliberately not described yet is named in `NOT_DESCRIBED_YET` in `tools/check.py` with the reason, and the list is held exact: a route on it that is now described, or gone from the table, fails too. A read of the page that comes back partial, no page, no `#api` section, no table or a row that cannot be read, fails rather than agreeing with nothing;
+11. a `language/` that is not exactly what `tools/language.py` generates from the schemas, a keyword of `workflow.schema.json` that no topic covers, a topic with no worked example, or a worked example that, read back from the YAML its page shows with a YAML 1.2 loader, is not the example it illustrates or does not validate against the keyword that carries it.
 
 ## Why every keyword carries a description and examples
 
@@ -76,6 +79,30 @@ for itself fails the run, and a description that only restates the keyword's own
 fails review.
 
 The API is held to the same rule for the same reason: the API reference is generated from `openapi.json`, and the console, `agk` and the Terraform provider read it as their one description of the API, so an operation or a field without a description is one none of them can explain.
+
+## The language reference
+
+`workflow.language`, the MCP tool, teaches the language one topic at a time, and the documentation names the topics: "repository, inputs, outputs, triggers, steps, ports, needs, merge, fan_out, retry, expressions, secrets, files, script, includes, mcp". Without a topic it answers an orientation. Both are generated here, so the tool, the command line and the site teach one language, the one the validator enforces:
+
+```sh
+python tools/language.py
+```
+
+It writes three kinds of file under `language/`:
+
+| File | Holds |
+| --- | --- |
+| `index.md` | The orientation: what the language is, one complete minimal workflow, the topics, and the schema parts by name. |
+| `<topic>.md` | One page per topic: a summary, the keywords it covers, the schema fragment governing them and worked examples, each written where it goes in `agentiik.yaml`. |
+| `topics.json` | The same for a program: each topic's `name`, `page`, `summary`, the `keywords` it covers as pointers into `workflow.schema.json`, and the `paths` it answers for; and the `parts`, each a `name`, the `file` and `$id` it is published as, and its `title` and `summary`. |
+
+Every sentence on a page is a `description` of the schema, and every example an entry of an `examples` array. What `tools/language.py` adds is structure alone: which keyword belongs to which topic, set by `TOPICS`, and the order a page is read in. A topic's summary is the description of one keyword it names, its anchor. A keyword belongs to the topic whose place is the longest prefix of where it is declared, so the steps topic covers the step while the retry topic takes the step's `retry` away from it, and the build fails on a keyword no topic covers. The orientation's minimal workflow is the first example of the schema's root, which is why that example is the smallest workflow that runs: one step, no brick to pull, one output.
+
+A path in `topics.json` is a JSON Pointer to where a keyword is written in `agentiik.yaml` or an included file, in which `*` stands for any one name or index and `.*` for any one name starting with a dot, a hidden block's. It is the pointer a validation error names, so an error can name the topic that explains it: the topic of the longest pattern that matches, token by token, the error's pointer or the start of it. A place is claimed by the keyword written there and so by one topic, which the build holds: a definition claims none, since the property it is reached through answers for it, and neither does a keyword of the included file, which restates one of the entry point's at the same place.
+
+A part is named after its file, so `workflow`, `brick` and `envelope` are `workflow.schema.json`, `brick.schema.json` and `envelope.schema.json`, published under the `$id` each carries. `workflow.schema` and `agentiik://schema/{part}` take one of these names.
+
+A definition written at several places, an expression or a duration, shows its examples as values rather than placed at the first of those places, where an expression would read as an event filter. A keyword written at one place is shown there, with the names its keyword's `propertyNames` examples give: a step is called `normalize` because that is the first example of a step's name.
 
 ## Readings taken where the documentation is silent
 
@@ -112,8 +139,8 @@ them.
 | --- | --- |
 | `strategy.fan_out`, `batch(n)` | The size starts at one. `batch(n)` is one container per batch of n items, and a batch of zero is a shard that can never be filled. The pattern also refuses the leading-zero spelling `batch(007)`. |
 | `resources.cpu`, `resources.memory` | Above zero, in both documents. A CPU allowance of zero is how a container is given no limit at all, and a memory ceiling of zero would stop the container before it started. This matches `pids`, `max_parallel` and `retain.fetches`, each of which the documentation bounds away from zero by what it says the value is for. |
-| `include`, `secrets`, `step.needs`, `step.outputs` | At least one entry, and `secrets`, `needs` and `outputs` hold no duplicate. An empty list means exactly what omitting the key means, and a duplicated edge would concatenate one envelope twice. `mcp.tools` is deliberately left unbounded, because the documentation says an empty tool list serves a server with nothing on it and that this differs from declaring no block. |
-| `mcpTool.timeout` | Bounded by the 120 second ceiling the documentation states, so `120s`, `2m` and `120000ms` are the longest forms the grammar accepts. The rule sits beside its companion, that an async tool carries no timeout, rather than being left to a validator that would have nothing to read but the literal in the file. |
+| `include`, `secrets`, `step.needs`, `step.outputs` | At least one entry, and `secrets`, `needs` and `outputs` hold no duplicate. An empty list means exactly what omitting the key means, and a duplicated edge would concatenate one envelope twice. |
+| `mcp.timeout` | Bounded by the 120 second ceiling the documentation states, so `120s`, `2m` and `120000ms` are the longest forms the grammar accepts. The rule sits beside its companion, that an async tool carries no timeout, rather than being left to a validator that would have nothing to read but the literal in the file. |
 | `include`, a path with a `ref` | Refused. A path include resolves inside the same commit, so it can never be stale and there is nothing for a ref to pin, which is the reasoning that also refuses a timeout on an async tool. |
 | `step`, `workflow` beside the script keywords | Refused. `script` commands run inside `image` and `workflow` is an alternative to `image`, so a sub-workflow call has no container for a script, a shell, a `before_script` or an `after_script` to run in. |
 
@@ -165,6 +192,7 @@ The access shapes sit in `wire.schema.json` rather than in a document of their o
 | `authPolicy.min_passkeys` | "integer, default 2". | At least one: zero would let a password go from an account with nothing to replace it. |
 | `notification` | Three things told in `GET /api/v1/me`, named `admin_access_widened`, `passkey_counter_refused` and `break_glass_recovery`: an administrator writing a grant by the installation's power, putting a user in a group holding a role, or widening their own access, told to the namespace's owners and, where it had nobody to tell before, the other administrators as well; a sign-in refused for a passkey's signature counter, told to its user; and a recovery code `agentiik-api recover` issued an administrator, told to every administrator. Each kept 90 days or until dismissed. | A record of the wire rather than of `openapi.json`, since the API keeps it and a route dismisses it by its identifier. Told apart by `kind`: `admin_access_widened` carries `namespace` and `grant`, the grant or deny as it was written, `act`, which of five acts widened access, and `by`, who did it, a login or `operator`, since the grant's own `granted_by` may be somebody else long before, and `login` on `joined_group` alone, the user put in; `passkey_counter_refused` the passkey's `credential` ID, `break_glass_recovery` the recovered administrator's `login`, and each refuses the others' fields. |
 | `namespaceVariable` | A name, a JSON value and a visibility, `all` or `selected` with the workflows that read it, written whole by a `PUT`, which writes `workflows` every time for `selected`, `[]` for none. | `workflows` present exactly where `visibility` is `selected`, so that a reader never guesses whether a missing list means none or every workflow; the value unconstrained, since what a file's `vars` holds is any value YAML writes, and its 64 KiB, written as compact JSON, left to the API. |
+| `collection`, `collectionMember` | A connector of a principal's own, `{id, name, description, url, members}`, each member its `workflow`, its `ref` and its `as` where written, and `tool`, or `null` beside `reason`, `no_mcp_block` or `not_runnable`; a name unique among its owner's collections; at most 100 members, and 50 collections to a principal. No grammar for the name, the description or the ref, and nothing on a ref that no longer names anything. | `name` on the identifier grammar, the one a workflow's and a tool's names are written on, so that it goes into a client's configuration and onto a command line as it is; `description` one line of at most 280 characters, as a user's `bio` is, and the empty string where none was written; `url` holding the ULID grammar, which `COMPOSED_GRAMMAR` holds to `$defs/ulid`; `workflow` by `$ref` to the `NS/NAME` a grant on one workflow is written on; `ref` on git's rules for a ref name, a short name or in full, never a commit, which has no head to follow, and absent for the default branch, so that the member follows whichever branch that is; `reason` present exactly where `tool` is `null`; and a ref that no longer names anything read as `no_mcp_block`, since no entry point there declares a block. That two members give one name is the API's to refuse when a member is written, and the record claims no more: a block renaming its tool can bring two members to one name at a later list, which the documentation does not settle. |
 
 ### The workflow repository
 
@@ -206,6 +234,9 @@ The documentation's table names each route and what it does, and settles few of 
 | `GET /api/v1/{ns}/workflows/{name}` | "Default branch head, resolved graph at that commit, commit history." | `{repository, version, graph, history, next}`: the version a run naming no ref runs with its graph, and a page of first-parent history, `limit` commits, 50 by default and at most 500 as runs are listed, from `from` or the head, `next` naming where the following page starts. |
 | `GET /api/v1/{ns}/workflows/{name}/tree/{ref}` | "The tree at a ref." | `{commit, entries}`, each entry the version manifest's `path`, `mode`, `size` and `sha256`; `?path=` answers one file's bytes. A ref is a branch or a tag, short or in full, or a whole commit that is a version, and a name held by both a branch and a tag is 400 rather than a guess: every tree answered is a version's, held to a version's rules. |
 | `PUT`, `DELETE /api/v1/groups/{group}/members/{login}` | "Adds or removes one member, touching no grant". | No body, and the group answered either way; adding a member already there or removing one who is not changes nothing. |
+| `/api/v1/me/collections` and the routes below it | Each route's statuses, "any authenticated principal, about its own", and a member written `{ref, as}`, both optional. | The list by name, whole, since a principal holds at most 50. `POST` answers `201` with `Location`, the API's address of the collection beside the `url` a client calls; the bootstrap token, which is nobody, holds none and is refused one with `403`. `PATCH` is partial, as a namespace's is. A member's `PUT` writes it whole, `{}` for the default branch under the block's name, so that what it sends is what the member is; a workflow already a member keeps its place, and one added goes last. A workflow whose entry point declares no `mcp` block at the ref is added, offering nothing, and a short name a branch and a tag both hold is `400`, as a run asked for by one is. Both member routes answer the collection as it stands, as a group's member routes answer the group, and taking out a workflow that is not a member answers the same. |
+| `POST /api/v1/{ns}/workflows/{name}/commits` | `{branch, parent, message, files}`, `files` a path's new text or `null`; `201` with `{commit, branch, parent}`, `409` where the branch moved, `422` and `413` for what a push may not carry, the hook's refusal with its rule, place, pointer, expectation and topic. | `files` holds 4096 paths at most and its texts and paths 4 MiB together, the bounds a push carries; the schema refuses of a path what a cleaned relative path never holds, an absolute one, a `.` or `..` segment, an empty one, a backslash or a NUL, a part of what the API refuses and never more. The hook's refusal is `hookRefusal`, reusable wherever a refusal of the hook is answered as JSON, beside `error` in a `oneOf`; its `rule` and `topic` are strings rather than enumerations, since the rules grow with the engine and the topics are the generator's. `parent` is answered as the request named it, the empty string for a first commit. |
+| `POST /api/v1/{ns}/workflows/{name}/validate` | `{ref, files}`, the files laid over the tree of `ref` as the commits route lays them; `200` with `{valid, steps, inputs, outputs}`, a refusal `422` with the problem a refused commit carries. | `files` is the commits route's own, by `$ref`, and `ref` a run's, `startRequest`'s, so that a draft is held to what a commit carries and read where a run reads; `400` for a ref a branch and a tag both hold and `404` for one naming nothing, as a run asked for by one is answered. `valid` is always `true`, beside the status that says it; `steps`, `inputs` and `outputs` count what the version would hold, none for a library. The refusal is `hookRefusal`, whose `error` names the rule alone here, its place being beside it. |
 
 ## Fixtures
 

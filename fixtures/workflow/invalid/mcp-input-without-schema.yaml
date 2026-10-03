@@ -1,6 +1,7 @@
-# invalid: A published tool with no description. The description is the field
-#   a model acts on, so a tool without one is exactly the tool a model has no
-#   way to decide to call.
+# invalid: A workflow publishing a tool with an input that carries no schema.
+#   Every input is one of the tool's arguments and the tool publishes their
+#   schemas as its inputSchema, so an input with none would be an argument a
+#   client is told nothing about.
 # refused by: the schema
 # reference: https://agentiik.github.io/docs/#publishing-tools
 
@@ -15,11 +16,12 @@ inputs:
   orders:
     schema: { $ref: "./schemas/order.json" }
     required: true
+  note:
+    default: ""
 
 mcp:
   name: create_invoice
-  title: Create an invoice
-  mode: sync
+  description: Issue one invoice for a customer.
 
 steps:
   normalize:

@@ -118,6 +118,7 @@ SCHEMAS = {
     "repository": {"file": "wire.schema.json", "pointer": "#/$defs/repository"},
     "ref": {"file": "wire.schema.json", "pointer": "#/$defs/ref"},
     "version": {"file": "wire.schema.json", "pointer": "#/$defs/version"},
+    "collection": {"file": "wire.schema.json", "pointer": "#/$defs/collection"},
     "run": {"file": "wire.schema.json", "pointer": "#/$defs/run"},
     "resolved-graph": {"file": "wire.schema.json", "pointer": "#/$defs/resolvedGraph"},
 }
@@ -1513,6 +1514,14 @@ COMPOSED_GRAMMAR = (
             ("wire.schema.json", "#/$defs/namespace/pattern"),
             ("wire.schema.json", "#/$defs/identifier/pattern"),
         ),
+    ),
+    # The address a client is given carries the collection's identifier, so a ULID the record
+    # accepts as its id is one its url accepts too, and a client never holds an id it cannot call.
+    (
+        "a collection's address",
+        ("wire.schema.json", "#/$defs/collection/properties/url/pattern"),
+        "^https?://\\S+/mcp/collections/{0}$",
+        (("wire.schema.json", "#/$defs/ulid/pattern"),),
     ),
 )
 

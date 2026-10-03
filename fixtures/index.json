@@ -30,6 +30,7 @@
     "repository": "../wire.schema.json",
     "ref": "../wire.schema.json",
     "version": "../wire.schema.json",
+    "collection": "../wire.schema.json",
     "run": "../wire.schema.json",
     "resolved-graph": "../wire.schema.json"
   },
@@ -1844,6 +1845,61 @@
         }
       ]
     },
+    "collection": {
+      "valid": [
+        {
+          "file": "wire/valid/collection-back-office.json",
+          "covers": "the documentation's collection: a member at its default branch under the name its mcp block gives, one at a tag under a name of its own, and one offering nothing for want of an mcp block",
+          "source": "https://agentiik.github.io/docs#collections"
+        },
+        {
+          "file": "wire/valid/collection-just-made.json",
+          "covers": "a collection just made, holding no member, its description the empty string where none was written"
+        },
+        {
+          "file": "wire/valid/collection-member-not-runnable.json",
+          "covers": "a member read at a branch written in full, and one whose workflow its owner may no longer run, offering nothing"
+        }
+      ],
+      "invalid": [
+        {
+          "file": "wire/invalid/collection-member-null-tool-without-reason.json",
+          "rule": "A member offering nothing that does not say why. A member missing from a client's tool list is one its owner has to be able to account for, so a null tool always carries its reason.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#collections"
+        },
+        {
+          "file": "wire/invalid/collection-member-reason-beside-tool.json",
+          "rule": "A reason beside a tool the member offers. reason says why a member offers nothing, and one that offers a tool has nothing to explain.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#collections"
+        },
+        {
+          "file": "wire/invalid/collection-member-reason-deleted.json",
+          "rule": "A reason the record never gives. A deleted workflow is not_runnable, one reason for it and for a workflow its owner may no longer run, since a workflow one may not run is one whose fate a collection does not tell.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#collections"
+        },
+        {
+          "file": "wire/invalid/collection-member-workflow-without-namespace.json",
+          "rule": "A member naming its workflow without its namespace. A collection holds workflows of several namespaces, and two of them may each hold a workflow of one name.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#collections"
+        },
+        {
+          "file": "wire/invalid/collection-101-members.json",
+          "rule": "A collection of 101 members, past the 100 a collection holds: a client reads the whole tool list into a model's context at every list, and a hundred tools is past what a model chooses among well.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#collections"
+        },
+        {
+          "file": "wire/invalid/collection-without-url.json",
+          "rule": "A collection that does not say its address. The url is what a client is given, and the API writes it so that no client puts it together.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#collections"
+        }
+      ]
+    },
     "run": {
       "valid": [
         {
@@ -1857,6 +1913,10 @@
         {
           "file": "wire/valid/run-called.json",
           "covers": "a run another workflow called, naming the calling run and step, and attributed to the principal its caller is"
+        },
+        {
+          "file": "wire/valid/run-called-through-a-collection.json",
+          "covers": "a run a tool call started through a collection, attributed to the calling principal, naming the collection and the tool it was called as"
         }
       ],
       "invalid": [
@@ -1889,6 +1949,18 @@
           "rule": "A run carrying its trigger kind as trigger. An expression reads run.trigger_kind, and an identifier is the same string in the YAML, the API and the schema.",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs#exposed-context"
+        },
+        {
+          "file": "wire/invalid/run-mcp-without-collection.json",
+          "rule": "A run of trigger_kind mcp that names no collection. Every such run is a tool called through one, and its reader is owed which, and as what, after the collection is gone.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#collections"
+        },
+        {
+          "file": "wire/invalid/run-manual-naming-a-collection.json",
+          "rule": "A run a person asked for naming a collection. workflow.run on the user's server starts a manual run, so only a call through a collection names one.",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs#collections"
         }
       ]
     },

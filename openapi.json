@@ -7374,13 +7374,13 @@
                   "bytes": {
                     "summary": "texts and paths past 4 MiB",
                     "value": {
-                      "error": "the files a commit writes are at most 4194304 bytes with their paths, as the tree a push carries is: a file this size belongs in an image or in an artifact"
+                      "error": "files holds at most 4194304 bytes with their paths, as the tree a push carries does: a file this size belongs in an image or in an artifact"
                     }
                   },
                   "files": {
                     "summary": "more than 4096 files",
                     "value": {
-                      "error": "a commit writes at most 4096 files, the most a version's tree holds"
+                      "error": "files names at most 4096 paths, the most a version's tree holds"
                     }
                   }
                 }
@@ -7595,7 +7595,7 @@
                   "bytes": {
                     "summary": "texts and paths past 4 MiB",
                     "value": {
-                      "error": "the files a commit writes are at most 4194304 bytes with their paths, as the tree a push carries is: a file this size belongs in an image or in an artifact"
+                      "error": "files holds at most 4194304 bytes with their paths, as the tree a push carries does: a file this size belongs in an image or in an artifact"
                     }
                   }
                 }

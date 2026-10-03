@@ -151,7 +151,7 @@ TOPICS = (
             "/patternProperties",
         ),
     ),
-    ("mcp", "/properties/mcp", ("/properties/mcp", "/$defs/mcpTool", "/$defs/mcpTimeout")),
+    ("mcp", "/properties/mcp", ("/properties/mcp", "/$defs/mcpTimeout", "/dependentSchemas/mcp")),
 )
 
 # Keywords the walk descends through, the same three families check.py walks. A keyword is

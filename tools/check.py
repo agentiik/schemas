@@ -184,7 +184,7 @@ LIST_OF_SUBSCHEMAS = ("allOf", "anyOf", "oneOf", "prefixItems")
 
 # Applicators that constrain a value rather than declare one. A properties entry under
 # any of these restates a keyword declared elsewhere, so it is not a declaration of its
-# own: the mode entry under mcpTool's dependentSchemas is the keyword mode being
+# own: the mode entry under mcp's dependentSchemas is the keyword mode being
 # constrained, not a second keyword called mode.
 CONSTRAINTS = ("not", "if", "then", "else", "dependentSchemas")
 

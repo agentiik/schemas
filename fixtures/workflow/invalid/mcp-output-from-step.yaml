@@ -1,6 +1,6 @@
-# invalid: A published tool with no description. The description is the field
-#   a model acts on, so a tool without one is exactly the tool a model has no
-#   way to decide to call.
+# invalid: A tool result taken from a step port. A tool is a view of the
+#   workflow's own boundary, never of the graph, which is what keeps the graph
+#   free to change beneath a published tool: output names a workflow output.
 # refused by: the schema
 # reference: https://agentiik.github.io/docs/#publishing-tools
 
@@ -18,8 +18,8 @@ inputs:
 
 mcp:
   name: create_invoice
-  title: Create an invoice
-  mode: sync
+  description: Issue one invoice for a customer.
+  output: { step: normalize, port: ok }
 
 steps:
   normalize:

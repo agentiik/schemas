@@ -15,16 +15,11 @@ inputs:
     required: true
 
 mcp:
-  name: invoicing
-  description: Issue invoices and check their status.
-  tools:
-    - name: create_invoice
-      description: Issue one invoice for a customer.
-      input:
-        from: { input: orders }
-      annotations:
-        readOnlyHint: false
-        requiresApproval: true
+  name: create_invoice
+  description: Issue one invoice for a customer.
+  annotations:
+    readOnlyHint: false
+    requiresApproval: true
 
 steps:
   normalize:

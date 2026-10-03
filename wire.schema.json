@@ -5814,12 +5814,14 @@
         },
         "mcp": {
           "type": "object",
-          "description": "The mcp block as the entry point writes it, as workflow.schema.json describes it: the tools this version publishes. Absent where it declares none, which serves no server, and never absent where it declares an empty tool list, which serves one carrying nothing.",
+          "description": "The mcp block as the entry point writes it, as workflow.schema.json describes it: the tool this version publishes. Absent where it declares none, which publishes no tool, so that a collection naming the workflow at this version offers nothing for it.",
           "examples": [
             {
-              "name": "invoicing",
-              "description": "Issue invoices and check their status.",
-              "tools": []
+              "name": "order_status",
+              "description": "Return the state of one order and, once shipped, its tracking link.",
+              "output": "status",
+              "mode": "sync",
+              "timeout": "30s"
             }
           ]
         },

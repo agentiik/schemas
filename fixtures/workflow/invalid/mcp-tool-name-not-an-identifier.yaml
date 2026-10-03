@@ -15,13 +15,8 @@ inputs:
     required: true
 
 mcp:
-  name: invoicing
-  description: Issue invoices and check their status.
-  tools:
-    - name: create invoice
-      description: Issue one invoice for a customer.
-      input:
-        from: { input: orders }
+  name: create invoice
+  description: Issue one invoice for a customer.
 
 steps:
   normalize:

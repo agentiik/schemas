@@ -192,7 +192,7 @@
           "examples": ["Return the state of one order and, once shipped, its tracking link. Takes an order number such as ORD-004211 and nothing else."]
         },
         "output": {
-          "description": "The name of one workflow output declared in this file, optional. Its envelope becomes the result, carried as structuredContent with a text rendering beside it, and its schema, where it declares one, the tool's outputSchema. Leaving it out publishes a tool that has an effect and returns only that it succeeded. It names an output and never a step or a port, so that the graph stays free to change beneath a published tool.",
+          "description": "The name of one workflow output declared in this file, optional. Its envelope becomes the result, carried as structuredContent with a text rendering beside it. Where the output declares a schema and the tool is sync, the tool's outputSchema describes that envelope, { meta, items } with each item's data held to the output's schema, since the protocol holds a structured result to its outputSchema and the result is the envelope; an async tool publishes none, since its call answers the run it started and never the output. Leaving it out publishes a tool that has an effect and returns only that it succeeded. It names an output and never a step or a port, so that the graph stays free to change beneath a published tool.",
           "$ref": "#/$defs/portName",
           "examples": ["status", "invoices"]
         },
@@ -435,7 +435,7 @@
           "examples": ["90d", { "for": "24h", "fetches": 1 }]
         },
         "schema": {
-          "description": "What the items of this output carry, written as a JSON Schema 2020-12 document. It is what a tool published from this output advertises as its outputSchema, so a client is told the shape of a result and not only its text. It is the mirror of a tool input, which has to have a schema because a tool has to advertise an inputSchema; here it stays optional, and an output declaring none is published as a tool with no outputSchema beside it.",
+          "description": "What the data of each item of this output carries, written as a JSON Schema 2020-12 document. A sync tool published from this output advertises it inside its outputSchema, which describes the output's envelope with each item's data held to this schema, so a client is told the shape of a result and not only its text. It is the mirror of a tool input, which has to have a schema because a tool has to advertise an inputSchema; here it stays optional, and an output declaring none is published as a tool with no outputSchema beside it.",
           "$ref": "#/$defs/jsonSchema",
           "examples": [
             { "$ref": "./schemas/invoice.json" },

@@ -3360,7 +3360,7 @@
     },
     "user": {
       "title": "User",
-      "description": "A local account: a login and the credentials it signs in with. The credentials are listed on their own, through the caller's credentials, rather than inside this record, so that a listing of users never carries what a user proves themselves with. Beside them, what the user says of themself, each field the empty string where they have not said it, the display name made of their given and family names, the email address an administrator gave them, and when their photo was last set, null where they hold none: answered wherever a user is, so that every client draws a person the same way.",
+      "description": "A local account: a login and the credentials it signs in with. The credentials are listed on their own, the caller's at GET /api/v1/me/credentials and a user's, to an administrator, at GET /api/v1/users/{login}/credentials, rather than inside this record, so that a listing of users never carries what a user proves themselves with. Beside them, what the user says of themself, each field the empty string where they have not said it, the display name made of their given and family names, the email address an administrator gave them, and when their photo was last set, null where they hold none: answered wherever a user is, so that every client draws a person the same way.",
       "type": "object",
       "required": [
         "kind",
@@ -3726,7 +3726,7 @@
     },
     "credential": {
       "title": "Credential",
-      "description": "One way a user proves who they are, as the caller's credentials list them: a passkey, a password or a TOTP generator. The record describes the credential and never holds it: no public key, no hash, no shared secret, and the objects are closed so that none of them can be written here at all. A reader tells the three apart by type. Two rules need the rest of the user's credentials and are left to the API: a TOTP exists only alongside a password, since with user verification required a passkey assertion already proves two factors, and a removal leaving fewer passkeys than min_passkeys is refused.",
+      "description": "One way a user proves who they are, as a listing of credentials writes it, the caller's own or, to an administrator, a user's: a passkey, a password or a TOTP generator. The record describes the credential and never holds it: no public key, no hash, no shared secret, and the objects are closed so that none of them can be written here at all. A reader tells the three apart by type. Two rules need the rest of the user's credentials and are left to the API: a TOTP exists only alongside a password, since with user verification required a passkey assertion already proves two factors, and a removal leaving fewer passkeys than min_passkeys is refused.",
       "oneOf": [
         {
           "$ref": "#/$defs/passkey"

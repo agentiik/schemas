@@ -46,7 +46,7 @@
     },
     {
       "name": "users",
-      "description": "Local accounts and their photos, which an administrator reads and removes; the links that enrol their first credential, and the recovery codes that replace a lost one."
+      "description": "Local accounts, their photos, which an administrator reads and removes, and their credentials, which an administrator lists; the links that enrol their first credential, and the recovery codes that replace a lost one."
     },
     {
       "name": "groups",
@@ -1931,6 +1931,110 @@
             "session": []
           }
         ]
+      }
+    },
+    "/api/v1/users/{login}/credentials": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/login"
+        }
+      ],
+      "get": {
+        "operationId": "listUserCredentials",
+        "tags": [
+          "users"
+        ],
+        "summary": "List a user's credentials",
+        "description": "A user's credentials, as GET /api/v1/me/credentials lists the caller's: oldest first, their passkeys, each with its identifier, kind, synced or device-bound, both flags, label, and when it was enrolled and last used; the password where one is still stored; and a TOTP generator where one is enrolled. Never a public key, a hash or a shared secret. Empty for a user who has enrolled nothing yet. It is how an administrator sees what each user signs in with and how exposed it is, a synced passkey being one device_bound_only refuses, before tightening the policy or handing over a recovery code. Nothing here removes a credential: its holder removes one at DELETE /api/v1/me/credentials/{id}, and a lost one is replaced through a recovery code. Administrator only, and the bootstrap token's until the first administrator has signed in, as every route about a user, asked before the login is looked up, so that a refusal tells nobody which users exist. A token narrowed by a scope reaches none, since an administrator's power passes through a token only where no scope narrows it.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#auth"
+        },
+        "responses": {
+          "200": {
+            "description": "The user's credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/credentialList"
+                },
+                "examples": {
+                  "passkeys": {
+                    "summary": "a device-bound passkey and a synced one",
+                    "value": {
+                      "credentials": [
+                        {
+                          "type": "passkey",
+                          "id": "Q2hyb21lUGFzc2tleTAx",
+                          "label": "work laptop",
+                          "backup_eligible": false,
+                          "backup_state": false,
+                          "kind": "device-bound",
+                          "created_at": "2026-09-27T09:00:00Z"
+                        },
+                        {
+                          "type": "passkey",
+                          "id": "aVBob25lUGFzc2tleQ",
+                          "label": "phone",
+                          "backup_eligible": true,
+                          "backup_state": true,
+                          "kind": "synced",
+                          "created_at": "2026-09-27T09:02:00Z",
+                          "last_used_at": "2026-09-27T12:30:00Z"
+                        }
+                      ]
+                    }
+                  },
+                  "password and totp": {
+                    "summary": "a password and the TOTP generator beside it",
+                    "value": {
+                      "credentials": [
+                        {
+                          "type": "password",
+                          "id": "01M2AAZ9G62NQXFAFCXKRPJEH5",
+                          "created_at": "2026-09-27T08:55:00Z",
+                          "last_used_at": "2026-09-27T12:30:00Z"
+                        },
+                        {
+                          "type": "totp",
+                          "id": "01M2AB3K5Q7R9T1V3X5Z7B9D1F",
+                          "created_at": "2026-09-27T09:05:00Z",
+                          "last_used_at": "2026-09-27T12:30:00Z"
+                        }
+                      ]
+                    }
+                  },
+                  "not enrolled": {
+                    "summary": "a user who has not enrolled yet",
+                    "value": {
+                      "credentials": []
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/noStore"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, and not the bootstrap token before the first administrator has signed in; presents a token narrowed by a scope, which carries no administrator's power; or holds a session that may only enrol."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No user by that login, or a login no user can have."
+          }
+        }
       }
     },
     "/api/v1/users/{login}/enrolment": {
@@ -4705,7 +4809,7 @@
           "users"
         ],
         "summary": "Read a user",
-        "description": "One user: login, display name, the email address an administrator gave them, whether an administrator, whether suspended and, where the policy suspended them, suspended_for, when created and when last signed in, what they say of themself and when their photo was last set; never a credential, and never the photo, which is read on its own. Administrator only. What the Terraform provider refreshes and imports a user with.",
+        "description": "One user: login, display name, the email address an administrator gave them, whether an administrator, whether suspended and, where the policy suspended them, suspended_for, when created and when last signed in, what they say of themself and when their photo was last set; never a credential, which GET /api/v1/users/{login}/credentials lists, and never the photo, which is read on its own. Administrator only. What the Terraform provider refreshes and imports a user with.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#principals"
@@ -6214,12 +6318,15 @@
           "workflows"
         ],
         "summary": "Read a workflow",
-        "description": "The workflow's repository; the version a run naming no ref runs, the default branch's head, and the graph it resolves to, includes resolved, inheritance applied, images by digest; and a page of the default branch's first-parent history, newest first, each commit that is a version carrying it. A workflow whose versions agk push sent as trees, and which no git push has filled yet, lists those versions instead, and a run naming no ref runs the latest of them. Pages follow next, through from. Requires workflow:read.",
+        "description": "The workflow's repository; a version and the graph it resolves to, includes resolved, inheritance applied, images by digest: the version ref names, or where none is named the one a run naming no ref runs, the default branch's head; and a page of the default branch's first-parent history, newest first, each commit that is a version carrying it. A workflow whose versions agk push sent as trees, and which no git push has filled yet, lists those versions instead, and a run naming no ref runs the latest of them. Pages follow next, through from. The entry point's text is not answered here, since a file's bytes are the tree route's: a client reads it with GET /api/v1/{ns}/workflows/{name}/tree/{ref}?path=agentiik.yaml, ref being the answer's version.commit, so that the text and the graph are one version's even where the ref moved between the two requests. Requires workflow:read.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#the-workflow-repository"
         },
         "parameters": [
+          {
+            "$ref": "#/components/parameters/versionRef"
+          },
           {
             "$ref": "#/components/parameters/historyFrom"
           },
@@ -6469,7 +6576,7 @@
           },
           "400": {
             "$ref": "#/components/responses/badRequest",
-            "description": "from is not a whole commit, or limit is not a number from 1 to 500. Two credentials: a bearer token beside the session cookie, or two session cookies."
+            "description": "ref is a name a branch and a tag both hold, from is not a whole commit, or limit is not a number from 1 to 500. Two credentials: a bearer token beside the session cookie, or two session cookies."
           },
           "401": {
             "$ref": "#/components/responses/unauthorised"
@@ -6480,7 +6587,7 @@
           },
           "404": {
             "$ref": "#/components/responses/notFound",
-            "description": "No such workflow, or one the caller cannot read: the same answer; or a from naming no commit of the history listed."
+            "description": "No such workflow, or one the caller cannot read: the same answer; a ref naming no branch, no tag and no version of the workflow, a commit a push only carried on the way and a branch nothing was pushed to yet among them; or a from naming no commit of the history listed."
           }
         }
       },
@@ -13663,14 +13770,14 @@
           "credentials"
         ],
         "additionalProperties": false,
-        "description": "The caller's credentials, each described and none held: no public key, no hash, no shared secret.",
+        "description": "Credentials, each described and none held: no public key, no hash, no shared secret. The caller's own at GET /api/v1/me/credentials, and a user's, to an administrator, at GET /api/v1/users/{login}/credentials.",
         "properties": {
           "credentials": {
             "type": "array",
             "items": {
               "$ref": "wire.schema.json#/$defs/credential"
             },
-            "description": "Passkeys, the password where one is still stored, and a TOTP generator where one is enrolled, oldest first. Empty for a service account, which holds tokens only, and for the bootstrap token.",
+            "description": "Passkeys, the password where one is still stored, and a TOTP generator where one is enrolled, oldest first. Empty for a user who has enrolled nothing yet, for a service account, which holds tokens only, and for the bootstrap token.",
             "examples": [
               [
                 {
@@ -15145,7 +15252,7 @@
           "history"
         ],
         "additionalProperties": false,
-        "description": "A workflow: its repository, the version a run naming no ref runs with the graph it resolves to, and a page of the default branch's history.",
+        "description": "A workflow: its repository, a version with the graph it resolves to, the one ref names or else the one a run naming no ref runs, and a page of the default branch's history.",
         "properties": {
           "repository": {
             "$ref": "wire.schema.json#/$defs/repository",
@@ -15167,7 +15274,7 @@
           },
           "version": {
             "$ref": "wire.schema.json#/$defs/version",
-            "description": "The version a run naming no ref runs: the default branch's head, or, while that branch is unborn, the latest version agk push sent as a tree before the repository's first git push. Absent where there is neither.",
+            "description": "The version ref names, or where none is named the version a run naming no ref runs: the default branch's head, or, while that branch is unborn, the latest version agk push sent as a tree before the repository's first git push. Absent where none is named and there is neither; a ref naming no version is a 404 rather than an answer without one.",
             "examples": [
               {
                 "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
@@ -15346,7 +15453,7 @@
             "items": {
               "$ref": "#/components/schemas/historyEntry"
             },
-            "description": "A page of the default branch's first-parent history, newest first, from its head or from the commit from names; each commit a version carries it. While the default branch is unborn, the versions agk push sent as trees instead, newest first. Empty for a repository holding nothing.",
+            "description": "A page of the default branch's first-parent history, newest first, from its head or from the commit from names, whatever version ref names; each commit a version carries it. While the default branch is unborn, the versions agk push sent as trees instead, newest first. Empty for a repository holding nothing.",
             "examples": [
               [
                 {
@@ -23356,6 +23463,30 @@
           "small page": {
             "summary": "ten commits",
             "value": 10
+          }
+        }
+      },
+      "versionRef": {
+        "name": "ref",
+        "in": "query",
+        "required": false,
+        "description": "The version answered, with the graph it resolves to: a branch or a tag, by its short name or written in full, or a commit written whole that is a version of the workflow, resolved as a run asked for by that ref resolves it. Where none is named, the version a run naming no ref runs: the default branch's head, or while it is unborn the latest version agk push sent as a tree. Every branch and every tag holding a commit is at a version, since a push makes a version of each commit it leaves a ref pointing at; a commit a push only carried on the way is none, and is answered 404 as a ref naming nothing is, and so is a branch nothing was pushed to yet. A name a branch and a tag both hold is refused with 400 rather than guessed at. It chooses the version alone: the repository, its labels included, and the history answered beside it are the default branch's whatever it names, so that from and limit page the same history with it or without it, and the labels are those a search finds the workflow by.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "examples": {
+          "branch": {
+            "summary": "a branch",
+            "value": "feature/vat-rounding"
+          },
+          "tag": {
+            "summary": "a tag",
+            "value": "v2.1.0"
+          },
+          "commit": {
+            "summary": "a commit, whole",
+            "value": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f"
           }
         }
       },

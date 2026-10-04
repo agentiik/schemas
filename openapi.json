@@ -82,7 +82,7 @@
     },
     {
       "name": "runs",
-      "description": "Runs, listed across the namespaces the caller reads, read one by one with their steps' logs and envelopes, cancelled and replayed. From v0.6.0 in this document, served since v0.2.0."
+      "description": "Runs, listed across the namespaces the caller reads or within one, read one by one with their steps' logs and envelopes, cancelled and replayed. From v0.6.0 in this document, served since v0.2.0."
     },
     {
       "name": "statistics",
@@ -2951,7 +2951,7 @@
                           "members": [
                             {
                               "workflow": "finance/monthly-invoicing",
-                              "tool": "create_invoice"
+                              "tool": "create_invoices"
                             },
                             {
                               "workflow": "support/order-status",
@@ -3165,7 +3165,7 @@
                       "members": [
                         {
                           "workflow": "finance/monthly-invoicing",
-                          "tool": "create_invoice"
+                          "tool": "create_invoices"
                         },
                         {
                           "workflow": "support/order-status",
@@ -3267,7 +3267,7 @@
                       "members": [
                         {
                           "workflow": "finance/monthly-invoicing",
-                          "tool": "create_invoice"
+                          "tool": "create_invoices"
                         },
                         {
                           "workflow": "support/order-status",
@@ -3424,7 +3424,7 @@
                       "members": [
                         {
                           "workflow": "finance/monthly-invoicing",
-                          "tool": "create_invoice"
+                          "tool": "create_invoices"
                         },
                         {
                           "workflow": "support/order-status",
@@ -3446,7 +3446,7 @@
           },
           "400": {
             "$ref": "#/components/responses/badRequest",
-            "description": "The body is refused: not an object, no body at all, a ref outside git's rules for a ref name, an as outside the identifier grammar, null, or a field the route does not read; or a ref a branch and a tag of the repository both hold by that short name, written in full instead. Two credentials: a bearer token beside the session cookie, or two session cookies."
+            "description": "The body is refused: not an object, no body at all, a ref outside git's rules for a ref name, a ref that is a whole commit, an as outside the identifier grammar, null, or a field the route does not read; or a ref a branch and a tag of the repository both hold by that short name, written in full instead. A commit is refused because a member is read at a branch or a tag, so that it follows the workflow as its triggers follow the default branch. Two credentials: a bearer token beside the session cookie, or two session cookies."
           },
           "401": {
             "$ref": "#/components/responses/unauthorised"
@@ -3536,7 +3536,7 @@
                       "members": [
                         {
                           "workflow": "finance/monthly-invoicing",
-                          "tool": "create_invoice"
+                          "tool": "create_invoices"
                         },
                         {
                           "workflow": "finance/reconcile",
@@ -3575,7 +3575,7 @@
           "namespaces"
         ],
         "summary": "Create a namespace",
-        "description": "Creates a shared namespace, owned by whoever creates it, with quotas where an administrator sets them. Any user creates one, and is given the owner role on it in the same transaction, so that they can share it and act in it from the start: an owner in the record alone would be refused everything in it. owner, a user or group:NAME, and quotas are an administrator's to write: a user naming another owner than themself, or any quota, is refused, and their namespace takes the installation's defaults, max_concurrent_tasks 20 and the other five unset, so that what its runs produce is kept until somebody decides otherwise. An administrator's namespace is owned by the owner it names, or by the administrator where it names none; the bootstrap token, which is nobody, names one. A service account and a token narrowed by a scope create none, since a namespace is a person's, who answers for what is shared in it. The owner's grant is written by the creator. The namespace's built-in identity, NS/agentiik, is created with it and holds no grant until an owner gives it one. Its name is refused where a login holds it, since logins and namespace names share one name space: a user's personal namespace is named after their login, and a namespace created first would take it from them; and where a renamed namespace holds it as a former name, which still reaches that namespace. The reserved words the API's first path segment routes on are refused by the grammar. allowed_runner_pools names pools that exist. Audited as namespace.create, and the owner's grant as grant.create in the namespace.",
+        "description": "Creates a shared namespace, owned by whoever creates it, with quotas where an administrator sets them. Any user creates one, and is given the owner role on it in the same transaction, so that they can share it and act in it from the start: an owner in the record alone would be refused everything in it. owner, a user or group:NAME, and quotas are an administrator's to write: a user naming another owner than themself, or any quota, is refused, and their namespace takes the installation's defaults, max_concurrent_tasks 20 and the other five unset, so that what its runs produce is kept until somebody decides otherwise. An administrator's namespace is owned by the owner it names, or by the administrator where it names none; the bootstrap token, which is nobody, names one. A service account and a token narrowed by a scope create none, since a namespace is a person's, who answers for what is shared in it. The owner's grant is written by the creator. The namespace's built-in identity, NS/agentiik, is created with it and holds no grant until an owner gives it one. Its name is refused where a login holds it, since logins and namespace names share one name space: a user's personal namespace is named after their login, and a namespace created first would take it from them; and where a renamed namespace holds it as a former name, which still reaches that namespace. The reserved words are refused by the grammar: those the API's first path segment routes on, and from v0.7.0 api, hooks, mcp and objects, whose addresses the API answers rather than the web console. allowed_runner_pools names pools that exist. Audited as namespace.create, and the owner's grant as grant.create in the namespace.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#scopes-and-resolution"
@@ -7968,14 +7968,14 @@
                             {
                               "step": "normalize",
                               "verdict": "succeeded",
-                              "started_at": "2026-09-30T05:40:12Z",
-                              "finished_at": "2026-09-30T05:41:02Z"
+                              "started_at": "2026-10-01T05:41:03Z",
+                              "finished_at": "2026-10-01T05:41:05Z"
                             },
                             {
                               "step": "invoice",
                               "verdict": "failed",
-                              "started_at": "2026-09-30T05:41:03Z",
-                              "finished_at": "2026-09-30T05:44:10Z"
+                              "started_at": "2026-10-01T05:41:05Z",
+                              "finished_at": "2026-10-01T05:42:55Z"
                             }
                           ]
                         },
@@ -7996,6 +7996,128 @@
                   },
                   "nothing": {
                     "summary": "a namespace the caller cannot read, or one with no run",
+                    "value": {
+                      "runs": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A state that is no run state, or a since or an until that is no time.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "state": {
+                    "summary": "a state misspelt",
+                    "value": {
+                      "error": "\"failing\" is not a run state"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          }
+        }
+      }
+    },
+    "/api/v1/{ns}/runs": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        }
+      ],
+      "get": {
+        "operationId": "listNamespaceRuns",
+        "tags": [
+          "runs"
+        ],
+        "summary": "List a namespace's runs",
+        "description": "GET /api/v1/runs within the namespace the path names: the runs of each of its workflows the caller holds run:read on, over the namespace or the workflow itself, newest first, each as the listing across namespaces answers it, narrowed by the same workflow, state, since, until and limit. The namespace is read from the path, a former name reaching it as its name does, and a namespace in the query is not read, since the path's is the only one its questions answer about. Every workflow of the namespace is asked about as one question, so that a namespace the caller holds nothing in lists nothing, as one that does not exist does, and asks what that one asks: a listing is no way of learning which namespaces and workflows exist, by what it answers or by how long it takes.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#api"
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/runsWorkflow"
+          },
+          {
+            "$ref": "#/components/parameters/runsState"
+          },
+          {
+            "$ref": "#/components/parameters/runsSince"
+          },
+          {
+            "$ref": "#/components/parameters/runsUntil"
+          },
+          {
+            "$ref": "#/components/parameters/runsLimit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The namespace's runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/runList"
+                },
+                "examples": {
+                  "runs": {
+                    "summary": "a failed run and a running one",
+                    "value": {
+                      "runs": [
+                        {
+                          "namespace": "finance",
+                          "run": "01JMZ8V1P9C4XQ7K2N4D6F8H0A",
+                          "workflow": "monthly-invoicing",
+                          "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                          "state": "failed",
+                          "trigger_kind": "manual",
+                          "triggered_by": "alice",
+                          "created_at": "2026-10-01T05:41:03Z",
+                          "started_at": "2026-10-01T05:41:03Z",
+                          "finished_at": "2026-10-01T05:42:55Z",
+                          "steps": [
+                            {
+                              "step": "normalize",
+                              "verdict": "succeeded",
+                              "started_at": "2026-10-01T05:41:03Z",
+                              "finished_at": "2026-10-01T05:41:05Z"
+                            },
+                            {
+                              "step": "invoice",
+                              "verdict": "failed",
+                              "started_at": "2026-10-01T05:41:05Z",
+                              "finished_at": "2026-10-01T05:42:55Z"
+                            }
+                          ]
+                        },
+                        {
+                          "namespace": "finance",
+                          "run": "01JMZ8S3H6X8QK2N4D6F8H0A2C",
+                          "workflow": "ledger-export",
+                          "commit": "5d0b7e2c9a4f1e3d8c6b0a2f4e6d8c0b2a4f6e8d",
+                          "state": "running",
+                          "trigger_kind": "webhook",
+                          "triggered_by": "finance/agentiik",
+                          "created_at": "2026-10-01T05:28:44Z",
+                          "started_at": "2026-10-01T05:28:45Z",
+                          "steps": []
+                        }
+                      ]
+                    }
+                  },
+                  "nothing": {
+                    "summary": "a namespace the caller holds nothing in, one that does not exist, or one with no run",
                     "value": {
                       "runs": []
                     }
@@ -8168,6 +8290,154 @@
           },
           "404": {
             "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/api/v1/{ns}/runs/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ns"
+        },
+        {
+          "$ref": "#/components/parameters/runId"
+        }
+      ],
+      "get": {
+        "operationId": "getNamespaceRun",
+        "tags": [
+          "runs"
+        ],
+        "summary": "Read a run under its namespace",
+        "description": "The run at the path the Location of startRun, cancelRun and replayRun names it by: the answer GET /api/v1/runs/{id} gives, authorised the same way, over the run's own workflow rather than over the namespace, so that run:read held on that workflow alone reads it and a deny of run:read on it refuses it. A run of another namespace than the path names is answered as one that does not exist, before anything is asked about the namespace it is in, so that the path is no way of learning where a run is. A former name of the namespace reaches it as its name does. Its inputs are envelope contents, answered only to a caller holding run:read_data on the run's workflow and otherwise left out. Requires run:read on the run's workflow.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#api"
+        },
+        "responses": {
+          "200": {
+            "description": "The run.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/runDetail"
+                },
+                "examples": {
+                  "failed": {
+                    "summary": "a run whose invoice step failed",
+                    "value": {
+                      "namespace": "finance",
+                      "run": "01JMZ8V1P9C4XQ7K2N4D6F8H0A",
+                      "workflow": "monthly-invoicing",
+                      "commit": "a3f9c1e04b7d2e8f6a1c3b5d7e9f0a2b4c6d8e0f",
+                      "state": "failed",
+                      "trigger_kind": "manual",
+                      "triggered_by": "alice",
+                      "created_at": "2026-10-01T05:41:03Z",
+                      "started_at": "2026-10-01T05:41:03Z",
+                      "finished_at": "2026-10-01T05:42:55Z",
+                      "inputs": {
+                        "orders": {
+                          "meta": {
+                            "count": 214
+                          }
+                        }
+                      },
+                      "replay_from_start_only": false,
+                      "steps": [
+                        {
+                          "step": "normalize",
+                          "verdict": "succeeded",
+                          "attempts": 1,
+                          "started_at": "2026-10-01T05:41:03Z",
+                          "finished_at": "2026-10-01T05:41:05Z",
+                          "ports": {
+                            "ok": {
+                              "digest": "sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0",
+                              "size": 10412,
+                              "items": 214
+                            }
+                          }
+                        },
+                        {
+                          "step": "invoice",
+                          "verdict": "failed",
+                          "attempts": 2,
+                          "started_at": "2026-10-01T05:41:05Z",
+                          "finished_at": "2026-10-01T05:42:55Z",
+                          "ports": {
+                            "out": {
+                              "digest": "sha256:7c2e1f4a9b8c0d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c9f11",
+                              "size": 4212,
+                              "items": 211
+                            },
+                            "error": {
+                              "digest": "sha256:1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f809",
+                              "size": 212,
+                              "items": 3
+                            }
+                          },
+                          "image": "ghcr.io/acme/agk-invoice@sha256:9f2c1d4a77b0c3e51d8a6f2b4c9e0a13d5f7b82c6e04a9d31b7f5c28e6a0b7e0",
+                          "input_ports": [
+                            "orders"
+                          ],
+                          "output_ports": [
+                            "out",
+                            "error"
+                          ]
+                        },
+                        {
+                          "step": "archive",
+                          "verdict": "pending",
+                          "attempts": 0
+                        }
+                      ],
+                      "tasks": [
+                        {
+                          "task": "01JMZ8V1P9C4XQ7K2N4D6F8H0A/normalize/1",
+                          "step": "normalize",
+                          "state": "succeeded",
+                          "attempt": 1,
+                          "runner": "runner-dmz-02",
+                          "exit_code": 0,
+                          "started_at": "2026-10-01T05:41:03Z",
+                          "finished_at": "2026-10-01T05:41:05Z"
+                        },
+                        {
+                          "task": "01JMZ8V1P9C4XQ7K2N4D6F8H0A/invoice/2/3/8",
+                          "step": "invoice",
+                          "state": "failed",
+                          "attempt": 2,
+                          "shard": {
+                            "index": 3,
+                            "of": 8
+                          },
+                          "runner": "runner-dmz-02",
+                          "exit_code": 108,
+                          "started_at": "2026-10-01T05:42:24Z",
+                          "finished_at": "2026-10-01T05:42:32Z",
+                          "inputs": {
+                            "in": {
+                              "digest": "sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0",
+                              "size": 10412,
+                              "items": 27
+                            }
+                          }
+                        }
+                      ],
+                      "artifacts": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No such run, one the caller may not read, or a run of another namespace than the path names: the same answer for each, so that asking teaches nothing."
           }
         }
       }
@@ -15742,8 +16012,9 @@
           "message": {
             "type": "string",
             "minLength": 1,
-            "pattern": "\\S",
-            "description": "The commit's message, which git log shows beside it: one character at least that is not a blank. Written with one line feed ending it; the commit workflow.commit makes carries a Via: mcp trailer besides, so that git log says what arrived through MCP.",
+            "$comment": "The class is Unicode's White_Space property, which Go's strings.TrimSpace trims before the core asks whether a message says anything (api/commits.go), so that the document refuses exactly what the core refuses: \\S would be a different set in each engine, ASCII blanks alone in RE2, and in ECMA-262 one without U+0085 and with U+FEFF, which TrimSpace keeps. The same class holds an mcp tool's description in workflow.schema.json.",
+            "pattern": "[^\\x09-\\x0d\\x20\\x85\\xa0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]",
+            "description": "The commit's message, which git log shows beside it: one character at least that is not white space, as Unicode counts it. Written with one line feed ending it; the commit workflow.commit makes carries a Via: mcp trailer besides, so that git log says what arrived through MCP.",
             "examples": [
               "Normalize with the pinned image",
               "Add the reminder script"
@@ -19904,14 +20175,14 @@
                     {
                       "step": "normalize",
                       "verdict": "succeeded",
-                      "started_at": "2026-09-30T05:40:12Z",
-                      "finished_at": "2026-09-30T05:41:02Z"
+                      "started_at": "2026-10-01T05:41:03Z",
+                      "finished_at": "2026-10-01T05:41:05Z"
                     },
                     {
                       "step": "invoice",
                       "verdict": "failed",
-                      "started_at": "2026-09-30T05:41:03Z",
-                      "finished_at": "2026-09-30T05:44:10Z"
+                      "started_at": "2026-10-01T05:41:05Z",
+                      "finished_at": "2026-10-01T05:42:55Z"
                     }
                   ]
                 },
@@ -19950,14 +20221,14 @@
                   {
                     "step": "normalize",
                     "verdict": "succeeded",
-                    "started_at": "2026-09-30T05:40:12Z",
-                    "finished_at": "2026-09-30T05:41:02Z"
+                    "started_at": "2026-10-01T05:41:03Z",
+                    "finished_at": "2026-10-01T05:41:05Z"
                   },
                   {
                     "step": "invoice",
                     "verdict": "failed",
-                    "started_at": "2026-09-30T05:41:03Z",
-                    "finished_at": "2026-09-30T05:44:10Z"
+                    "started_at": "2026-10-01T05:41:05Z",
+                    "finished_at": "2026-10-01T05:42:55Z"
                   }
                 ]
               },
@@ -21601,7 +21872,7 @@
                   "members": [
                     {
                       "workflow": "finance/monthly-invoicing",
-                      "tool": "create_invoice"
+                      "tool": "create_invoices"
                     },
                     {
                       "workflow": "support/order-status",
@@ -21631,7 +21902,7 @@
                 "members": [
                   {
                     "workflow": "finance/monthly-invoicing",
-                    "tool": "create_invoice"
+                    "tool": "create_invoices"
                   },
                   {
                     "workflow": "support/order-status",

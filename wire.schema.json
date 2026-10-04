@@ -2980,12 +2980,12 @@
     },
     "namespace": {
       "title": "Namespace",
-      "description": "The namespace that owns the run. Every artifact, every quota and every grant is scoped to it, and deduplication in the object store never crosses it. Lowercase words joined by hyphens, at most 255 characters, the most a directory or a bus subject token holds a name to, which is also what bounds a login, a group's name and each half of a service account's, all written on this grammar. The API's first path segment decides the route, so auth, me, users, groups, service-accounts, namespaces, runners, runner-pools, bus, tasks, bricks, runs, artifacts, stats cannot name a namespace, and are refused at namespace and login creation from v0.3.0. stats is reserved from v0.3.0 for GET /api/v1/stats/pools, which v0.6.0 serves at that path alone, so that no namespace created meanwhile takes it. A namespace made before v0.3.0 under one keeps its name until its owner renames it, and the API still serves it, every route of it, with nothing to do; only its creation, and a rename to one, are refused: a reader validating what such an installation answers meets a refusal the API does not make. A shared namespace is renamed by its owner or an administrator, every row naming it following in one transaction, and the name it leaves stays its own as a former name, which every address naming it still reaches and no other namespace or login takes while it lives. Its objects and sealed values stay under the name it was created with, its storage name, so that a rename copies nothing; that name is the installation's to keep and no record here carries it.",
+      "description": "The namespace that owns the run. Every artifact, every quota and every grant is scoped to it, and deduplication in the object store never crosses it. Lowercase words joined by hyphens, at most 255 characters, the most a directory or a bus subject token holds a name to, which is also what bounds a login, a group's name and each half of a service account's, all written on this grammar. The API's first path segment decides the route, so auth, me, users, groups, service-accounts, namespaces, runners, runner-pools, bus, tasks, bricks, runs, artifacts, stats cannot name a namespace, and are refused at namespace and login creation from v0.3.0. stats is reserved from v0.3.0 for GET /api/v1/stats/pools, which v0.6.0 serves at that path alone, so that no namespace created meanwhile takes it. api, hooks, mcp and objects are reserved from v0.7.0, because an address's first path segment decides who answers it: the API answers /api, /auth, /hooks, /mcp and /objects, and the web console every other one, which it reads as a namespace, so that a namespace named after one of them would be one whose pages the console never opens. A namespace made under one of these words before it was reserved keeps its name until its owner renames it, and the API still serves it, every route of it; only its creation, and a rename to one, are refused: a reader validating what such an installation answers meets a refusal the API does not make. Under stats there is nothing to do; under api, hooks, mcp or objects the web console opens none of its pages, which renaming a shared one gives back. A shared namespace is renamed by its owner or an administrator, every row naming it following in one transaction, and the name it leaves stays its own as a former name, which every address naming it still reaches and no other namespace or login takes while it lives. Its objects and sealed values stay under the name it was created with, its storage name, so that a rename copies nothing; that name is the installation's to keep and no record here carries it.",
       "type": "string",
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
       "maxLength": 255,
       "not": {
-        "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats)$"
+        "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats|api|hooks|mcp|objects)$"
       },
       "examples": [
         "finance",
@@ -5505,7 +5505,7 @@
                 "type": "string",
                 "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,254}/[A-Za-z0-9][A-Za-z0-9_-]{0,254}$",
                 "not": {
-                  "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats)/"
+                  "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats|api|hooks|mcp|objects)/"
                 },
                 "description": "Another workflow repository, as <namespace>/<name>, whose root agentiik.yaml was read as a fragment.",
                 "examples": [
@@ -5989,7 +5989,7 @@
                     "type": "string",
                     "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,254}/[A-Za-z0-9][A-Za-z0-9_-]{0,254}$",
                     "not": {
-                      "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats)/"
+                      "pattern": "^(auth|me|users|groups|service-accounts|namespaces|runners|runner-pools|bus|tasks|bricks|runs|artifacts|stats|api|hooks|mcp|objects)/"
                     },
                     "description": "The workflow called, as <namespace>/<name>.",
                     "examples": [
@@ -7102,7 +7102,7 @@
             [
               {
                 "workflow": "finance/monthly-invoicing",
-                "tool": "create_invoice"
+                "tool": "create_invoices"
               },
               {
                 "workflow": "support/order-status",
@@ -7129,7 +7129,7 @@
           "members": [
             {
               "workflow": "finance/monthly-invoicing",
-              "tool": "create_invoice"
+              "tool": "create_invoices"
             },
             {
               "workflow": "support/order-status",
@@ -7198,7 +7198,7 @@
           ],
           "description": "The name the member is offered under in tools/list: as where it is written, and otherwise the name the mcp block at the head of its ref gives. null where it offers nothing, reason beside it saying why: such a member is left out of tools/list, and a call naming it is answered as one naming a tool that does not exist. A member is refused when it is written with a name another member already gives, since clients hold the name and a model told of two tools of one name cannot choose between them; as resolves it.",
           "examples": [
-            "create_invoice",
+            "create_invoices",
             "order_lookup",
             null
           ]
@@ -7238,7 +7238,7 @@
       "examples": [
         {
           "workflow": "finance/monthly-invoicing",
-          "tool": "create_invoice"
+          "tool": "create_invoices"
         },
         {
           "workflow": "support/order-status",
@@ -7470,7 +7470,7 @@
               "description": "The name the tool was called as, which tools/list offered it under: the member's as where written, and otherwise the name its mcp block gave.",
               "examples": [
                 "order_lookup",
-                "create_invoice"
+                "create_invoices"
               ]
             }
           }

@@ -189,16 +189,23 @@ Dumper.add_implicit_resolver(
 )
 
 
+def legible(text):
+    """JSON text with every character a reader cannot see written as its escape. A pattern
+    naming the spaces of every script holds them as characters, which a page showing them
+    as they are would show as a run of blanks, and a line separator among them as a break."""
+    return "".join(c if c.isprintable() else json.dumps(c)[1:-1] for c in text)
+
+
 def render_json(value, indent=""):
     """JSON as a page shows it: a value on one line where it fits in 100 characters, and
     broken over lines only where it does not, so a fragment reads as the shape it is rather
     than as a column of brackets."""
-    flat = json.dumps(value, ensure_ascii=False)
+    flat = legible(json.dumps(value, ensure_ascii=False))
     if len(indent) + len(flat) <= 100 or not isinstance(value, (dict, list)) or not value:
         return flat
     inner = indent + "  "
     if isinstance(value, dict):
-        body = [inner + json.dumps(key, ensure_ascii=False) + ": " + render_json(item, inner).lstrip() for key, item in value.items()]
+        body = [inner + legible(json.dumps(key, ensure_ascii=False)) + ": " + render_json(item, inner).lstrip() for key, item in value.items()]
         return "{\n" + ",\n".join(body) + "\n" + indent + "}"
     body = [inner + render_json(item, inner).lstrip() for item in value]
     return "[\n" + ",\n".join(body) + "\n" + indent + "]"

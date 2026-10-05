@@ -1710,6 +1710,10 @@
         {
           "file": "wire/valid/notification-break-glass-recovery.json",
           "covers": "agentiik-api recover having issued the administrator alice a recovery code from the installation's host, told to every administrator with her login and nothing else"
+        },
+        {
+          "file": "wire/valid/notification-login-changed.json",
+          "covers": "the user mcp, whose login was made before v0.7.0 reserved the word, given mc-petit by an administrator and told so: the login they had, a word reserved since, which their personal namespace keeps as a former name, the one they were given, and who gave it"
         }
       ],
       "invalid": [
@@ -1758,6 +1762,30 @@
         {
           "file": "wire/invalid/notification-break-glass-without-login.json",
           "rule": "every administrator is told which account the break-glass path issued a recovery code, since an administrator who did not run it has to know whose it was",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#auth"
+        },
+        {
+          "file": "wire/invalid/notification-login-changed-without-from.json",
+          "rule": "a user given a new login is told which login they had, the one every address and grant they knew named them by",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#scopes-and-resolution"
+        },
+        {
+          "file": "wire/invalid/notification-login-changed-by-nobody.json",
+          "rule": "a user given a new login is told who gave it, the administrator they would ask why",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#scopes-and-resolution"
+        },
+        {
+          "file": "wire/invalid/notification-login-changed-to-a-reserved-word.json",
+          "rule": "a new login is held as one at the creation, so it is never a reserved word: the login a user had may be one, reserved since, and the login they are given never is",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#scopes-and-resolution"
+        },
+        {
+          "file": "wire/invalid/notification-break-glass-naming-a-former-login.json",
+          "rule": "from names the login a user had, on login_changed alone; each kind carries what its reader needs and nothing of the others'",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#auth"
         }

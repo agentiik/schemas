@@ -1881,6 +1881,11 @@
         {
           "file": "wire/valid/collection-member-not-runnable.json",
           "covers": "a member read at a branch written in full, and one whose workflow its owner may no longer run, offering nothing"
+        },
+        {
+          "file": "wire/valid/collection-member-tool-name-taken.json",
+          "covers": "two members whose tools came to go by one name after both were written, a commit to one of their mcp blocks, each offering nothing beside tool_name_taken, and a third offering its tool",
+          "source": "https://agentiik.github.io/docs#collections"
         }
       ],
       "invalid": [

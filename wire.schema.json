@@ -7196,7 +7196,7 @@
               "type": "null"
             }
           ],
-          "description": "The name the member is offered under in tools/list: as where it is written, and otherwise the name the mcp block at the head of its ref gives. null where it offers nothing, reason beside it saying why: such a member is left out of tools/list, and a call naming it is answered as one naming a tool that does not exist. A member is refused when it is written with a name another member already gives, since clients hold the name and a model told of two tools of one name cannot choose between them; as resolves it.",
+          "description": "The name the member is offered under in tools/list: as where it is written, and otherwise the name the mcp block at the head of its ref gives. null where it offers nothing, reason beside it saying why: such a member is left out of tools/list, and a call naming it is answered as one naming a tool that does not exist. A member is refused when it is written with a name another member already gives, since clients hold the name and a model told of two tools of one name cannot choose between them; as resolves it. Two members whose names come to be one after both were written, a commit moving the head of a ref or a grant given back, are both null beside tool_name_taken, so that a call meant for one never runs the other.",
           "examples": [
             "create_invoices",
             "order_lookup",
@@ -7207,12 +7207,14 @@
           "type": "string",
           "enum": [
             "no_mcp_block",
-            "not_runnable"
+            "not_runnable",
+            "tool_name_taken"
           ],
-          "description": "Why a member offers nothing, beside a null tool and nowhere else. no_mcp_block: the entry point at the head of its ref declares no mcp block, which is also what a ref that no longer names anything reads as, since there is no entry point there to declare one. not_runnable: its owner may no longer run the workflow, a deleted one included, one reason for both since a workflow one may not run is one whose fate a collection does not tell. A grant revoked takes the tool away from the next list, as the protocol lets a tool set vary by the authorization presented, and the member comes back when the grant does.",
+          "description": "Why a member offers nothing, beside a null tool and nowhere else. no_mcp_block: the entry point at the head of its ref declares no mcp block, which is also what a ref that no longer names anything reads as, since there is no entry point there to declare one. not_runnable: its owner may no longer run the workflow, a deleted one included, one reason for both since a workflow one may not run is one whose fate a collection does not tell. A grant revoked takes the tool away from the next list, as the protocol lets a tool set vary by the authorization presented, and the member comes back when the grant does. tool_name_taken: another member's tool goes by the name this one's goes by, both left out until as or a commit tells them apart, since a tool's name is unique in its collection at every tools/list and every tools/call, and a name comes from the head of a ref somebody may commit to after the member was written.",
           "examples": [
             "no_mcp_block",
-            "not_runnable"
+            "not_runnable",
+            "tool_name_taken"
           ]
         }
       },

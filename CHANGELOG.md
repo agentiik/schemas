@@ -6,7 +6,7 @@ Every repository of the project carries the same version and is tagged at the sa
 
 `0.y.z` promises nothing beyond itself: what a release here describes may be gone in the next one.
 
-## Unreleased
+## v0.7.0, 2026-10-30
 
 - `openapi.json` describes `GET /api/v1/users/{login}/credentials`, `listUserCredentials`: a user's credentials read by an administrator as `listCredentials` lists the caller's, oldest first, never a public key, a hash or a secret, answered with `Cache-Control: no-store`, and `404` for no user by that login.
 - `language/` is the language reference `workflow.language` teaches, generated from `workflow.schema.json` by `tools/language.py`:
@@ -48,6 +48,7 @@ Every repository of the project carries the same version and is tagged at the sa
 - `wire.schema.json`'s `notification` writes `by` and `login` on the grammar of a namespace's former name, as `from` is, rather than on `$defs/login`: a notification keeps the logins it named when it was told, and one may be a word a later release reserved, the login of a user made before it who has not been given a new one, or one given a new one since. `notification-break-glass-recovery-of-a-login-reserved-since.json` and `notification-recovery-code-issued-by-a-login-reserved-since.json` are valid fixtures of it.
 - `CLAUDE.md` is the copy of `agentiik/.github`'s, which no longer counts the roadmap's tasks, groups or Feature issues: the roadmap counts them in each milestone's tally, and the 685 tasks the copy named were already 696 at the v0.6.0 documentation.
 - `openapi.json` describes the installation's own OAuth 2.1 authorisation server for `/mcp` and each collection: `oauthServerMetadata` at `GET /.well-known/oauth-authorization-server`, RFC 8414's document; `mcpResourceMetadata` and `collectionResourceMetadata` at `GET /.well-known/oauth-protected-resource/mcp` and `/mcp/collections/{id}`, RFC 9728's, the nine permissions the scopes of `/mcp` and `workflow:run` a collection's; `authorizeClient` at `GET /auth/authorize`, the page naming the client by its Client ID Metadata Document, held to OAuth 2.1 with PKCE `S256` alone; and `oauthToken` at `POST /api/v1/auth/oauth/token`, a code for an access token of an hour and a refresh token that works once, OAuth's errors as `oauthError`. Each answers `404` under `AGK_MCP=off`. `passkeyVerifyRequest` and `passwordLoginRequest` take `authorization`, what the client opened the page with, never beside `terminal`, `409` on an installation serving no MCP, and `passkeyVerified` and `signIn` answer the client's redirect as `redirect_to`. `wire.schema.json`'s `apiToken` gains `audience` and `client_id`, an OAuth grant's and nobody else's.
+- `openapi.json` and `fixtures/index.json` name `0.7.0`, and the document's summary and description say what it describes now: the caller's collections, a workflow validated and committed without git, and the authorisation server that issues the tokens of `/mcp` and each collection.
 
 ## v0.6.0, 2026-10-02
 

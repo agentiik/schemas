@@ -2302,7 +2302,7 @@
           "me"
         ],
         "summary": "Who the caller is",
-        "description": "The caller: its principal as written, whether it administers the installation through the credential it presented, the user or service account record behind it, neither for the bootstrap token, a user's carrying what they say of themself and when their photo was last set, and its groups; its effective permissions keyed by scope, each namespace where it holds anything and each workflow where a grant, a deny or the token's scope makes them other than its namespace's, narrowed by that scope, leaving out a workflow where it holds nothing, as one it cannot read; and its notifications, newest first: admin_access_widened, an administrator having written a grant in a namespace by the installation's power, put a user in a group holding a role there, or widened their own access there, told to its owners and, where the namespace had nobody to tell before, the other administrators as well, each saying the act and who did it; passkey_counter_refused, a sign-in refused for a passkey's signature counter, told to its user; and break_glass_recovery, a recovery code agentiik-api recover issued an administrator, naming the account, told to every administrator. A notification past its 90 days is removed as the list is read. A token narrowed by a scope reads no notification, since reading what the installation tells a principal is none of the nine, so that a script holding one neither reads that an administrator widened their access nor makes the notice go away before its owner reads it. What agk whoami prints, and what the console reads to hide what the caller does not hold rather than disable it.",
+        "description": "The caller: its principal as written, whether it administers the installation through the credential it presented, the user or service account record behind it, neither for the bootstrap token, a user's carrying what they say of themself and when their photo was last set, and its groups; its effective permissions keyed by scope, each namespace where it holds anything and each workflow where a grant, a deny or the token's scope makes them other than its namespace's, narrowed by that scope, leaving out a workflow where it holds nothing, as one it cannot read; and its notifications, newest first: admin_access_widened, an administrator having written a grant in a namespace by the installation's power, put a user in a group holding a role there, or widened their own access there, told to its owners and, where the namespace had nobody to tell before, the other administrators as well, each saying the act and who did it; passkey_counter_refused, a sign-in refused for a passkey's signature counter, told to its user; break_glass_recovery, a recovery code agentiik-api recover issued an administrator, naming the account, told to every administrator; and recovery_code_issued and recovery_code_used, a recovery code an administrator or the bootstrap token issued the caller, naming who, and that code spent, naming who issued it and the credential it enrolled, told to the caller alone and dismissed by nobody. A notification past its 90 days is removed as the list is read. A token narrowed by a scope reads no notification, since reading what the installation tells a principal is none of the nine, so that a script holding one neither reads that an administrator widened their access nor makes the notice go away before its owner reads it. What agk whoami prints, and what the console reads to hide what the caller does not hold rather than disable it.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#administrators"
@@ -2606,7 +2606,7 @@
           "me"
         ],
         "summary": "Dismiss one of the caller's notifications",
-        "description": "Dismisses one of the notifications GET /api/v1/me lists, which lists it no more. One not dismissed is kept 90 days from when it was written: long enough to reach someone back from leave, and bounded so that GET /api/v1/me does not grow for ever. Dismissing changes nothing of what happened: the grant.create, the signin.fail or the enrolment.issue the audit log recorded stays. A notification owed to a group was written once for each of its members, so that one member dismissing it dismisses it for nobody else. A token narrowed by a scope dismisses none, as it reads none.",
+        "description": "Dismisses one of the notifications GET /api/v1/me lists, which lists it no more. One not dismissed is kept 90 days from when it was written: long enough to reach someone back from leave, and bounded so that GET /api/v1/me does not grow for ever. Dismissing changes nothing of what happened: the grant.create, the signin.fail or the enrolment.issue the audit log recorded stays. A notification owed to a group was written once for each of its members, so that one member dismissing it dismisses it for nobody else. A token narrowed by a scope dismisses none, as it reads none. A recovery code's, recovery_code_issued or recovery_code_used, is refused 409 and kept its 90 days, since whoever spent the code signs in as the caller, from the session it opened or with the credential it enrolled, and could otherwise dismiss what tells the caller of it before they read it.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#administrators"
@@ -2629,6 +2629,24 @@
           "404": {
             "$ref": "#/components/responses/notFound",
             "description": "No notification of the caller's by that identifier: dismissed already, past its 90 days, or never the caller's; and any through a token narrowed by a scope, or the bootstrap token, which are told nothing."
+          },
+          "409": {
+            "description": "A recovery code's notification, issued the caller or spent on their account, which nobody dismisses; it stays listed its 90 days.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "kept": {
+                    "summary": "recovery_code_used, asked to be dismissed",
+                    "value": {
+                      "error": "a recovery code issued you, or spent on your account, is told for 90 days and dismissed by nobody, since whoever spent it signs in as you and could otherwise dismiss what tells you of it"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -13543,7 +13561,7 @@
             "items": {
               "$ref": "wire.schema.json#/$defs/notification"
             },
-            "description": "What the installation has to tell the caller, newest first: an administrator having written a grant in a namespace the caller owns by the installation's power, put a user in a group holding a role there, or widened their own access there, each with the act and who did it, told to the other administrators too where the namespace had nobody to tell; a sign-in refused for one of the caller's passkeys' signature counters; and a recovery code agentiik-api recover issued an administrator, told to every administrator. Each is kept 90 days from when it was written, or until the caller dismisses it with DELETE /api/v1/me/notifications/{id}; one past its days is removed as this is read. Empty through a token narrowed by a scope, which reads none.",
+            "description": "What the installation has to tell the caller, newest first: an administrator having written a grant in a namespace the caller owns by the installation's power, put a user in a group holding a role there, or widened their own access there, each with the act and who did it, told to the other administrators too where the namespace had nobody to tell; a sign-in refused for one of the caller's passkeys' signature counters; a recovery code agentiik-api recover issued an administrator, told to every administrator; and a recovery code issued the caller, and that code spent, told to the caller alone. Each is kept 90 days from when it was written, or until the caller dismisses it with DELETE /api/v1/me/notifications/{id}, which a recovery code's never is; one past its days is removed as this is read. Empty through a token narrowed by a scope, which reads none.",
             "examples": [
               [],
               [

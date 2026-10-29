@@ -1710,6 +1710,14 @@
         {
           "file": "wire/valid/notification-break-glass-recovery.json",
           "covers": "agentiik-api recover having issued the administrator alice a recovery code from the installation's host, told to every administrator with her login and nothing else"
+        },
+        {
+          "file": "wire/valid/notification-recovery-code-issued.json",
+          "covers": "an administrator having issued the reader a recovery code, told to the reader alone with who issued it and nothing of the code or its link"
+        },
+        {
+          "file": "wire/valid/notification-recovery-code-used.json",
+          "covers": "a recovery code having been spent on the reader's account, told to the reader with who issued it and the credential it enrolled, so that they can remove it if it was not them"
         }
       ],
       "invalid": [
@@ -1758,6 +1766,24 @@
         {
           "file": "wire/invalid/notification-break-glass-without-login.json",
           "rule": "every administrator is told which account the break-glass path issued a recovery code, since an administrator who did not run it has to know whose it was",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#auth"
+        },
+        {
+          "file": "wire/invalid/notification-recovery-code-issued-by-nobody.json",
+          "rule": "a user told of a recovery code issued for them is told who issued it, since they are the one who knows whether they asked anybody for one",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#auth"
+        },
+        {
+          "file": "wire/invalid/notification-recovery-code-used-enrolling-nothing.json",
+          "rule": "a user told that a recovery code was spent on their account is told the credential it enrolled, which is what they remove if it was not them",
+          "refused_by": "schema",
+          "reference": "https://agentiik.github.io/docs/#auth"
+        },
+        {
+          "file": "wire/invalid/notification-recovery-code-issued-naming-a-namespace.json",
+          "rule": "a recovery code is issued for an account and names no namespace; each kind carries what its reader needs and nothing of the others'",
           "refused_by": "schema",
           "reference": "https://agentiik.github.io/docs/#auth"
         }
@@ -1881,6 +1907,11 @@
         {
           "file": "wire/valid/collection-member-not-runnable.json",
           "covers": "a member read at a branch written in full, and one whose workflow its owner may no longer run, offering nothing"
+        },
+        {
+          "file": "wire/valid/collection-member-tool-name-taken.json",
+          "covers": "two members whose tools came to go by one name after both were written, a commit to one of their mcp blocks, each offering nothing beside tool_name_taken, and a third offering its tool",
+          "source": "https://agentiik.github.io/docs#collections"
         }
       ],
       "invalid": [

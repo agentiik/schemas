@@ -8,6 +8,7 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## Unreleased
 
+- `openapi.json` describes `GET /api/v1/users/{login}/credentials`, `listUserCredentials`: a user's credentials read by an administrator as `listCredentials` lists the caller's, oldest first, never a public key, a hash or a secret, answered with `Cache-Control: no-store`, and `404` for no user by that login.
 - `language/` is the language reference `workflow.language` teaches, generated from `workflow.schema.json` by `tools/language.py`:
   - `index.md` is the orientation: what the language is, one complete minimal workflow, the sixteen topics and the schema parts.
   - A page per topic, `repository` to `mcp`, gives a summary, the keywords it covers, the schema fragment governing them and worked examples written where they go in `agentiik.yaml`.

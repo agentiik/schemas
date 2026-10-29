@@ -39,6 +39,7 @@ Every repository of the project carries the same version and is tagged at the sa
 - `openapi.json`'s `getArtifact` answers `403` to a browser's session asking for an artifact with a fetch budget from anywhere but the public URL's pages, as `Sec-Fetch-Site` says, or, where the browser sends none, its `Origin`, before any fetch is held, since `SameSite=Lax` carries the cookie on a link followed from another site and on an image on another host of the same site.
 - `wire.schema.json`'s `notification` gains `recovery_code_issued`, a recovery code an administrator or the bootstrap token issued the reader, naming who as `by`, and `recovery_code_used`, that code spent, naming who issued it and the `credential` it enrolled, a passkey's credential ID or a password's identifier: both told to the reader alone, carrying nothing of the code or its link, and dismissed by nobody, since whoever spent the code signs in as the reader. Two valid fixtures and three invalid ones hold each kind to the fields it carries.
 - `openapi.json`'s `GET /api/v1/me` names both kinds, and `dismissNotification` answers `409` for either, keeping it its 90 days.
+- `openapi.json`'s `setMyAvatar` and `setNamespaceAvatar` say that pictures are re-encoded a few at a time in each process of the API, and answer `503` with `Retry-After` to one that waits five seconds for its turn, storing nothing.
 
 ## v0.6.0, 2026-10-02
 

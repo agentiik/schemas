@@ -2742,7 +2742,7 @@
           "me"
         ],
         "summary": "Set the caller's photo",
-        "description": "Sets the caller's photo in place of any before it: the body a PNG or a JPEG of at most 1 MiB, its Content-Type image/png or image/jpeg. Its size in pixels is read from its header before anything is decoded, and one past 2048 by 2048 is refused, since a few kilobytes of PNG can announce a picture that takes gigabytes to hold. It is then decoded and encoded again as a PNG, scaled down to 512 by 512 at most keeping its aspect, and turned upright where a JPEG's Exif says it was taken on its side, so that what is stored carries nothing of the file but its pixels: no Exif, and no location a phone wrote into it, which a photo shown to colleagues would hand them. The Content-Type says the body is one of the two and the bytes say which, since a browser names a file's type by its extension. Set by the user alone, as the profile is: the bootstrap token, a service account and a token narrowed by a scope are refused saying so. avatar_updated_at says when it was set, which a client adds to the photo's address. Audited as user.avatar with the size it was stored at, and never the photo.",
+        "description": "Sets the caller's photo in place of any before it: the body a PNG or a JPEG of at most 1 MiB, its Content-Type image/png or image/jpeg. Its size in pixels is read from its header before anything is decoded, and one past 2048 by 2048 is refused, since a few kilobytes of PNG can announce a picture that takes gigabytes to hold. Pictures are re-encoded a few at a time in each process of the API, a user's photo and a namespace's picture alike, one for each processor and no more than a quarter of its memory holds at 64 MiB each, so that many sent at once cannot take the memory every other request needs; one that waits five seconds for its turn is refused, and stores nothing. It is then decoded and encoded again as a PNG, scaled down to 512 by 512 at most keeping its aspect, and turned upright where a JPEG's Exif says it was taken on its side, so that what is stored carries nothing of the file but its pixels: no Exif, and no location a phone wrote into it, which a photo shown to colleagues would hand them. The Content-Type says the body is one of the two and the bytes say which, since a browser names a file's type by its extension. Set by the user alone, as the profile is: the bootstrap token, a service account and a token narrowed by a scope are refused saying so. avatar_updated_at says when it was set, which a client adds to the photo's address. Audited as user.avatar with the size it was stored at, and never the photo.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#principals"
@@ -2847,6 +2847,30 @@
                     "summary": "not a photo",
                     "value": {
                       "error": "the body is not a PNG or a JPEG that can be read, and a photo is one of the two"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Too many pictures are being re-encoded at once to take this photo within five seconds: nothing was stored, and the request may be sent again once Retry-After has passed.",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/retryAfter",
+                "description": "One second: a re-encoding takes half a second at the most."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "busy": {
+                    "summary": "no turn to re-encode in time",
+                    "value": {
+                      "error": "this installation is re-encoding too many pictures at once to take this one in time: try again in a moment"
                     }
                   }
                 }
@@ -4112,7 +4136,7 @@
           "namespaces"
         ],
         "summary": "Set a namespace's picture",
-        "description": "Sets the namespace's picture in place of any before it, held to the rules of a user's photo: the body a PNG or a JPEG of at most 1 MiB, its Content-Type image/png or image/jpeg. Its size in pixels is read from its header before anything is decoded, and one past 2048 by 2048 is refused, since a few kilobytes of PNG can announce a picture that takes gigabytes to hold. It is then decoded and encoded again as a PNG, scaled down to 512 by 512 at most keeping its aspect, and turned upright where a JPEG's Exif says it was taken on its side, so that what is stored carries nothing of the file but its pixels: no Exif, and no location a phone wrote into it. Set by its owner, whoever holds grant:manage at its scope, a personal namespace's user among them, or an administrator. The record's avatar_updated_at says when it was set, which a client adds to the picture's address. Audited as namespace.avatar with the size it was stored at, and never the picture.",
+        "description": "Sets the namespace's picture in place of any before it, held to the rules of a user's photo: the body a PNG or a JPEG of at most 1 MiB, its Content-Type image/png or image/jpeg. Its size in pixels is read from its header before anything is decoded, and one past 2048 by 2048 is refused, since a few kilobytes of PNG can announce a picture that takes gigabytes to hold. Pictures are re-encoded a few at a time in each process of the API, a user's photo and a namespace's picture alike, one for each processor and no more than a quarter of its memory holds at 64 MiB each, so that many sent at once cannot take the memory every other request needs; one that waits five seconds for its turn is refused, and stores nothing. It is then decoded and encoded again as a PNG, scaled down to 512 by 512 at most keeping its aspect, and turned upright where a JPEG's Exif says it was taken on its side, so that what is stored carries nothing of the file but its pixels: no Exif, and no location a phone wrote into it. Set by its owner, whoever holds grant:manage at its scope, a personal namespace's user among them, or an administrator. The record's avatar_updated_at says when it was set, which a client adds to the picture's address. Audited as namespace.avatar with the size it was stored at, and never the picture.",
         "externalDocs": {
           "description": "Where the documentation specifies it.",
           "url": "https://agentiik.github.io/docs#api"
@@ -4221,6 +4245,30 @@
                     "summary": "not a picture",
                     "value": {
                       "error": "the body is not a PNG or a JPEG that can be read, and a picture is one of the two"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Too many pictures are being re-encoded at once to take this picture within five seconds: nothing was stored, and the request may be sent again once Retry-After has passed.",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/retryAfter",
+                "description": "One second: a re-encoding takes half a second at the most."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                },
+                "examples": {
+                  "busy": {
+                    "summary": "no turn to re-encode in time",
+                    "value": {
+                      "error": "this installation is re-encoding too many pictures at once to take this one in time: try again in a moment"
                     }
                   }
                 }

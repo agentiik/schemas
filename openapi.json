@@ -2064,6 +2064,88 @@
         }
       }
     },
+    "/api/v1/users/{login}/credentials": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/login"
+        }
+      ],
+      "get": {
+        "operationId": "listUserCredentials",
+        "tags": [
+          "users"
+        ],
+        "summary": "List a user's credentials",
+        "description": "A user's credentials, oldest first, as GET /api/v1/me/credentials lists the caller's: their passkeys, each with its identifier, kind, both flags, label, and when it was enrolled and last used; the password where one is still stored; and a TOTP generator where one is enrolled. Never a public key, a hash or a shared secret. So that whoever administers the installation sees what an account signs in with, synced or device-bound, before recovering it; nothing here removes one, which its holder does, a lost one being replaced through a recovery code. A user who enrolled nothing holds none. Administrator only.",
+        "externalDocs": {
+          "description": "Where the documentation specifies it.",
+          "url": "https://agentiik.github.io/docs#auth"
+        },
+        "responses": {
+          "200": {
+            "description": "The credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/credentialList"
+                },
+                "examples": {
+                  "passkeys": {
+                    "summary": "a password and a synced passkey",
+                    "value": {
+                      "credentials": [
+                        {
+                          "type": "password",
+                          "id": "01M2AAZ9G62NQXFAFCXKRPJEH5",
+                          "created_at": "2026-09-27T08:55:00Z",
+                          "last_used_at": "2026-09-27T09:00:00Z"
+                        },
+                        {
+                          "type": "passkey",
+                          "id": "aVBob25lUGFzc2tleQ",
+                          "label": "phone",
+                          "backup_eligible": true,
+                          "backup_state": true,
+                          "kind": "synced",
+                          "created_at": "2026-09-27T09:02:00Z",
+                          "last_used_at": "2026-09-27T12:30:00Z"
+                        }
+                      ]
+                    }
+                  },
+                  "none": {
+                    "summary": "a user who enrolled nothing yet",
+                    "value": {
+                      "credentials": []
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/noStore"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest",
+            "description": "Two credentials: a bearer token beside the session cookie, or two session cookies."
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorised"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden",
+            "description": "The caller is not an administrator, or holds a session that may only enrol."
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound",
+            "description": "No user by that login, or a login no user can have."
+          }
+        }
+      }
+    },
     "/api/v1/auth/tokens": {
       "post": {
         "operationId": "createToken",

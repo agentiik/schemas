@@ -6,6 +6,10 @@ Every repository of the project carries the same version and is tagged at the sa
 
 `0.y.z` promises nothing beyond itself: what a release here describes may be gone in the next one.
 
+## Unreleased
+
+- `openapi.json` describes `taken_at` on a run's `taskSummary`: when a runner took the task, which tells a dispatched task waiting on its pool's queue for a free slot from one a runner holds (#153).
+
 ## v0.7.2, 2026-10-30
 
 - `openapi.json` names `0.7.2`, the release it describes, as `fixtures/index.json` does.

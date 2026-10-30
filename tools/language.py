@@ -16,7 +16,7 @@ It writes language/, which is generated and never edited by hand:
                          instance paths it answers for, and the schema parts by name.
 
 The documentation decides that the language is taught from the schema and never beside it:
-"workflow.language projects the description and examples of every keyword in the JSON Schema
+"workflow_language projects the description and examples of every keyword in the JSON Schema
 of agentiik/schemas, and the build fails if a keyword lacks them. Two hand-kept sources would
 drift, into the worst failure available: a tool confidently teaching a model syntax the
 pre-receive hook then rejects." So every sentence on a page is a description field of a
@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "language"
 WORKFLOW = "workflow.schema.json"
 
-# The schema parts a client can ask for by name: workflow.schema and agentiik://schema/{part}
+# The schema parts a client can ask for by name: workflow_schema and agentiik://schema/{part}
 # take one of these. A part is named after its file, so the name, the file and the $id say
 # the same thing and none of them needs a table to be found from another; what a part is, the
 # index takes from the part's own title and description. The documentation names these

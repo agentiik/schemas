@@ -8,6 +8,7 @@ Every repository of the project carries the same version and is tagged at the sa
 
 ## v0.7.2, 2026-10-30
 
+- `openapi.json` names `0.7.2`, the release it describes, as `fixtures/index.json` does.
 - `openapi.json`'s `statsActivity` counts the tasks in flight in two parts: `tasks_held`, those a runner took, which is what `slots` is set against, and `tasks_queued`, those waiting on their pool's queue, and each bucket the most of each at once, `tasks_held_max` and `tasks_queued_max`. The CSV gains the two columns.
 - `openapi.json` describes `reason` on a run's `stepSummary`: why the step reached its verdict, in the words of the rule that decided it, where the verdict alone does not say, as a step refused before any task started.
 - `workflow.schema.json` says what a step's `inputs` feeds a port, an object, which is one item, or a list of objects, and that a scalar is written under a key of an object, with an example; `language/ports.md` is regenerated.

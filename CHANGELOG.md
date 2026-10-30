@@ -12,6 +12,7 @@ Every repository of the project carries the same version and is tagged at the sa
 - `openapi.json` describes `reason` on a run's `stepSummary`: why the step reached its verdict, in the words of the rule that decided it, where the verdict alone does not say, as a step refused before any task started.
 - `workflow.schema.json` says what a step's `inputs` feeds a port, an object, which is one item, or a list of objects, and that a scalar is written under a key of an object, with an example; `language/ports.md` is regenerated.
 - The corpus refuses `workflow/invalid/step-input-not-a-batch.yaml`, an integer input fed to a port, by the validator; `mcp-async-tool.yaml` and two invalid fixtures feed their string input under a key of an object, since fed whole it was refused on every run.
+- The descriptions that cite a tool of the user's MCP server name it with an underscore, as the server lists it from v0.7.2 (agentiik/agentiik#932): `run_get` in `workflow.schema.json`'s `mcp.mode` and its async example, and so in `language/mcp.md` and `fixtures/workflow/valid/mcp-async-tool.yaml`; `workflow_create`, `workflow_commit`, `workflow_validate` and `workflow_language` in `openapi.json`; `workflow_run` in `wire.schema.json` and `fixtures/index.json`.
 
 ## v0.7.1, 2026-10-30
 

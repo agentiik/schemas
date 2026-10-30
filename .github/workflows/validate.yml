@@ -44,7 +44,7 @@ jobs:
       # document held to the same rule, and its routes agree with the documentation's
       # route table, which the check reads from https://agentiik.github.io/docs/v/main/.
       # The keyword rule is the documentation's own: the language reference and the
-      # workflow.language tool are generated from these fields, so a keyword without them
+      # workflow_language tool are generated from these fields, so a keyword without them
       # is a keyword the language reference cannot teach.
       - name: Check the contract
         run: python tools/check.py

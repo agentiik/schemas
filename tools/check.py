@@ -33,7 +33,7 @@ reports everything that is wrong rather than the first thing:
      back from its page's YAML, is the example it illustrates and validates against it.
 
 Check 2 is the one the documentation asks for by name: the language reference on the
-site and the workflow.language tool are projections of the description and examples
+site and the workflow_language tool are projections of the description and examples
 fields of these schemas, so a keyword without them is a keyword the language reference
 cannot teach. It is enforced here rather than left to a reviewer. Check 9 is the same rule
 for the API, whose reference and clients are generated from openapi.json.

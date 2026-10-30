@@ -6,6 +6,10 @@ Every repository of the project carries the same version and is tagged at the sa
 
 `0.y.z` promises nothing beyond itself: what a release here describes may be gone in the next one.
 
+## v0.7.1, 2026-10-30
+
+- `openapi.json` names `0.7.1`, the release it describes, as `fixtures/index.json` does; no shape changed.
+
 ## v0.7.0, 2026-10-30
 
 - `openapi.json` describes `GET /api/v1/users/{login}/credentials`, `listUserCredentials`: a user's credentials read by an administrator as `listCredentials` lists the caller's, oldest first, never a public key, a hash or a secret, answered with `Cache-Control: no-store`, and `404` for no user by that login.

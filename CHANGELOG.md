@@ -9,6 +9,9 @@ Every repository of the project carries the same version and is tagged at the sa
 ## Unreleased
 
 - `openapi.json`'s `statsActivity` counts the tasks in flight in two parts: `tasks_held`, those a runner took, which is what `slots` is set against, and `tasks_queued`, those waiting on their pool's queue, and each bucket the most of each at once, `tasks_held_max` and `tasks_queued_max`. The CSV gains the two columns.
+- `openapi.json` describes `reason` on a run's `stepSummary`: why the step reached its verdict, in the words of the rule that decided it, where the verdict alone does not say, as a step refused before any task started.
+- `workflow.schema.json` says what a step's `inputs` feeds a port, an object, which is one item, or a list of objects, and that a scalar is written under a key of an object, with an example; `language/ports.md` is regenerated.
+- The corpus refuses `workflow/invalid/step-input-not-a-batch.yaml`, an integer input fed to a port, by the validator; `mcp-async-tool.yaml` and two invalid fixtures feed their string input under a key of an object, since fed whole it was refused on every run.
 
 ## v0.7.1, 2026-10-30
 

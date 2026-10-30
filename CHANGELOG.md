@@ -6,6 +6,10 @@ Every repository of the project carries the same version and is tagged at the sa
 
 `0.y.z` promises nothing beyond itself: what a release here describes may be gone in the next one.
 
+## Unreleased
+
+- `openapi.json`'s `statsActivity` counts the tasks in flight in two parts: `tasks_held`, those a runner took, which is what `slots` is set against, and `tasks_queued`, those waiting on their pool's queue, and each bucket the most of each at once, `tasks_held_max` and `tasks_queued_max`. The CSV gains the two columns.
+
 ## v0.7.1, 2026-10-30
 
 - `openapi.json` names `0.7.1`, the release it describes, as `fixtures/index.json` does; no shape changed.

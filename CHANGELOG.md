@@ -6,8 +6,9 @@ Every repository of the project carries the same version and is tagged at the sa
 
 `0.y.z` promises nothing beyond itself: what a release here describes may be gone in the next one.
 
-## Unreleased
+## v0.7.3, 2026-10-31
 
+- `openapi.json` names `0.7.3`, the release it describes, as `fixtures/index.json` does.
 - `openapi.json` describes `taken_at` on a run's `taskSummary`: when a runner took the task, which tells a dispatched task waiting on its pool's queue for a free slot from one a runner holds (#153).
 - `openapi.json`'s `POST /api/v1/{ns}/workflows/{name}/images` takes `resolve`, up to 16 image tags the installation resolves at their registries and pins to the digest each serves now, as agk push would pin it, which `workflow_pin` sends (agentiik/agentiik#940): `imagesRecord` describes it and names at least one entry among `pins`, `manifests` and `resolve`, and the route describes a refused tag, `400`, `413` and `422`, and a registry it could not ask, `502`.
 
